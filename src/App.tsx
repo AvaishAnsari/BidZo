@@ -1,0 +1,56 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './context/AuthContext';
+import { Layout } from './components/Layout';
+import { LandingPage } from './pages/LandingPage';
+import { Home } from './pages/Home';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { CreateAuction } from './pages/CreateAuction';
+import { AuctionDetail } from './pages/AuctionDetail';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { SupabaseStatus } from './components/SupabaseStatus';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: 'rgba(17,24,39,0.95)',
+              color: '#f9fafb',
+              border: '1px solid rgba(55,65,81,0.6)',
+              backdropFilter: 'blur(12px)',
+            },
+          }}
+        />
+        <SupabaseStatus />
+        <Routes>
+          {/* ── Public landing (no Layout wrapper) ── */}
+          <Route index element={<LandingPage />} />
+
+          {/* ── App shell (Layout = navbar + footer) ── */}
+          <Route element={<Layout />}>
+            <Route path="login"    element={<Login />} />
+            <Route path="register" element={<Register />} />
+
+            {/* Any logged-in user */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="auctions"      element={<Home />} />
+              <Route path="auction/:id"   element={<AuctionDetail />} />
+            </Route>
+
+            {/* Sellers only */}
+            <Route element={<ProtectedRoute requiredRole="seller" />}>
+              <Route path="create-auction" element={<CreateAuction />} />
+            </Route>
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;
