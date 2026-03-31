@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAuction } from '../hooks/useAuction';
+import { useWatchlist } from '../hooks/useWatchlist';
+import { VerifiedBadge, SellerRating } from '../components/TrustBadges';
 import { placeBidRPC } from '../services/bidService';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { placeBid as localPlaceBid, emitBidEvent, extendAuctionTime } from '../utils/localStore';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
 import {
   Loader2, Clock, TrendingUp, ArrowLeft, Gavel,
-  AlertCircle, CheckCircle2, Trophy, RefreshCw, Zap, Bell,
+  AlertCircle, CheckCircle2, Trophy, RefreshCw, Zap, Bell, Heart,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +51,7 @@ export const AuctionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
+  const { isWatched, toggleWatchlist } = useWatchlist();
 
   const {
     auction,
@@ -214,9 +217,9 @@ export const AuctionDetail = () => {
     }
   };
 
-  // ── Derived: is auction ending soon? (< 60s) ──────────────────────
+  // ── Derived: is auction ending soon? (< 5 mins) ──────────────────────
   const msLeft  = auction ? new Date(auction.end_time).getTime() - Date.now() : Infinity;
-  const urgentTimer = !isEnded && !isUpcoming && msLeft <= 60_000 && msLeft > 0;
+  const urgentTimer = !isEnded && !isUpcoming && msLeft <= 300_000 && msLeft > 0;
 
   // ── Loading state ─────────────────────────────────────────────────
   if (isLoading) {
@@ -331,10 +334,45 @@ export const AuctionDetail = () => {
                   Extended ×{auction.extension_count}
                 </div>
               )}
+
+              {/* Watchlist Heart */}
+              {auction && (
+                <button
+                  onClick={() => toggleWatchlist(auction.id)}
+                  style={{
+                    position: 'absolute', top: '1rem', right: (auction.extension_count ?? 0) > 0 ? '7.5rem' : '1rem', zIndex: 10,
+                    background: isWatched(auction.id) ? 'rgba(239,68,68,0.2)' : 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(8px)',
+                    border: isWatched(auction.id) ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '50%', padding: '0.5rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseOver={(e) => {
+                     e.currentTarget.style.transform = 'scale(1.1)';
+                     if (!isWatched(auction.id)) e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
+                  }}
+                  onMouseOut={(e) => {
+                     e.currentTarget.style.transform = 'scale(1)';
+                     if (!isWatched(auction.id)) e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill={isWatched(auction.id) ? '#ef4444' : 'none'} stroke={isWatched(auction.id) ? '#ef4444' : '#ffffff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* Description Card */}
             <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.8rem', color: '#9ca3af', fontWeight: 500 }}>Verified Seller</span>
+                <VerifiedBadge userId={auction.seller_id} />
+                <div style={{ marginLeft: '1rem' }}>
+                  <SellerRating userId={auction.seller_id} />
+                </div>
+              </div>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', marginBottom: '0.75rem', lineHeight: 1.2 }}>
                 {auction.title}
               </h1>
@@ -440,7 +478,7 @@ export const AuctionDetail = () => {
 
             {/* Countdown Timer */}
             {!isEnded && (
-              <div className="glass-card" style={{
+              <div className={`glass-card ${urgentTimer ? 'badge-urgent' : ''}`} style={{
                 borderRadius: '1rem', padding: '1.25rem',
                 border: urgentTimer ? '1px solid rgba(239,68,68,0.3)' : undefined,
                 background: urgentTimer ? 'rgba(239,68,68,0.04)' : undefined,

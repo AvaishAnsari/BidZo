@@ -1,10 +1,15 @@
 import { useAuctions } from '../hooks/useAuctions';
 import { AuctionCard } from '../components/AuctionCard';
-import { Loader2, Zap, RefreshCw } from 'lucide-react';
+import { Loader2, Zap, RefreshCw, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Home = () => {
   const { auctions, isLoading, error, refetch } = useAuctions();
+
+  const trendingAuctions = [...auctions]
+    .filter(a => a.status === 'live')
+    .sort((a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime())
+    .slice(0, 3);
 
   return (
     <div style={{ width: '100%', paddingBottom: '4rem' }}>
@@ -119,19 +124,50 @@ export const Home = () => {
           </button>
         </motion.div>
       ) : auctions.length > 0 ? (
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-          }}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '1.75rem',
-          }}
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+          
+          {/* Trending Section */}
+          {trendingAuctions.length > 0 && (
+            <motion.div
+              initial="hidden" animate="visible"
+              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <Flame style={{ width: '1.5rem', height: '1.5rem', color: '#ef4444' }} />
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f3f4f6' }}>Trending Now</h2>
+                <span className="badge-urgent" style={{ marginLeft: 'auto', animation: 'none' }}>Ending Soon</span>
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '1.75rem',
+              }}>
+                {trendingAuctions.map(auction => (
+                  <motion.div key={auction.id} whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+                    <AuctionCard auction={auction} />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* All Auctions */}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#e5e7eb' }}>All Live Auctions</h2>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '1.75rem',
+            }}>
           {auctions.map((auction) => (
             <motion.div
               key={auction.id}
@@ -141,9 +177,11 @@ export const Home = () => {
               }}
             >
               <AuctionCard auction={auction} />
-            </motion.div>
-          ))}
-        </motion.div>
+              </motion.div>
+            ))}
+            </div>
+          </motion.div>
+        </div>
       ) : (
         /* ── Empty State ── */
         <motion.div

@@ -4,6 +4,8 @@ import { Clock, TrendingUp } from 'lucide-react';
 import type { Auction } from '../types';
 import { formatCurrency } from '../utils/format';
 import { useCountdown } from '../hooks/useCountdown';
+import { useWatchlist } from '../hooks/useWatchlist';
+import { VerifiedBadge, SellerRating } from './TrustBadges';
 import { motion } from 'framer-motion';
 
 interface AuctionCardProps {
@@ -12,8 +14,10 @@ interface AuctionCardProps {
 
 export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   // Live countdown — ticks every second
-  const { timeLeft, isEnded: countdownEnded } = useCountdown(auction.end_time);
+  const { timeLeft, isEnded: countdownEnded, isUrgent } = useCountdown(auction.end_time);
+  const { isWatched, toggleWatchlist } = useWatchlist();
 
+  const isWatchedItem = isWatched(auction.id);
   const isEnded = countdownEnded || auction.status === 'ended';
   const isUpcoming =
     !isEnded &&
@@ -79,9 +83,36 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
           </div>
         )}
 
+        {/* Watchlist Heart */}
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWatchlist(auction.id); }}
+          style={{
+            position: 'absolute', top: '0.875rem', left: '0.875rem', zIndex: 10,
+            background: isWatchedItem ? 'rgba(239,68,68,0.2)' : 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(8px)',
+            border: isWatchedItem ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '50%', padding: '0.5rem', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => {
+             e.currentTarget.style.transform = 'scale(1.1)';
+             if (!isWatchedItem) e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
+          }}
+          onMouseOut={(e) => {
+             e.currentTarget.style.transform = 'scale(1)';
+             if (!isWatchedItem) e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
+          }}
+          title={isWatchedItem ? "Remove from Watchlist" : "Add to Watchlist"}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill={isWatchedItem ? '#ef4444' : 'none'} stroke={isWatchedItem ? '#ef4444' : '#ffffff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+        </button>
+
         {/* Status badge */}
         <div
-          className={isEnded ? 'badge-ended' : isUpcoming ? 'badge-upcoming' : 'badge-live'}
+          className={isEnded ? 'badge-ended' : isUpcoming ? 'badge-upcoming' : (isUrgent ? 'badge-urgent' : 'badge-live')}
           style={{
             position: 'absolute',
             top: '0.875rem',
@@ -98,6 +129,10 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
 
       {/* Content */}
       <div style={{ padding: '1.25rem 1.35rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500 }}>Verified Seller</span>
+          <VerifiedBadge userId={auction.seller_id} />
+        </div>
         <h3 style={{
           fontSize: '1.1rem', fontWeight: 700,
           color: '#f3f4f6', margin: '0 0 0.5rem 0',
@@ -116,6 +151,10 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
             {auction.description}
           </p>
         )}
+
+        <div style={{ marginBottom: '1.25rem' }}>
+          <SellerRating userId={auction.seller_id} />
+        </div>
 
         {/* Footer */}
         <div style={{

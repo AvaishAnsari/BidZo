@@ -17,15 +17,16 @@ export interface UseCountdownResult {
   parts: CountdownParts;
   timeLeft: string;
   isEnded: boolean;
+  isUrgent: boolean;
 }
 
 const ZERO_PARTS: CountdownParts = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
-function computeCountdown(endTime: string): { parts: CountdownParts; timeLeft: string; isEnded: boolean } {
+function computeCountdown(endTime: string): { parts: CountdownParts; timeLeft: string; isEnded: boolean; isUrgent: boolean } {
   const diff = new Date(endTime).getTime() - Date.now();
 
   if (diff <= 0) {
-    return { parts: ZERO_PARTS, timeLeft: 'Ended', isEnded: true };
+    return { parts: ZERO_PARTS, timeLeft: 'Ended', isEnded: true, isUrgent: false };
   }
 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -42,7 +43,9 @@ function computeCountdown(endTime: string): { parts: CountdownParts; timeLeft: s
     timeLeft = `${minutes}m ${seconds}s`;
   }
 
-  return { parts: { days, hours, minutes, seconds }, timeLeft, isEnded: false };
+  const isUrgent = diff <= 5 * 60 * 1000; // < 5 minutes
+
+  return { parts: { days, hours, minutes, seconds }, timeLeft, isEnded: false, isUrgent };
 }
 
 export function useCountdown(endTime: string): UseCountdownResult {
