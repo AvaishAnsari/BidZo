@@ -1,6 +1,14 @@
 # BidZo - Real-Time Auction Bidding Platform
 
-A modern, full-stack real-time auction bidding application built with React, Vite, Tailwind CSS, and Supabase.
+Our platform introduces a set of innovative and scalable features designed to enhance the online auction experience. It leverages real-time technology to enable instant bid updates without page refresh, ensuring a seamless and competitive environment for users.
+
+The system incorporates an AI-powered smart bidding assistant that analyzes bidding patterns and suggests optimal bid values, helping users make informed decisions. To maintain platform integrity, advanced validation mechanisms and fraud detection techniques are implemented to prevent fake or malicious bidding activities.
+
+A secure and automated payment workflow is integrated using Razorpay, enabling smooth transaction processing and ensuring reliability. The platform also features a transparent live dashboard that provides real-time insights such as bid history, highest bids, and auction countdown, promoting trust among users.
+
+Built on a scalable serverless architecture using Supabase and PostgreSQL, the system ensures high performance and reliability. Additionally, role-based access control enables efficient management for buyers, sellers, and administrators.
+
+The platform is future-ready, with planned enhancements including AI-based price prediction models, blockchain-backed transparency, and intelligent automation to further optimize the auction ecosystem.
 
 ## 🚀 Features
 
@@ -210,26 +218,3 @@ This project is licensed under the MIT License - see LICENSE file for details.
 ## 💬 Support
 
 For issues and questions, please open a GitHub issue or contact the development team.
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
