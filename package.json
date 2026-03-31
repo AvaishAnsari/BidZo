@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.99.3",
     "@tailwindcss/postcss": "^4.2.2",
     "@tailwindcss/vite": "^4.2.2",
+    "@vercel/analytics": "^2.0.1",
     "axios": "^1.13.6",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
