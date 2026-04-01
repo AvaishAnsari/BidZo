@@ -7,6 +7,7 @@ import { VerifiedBadge, SellerRating } from '../components/TrustBadges';
 import { SmartBidAssistant } from '../components/SmartBidAssistant';
 import { generateMockTxHash, shortenTxHash, copyToClipboard } from '../utils/blockchain';
 import { placeBidRPC } from '../services/bidService';
+import { closeAuctionRPC } from '../services/auctionService';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { placeBid as localPlaceBid, emitBidEvent, extendAuctionTime } from '../utils/localStore';
 import { initializeRazorpayCheckout } from '../utils/razorpay';
@@ -75,7 +76,10 @@ export const AuctionDetail = () => {
 
   // ── Step 4: Winning / Outbid state ─────────────────────────────────────────
   const isOwnAuction = !!(user && auction && auction.seller_id === user.id);
-  const isWinning    = !!(user && bids.length > 0 && bids[0].user_email === (user.email ?? ''));
+  const isWinning    = isEnded && auction?.winner_id
+    ? auction.winner_id === user?.id
+    : !!(user && bids.length > 0 && bids[0].user_email === (user?.email ?? ''));
+    
   const prevTopBidRef = useRef<string | null>(null);
 
   // ── Step 5a: Outbid toast ─────────────────────────────────────────
@@ -112,6 +116,21 @@ export const AuctionDetail = () => {
     // Reset if time goes back (e.g. after anti-snipe extension)
     if (msLeft > 60_000) endingSoonFiredRef.current = false;
   }, [parts, auction, isEnded, isUpcoming]);
+
+  // ── Step 5c: Atomic Back-end Closure Trigger ─────────────────────────────
+  const closureFiredRef = useRef(false);
+  useEffect(() => {
+    if (isEnded && auction && auction.status !== 'ended' && isSupabaseConfigured() && !closureFiredRef.current) {
+      closureFiredRef.current = true;
+      console.log('Timer expired. Requesting atomic formal closure from PostgreSQL...');
+      closeAuctionRPC(auction.id).then((res) => {
+         if (res.success) {
+           console.log('Auction formally locked securely.');
+           refetch(); // Pull the newly settled winner_id state
+         }
+      });
+    }
+  }, [isEnded, auction, refetch]);
 
   // ── Step 5c: Won toast (fires when auction just ended and user was winning) ──
   const wonFiredRef = useRef(false);

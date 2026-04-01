@@ -30,6 +30,7 @@ export interface Auction {
   start_time: string;
   end_time: string;
   seller_id: string;
+  winner_id?: string;
   status: 'upcoming' | 'live' | 'ended';
   created_at: string;
   /** How many times the end_time has been extended by anti-sniping (max 3) */

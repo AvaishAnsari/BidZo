@@ -125,3 +125,21 @@ export async function fetchLiveAuctions(): Promise<Auction[]> {
 
   return (data ?? []) as unknown as Auction[];
 }
+
+/**
+ * Triggers the atomic backend winner settlement algorithm.
+ * Guarantees race-condition proof evaluations by strictly locking 
+ * the target row on the PostgreSQL level immediately upon execution.
+ */
+export async function closeAuctionRPC(auctionId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const { error } = await supabase.rpc('close_auction', { p_auction_id: auctionId });
+    if (error) {
+       console.error('[auctionService] Atomic closure error:', error.message);
+       return { success: false, message: error.message };
+    }
+    return { success: true, message: 'Auction closed securely' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Unknown network error' };
+  }
+}
