@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { getValidatedNow } from '../utils/timeSync';
 
 export interface CountdownParts {
   days: number;
@@ -23,25 +24,23 @@ export interface UseCountdownResult {
 const ZERO_PARTS: CountdownParts = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
 function computeCountdown(endTime: string): { parts: CountdownParts; timeLeft: string; isEnded: boolean; isUrgent: boolean } {
-  const diff = new Date(endTime).getTime() - Date.now();
+  const diff = new Date(endTime).getTime() - getValidatedNow();
 
   if (diff <= 0) {
-    return { parts: ZERO_PARTS, timeLeft: 'Ended', isEnded: true, isUrgent: false };
+    return { parts: ZERO_PARTS, timeLeft: '00:00:00', isEnded: true, isUrgent: false };
   }
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const totalHours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-  let timeLeft: string;
-  if (days > 0) {
-    timeLeft = `${days}d ${hours}h ${minutes}m`;
-  } else if (hours > 0) {
-    timeLeft = `${hours}h ${minutes}m ${seconds}s`;
-  } else {
-    timeLeft = `${minutes}m ${seconds}s`;
-  }
+  const hh = totalHours.toString().padStart(2, '0');
+  const mm = minutes.toString().padStart(2, '0');
+  const ss = seconds.toString().padStart(2, '0');
+
+  const timeLeft = `${hh}:${mm}:${ss}`;
 
   const isUrgent = diff <= 5 * 60 * 1000; // < 5 minutes
 

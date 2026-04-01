@@ -1,83 +1,108 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../utils/supabase';
+import toast from 'react-hot-toast';
 
 export function useWatchlist() {
   const { user } = useAuth();
-  
-  // Use a fallback key if anonymous, though typically tied to user.id
-  const storageKey = `bidzo_watchlist_${user?.id || 'guest'}`;
-
   const [watchedIds, setWatchedIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from local storage on mount
+  // Fetch initial watchlist from DB
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        setWatchedIds(JSON.parse(stored));
-      } else {
+    async function loadWatchlist() {
+      if (!user) {
         setWatchedIds([]);
+        setIsLoaded(true);
+        return;
       }
-    } catch (e) {
-      console.error('Failed to parse watchlist from storage', e);
-    }
-    setIsLoaded(true);
-  }, [storageKey]);
 
-  // Save to local storage whenever watchedIds change (after initial load)
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(storageKey, JSON.stringify(watchedIds));
-      
-      // Optional: dispatch a custom event to sync across tabs/components
-      window.dispatchEvent(new Event('watchlistUpdated'));
-    }
-  }, [watchedIds, isLoaded, storageKey]);
+      if (isSupabaseConfigured()) {
+        try {
+          const { data, error } = await supabase
+            .from('watchlist')
+            .select('auction_id')
+            .eq('user_id', user.id);
 
-  // Sync across tabs/components in same window
-  useEffect(() => {
-    const handleSync = () => {
-      try {
-        const stored = localStorage.getItem(storageKey);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          // Only update if different
-          if (JSON.stringify(parsed) !== JSON.stringify(watchedIds)) {
-            setWatchedIds(parsed);
+          if (error) throw error;
+          
+          if (data) {
+            setWatchedIds(data.map(item => item.auction_id));
           }
+        } catch (error) {
+          console.error("Failed to load watchlist from Supabase:", error);
         }
-      } catch (e) {
-        // Safe fail
+      }
+      setIsLoaded(true);
+    }
+
+    loadWatchlist();
+  }, [user]);
+
+  // Sync mechanism across components
+  useEffect(() => {
+    const handleSync = (e: any) => {
+      // Sync local state if a custom event was fired
+      if (e.detail && Array.isArray(e.detail)) {
+        setWatchedIds(e.detail);
       }
     };
     window.addEventListener('watchlistUpdated', handleSync);
-    window.addEventListener('storage', handleSync); // For true multi-tab
-    return () => {
-      window.removeEventListener('watchlistUpdated', handleSync);
-      window.removeEventListener('storage', handleSync);
-    };
-  }, [storageKey, watchedIds]);
+    return () => window.removeEventListener('watchlistUpdated', handleSync);
+  }, []);
 
-  const addToWatchlist = (auctionId: string) => {
-    setWatchedIds(prev => {
-      if (!prev.includes(auctionId)) {
-        return [...prev, auctionId];
+  const syncAcrossTabs = (newIds: string[]) => {
+    window.dispatchEvent(new CustomEvent('watchlistUpdated', { detail: newIds }));
+  };
+
+  const toggleWatchlist = async (auctionId: string) => {
+    if (!user) {
+      toast.error('Please log in to manage your watchlist');
+      return;
+    }
+
+    const previouslyWatched = watchedIds.includes(auctionId);
+    
+    // 1. Optimistic UI update instantly!
+    const updatedIds = previouslyWatched
+      ? watchedIds.filter(id => id !== auctionId)
+      : [...watchedIds, auctionId];
+      
+    setWatchedIds(updatedIds);
+    syncAcrossTabs(updatedIds);
+
+    // 2. Database Sync
+    if (isSupabaseConfigured()) {
+      try {
+        if (previouslyWatched) {
+          // Remove from DB
+          const { error } = await supabase
+            .from('watchlist')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('auction_id', auctionId);
+            
+          if (error) throw error;
+        } else {
+          // Add to DB
+          const { error } = await supabase
+            .from('watchlist')
+            .insert({ user_id: user.id, auction_id: auctionId });
+            
+          if (error) throw error;
+          toast.success('Added to Watchlist!', { icon: '❤️' });
+        }
+      } catch (error: any) {
+        console.error("Watchlist sync error:", error);
+        // Rollback state if DB request failed securely
+        toast.error('Failed to sync watchlist. Reverting changes.');
+        setWatchedIds(watchedIds); // Revert to old state
+        syncAcrossTabs(watchedIds);
       }
-      return prev;
-    });
-  };
-
-  const removeFromWatchlist = (auctionId: string) => {
-    setWatchedIds(prev => prev.filter(id => id !== auctionId));
-  };
-
-  const toggleWatchlist = (auctionId: string) => {
-    setWatchedIds(prev => 
-      prev.includes(auctionId) 
-        ? prev.filter(id => id !== auctionId)
-        : [...prev, auctionId]
-    );
+    } else {
+      // Offline fallback
+      if (!previouslyWatched) toast.success('Added locally! ❤️');
+    }
   };
 
   const isWatched = (auctionId: string): boolean => {
@@ -86,8 +111,6 @@ export function useWatchlist() {
 
   return {
     watchedIds,
-    addToWatchlist,
-    removeFromWatchlist,
     toggleWatchlist,
     isWatched,
     isLoaded

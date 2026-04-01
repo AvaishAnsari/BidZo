@@ -8,10 +8,18 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { CreateAuction } from './pages/CreateAuction';
 import { AuctionDetail } from './pages/AuctionDetail';
+import { WatchlistPage } from './pages/WatchlistPage';
+import { ProfilePage } from './pages/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SupabaseStatus } from './components/SupabaseStatus';
+import { syncServerTime } from './utils/timeSync';
+import { useEffect } from 'react';
 
 function App() {
+  useEffect(() => {
+    syncServerTime();
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
@@ -40,6 +48,8 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="auctions"      element={<Home />} />
               <Route path="auction/:id"   element={<AuctionDetail />} />
+              <Route path="watchlist"     element={<WatchlistPage />} />
+              <Route path="profile"       element={<ProfilePage />} />
             </Route>
 
             {/* Sellers only */}

@@ -5,6 +5,7 @@ import type { Auction } from '../types';
 import { formatCurrency } from '../utils/format';
 import { useCountdown } from '../hooks/useCountdown';
 import { useWatchlist } from '../hooks/useWatchlist';
+import { useAuth } from '../context/AuthContext';
 import { VerifiedBadge, SellerRating } from './TrustBadges';
 import { motion } from 'framer-motion';
 
@@ -16,8 +17,10 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   // Live countdown — ticks every second
   const { timeLeft, isEnded: countdownEnded, isUrgent } = useCountdown(auction.end_time);
   const { isWatched, toggleWatchlist } = useWatchlist();
+  const { user } = useAuth();
 
   const isWatchedItem = isWatched(auction.id);
+  const isOwnAuction = user?.id === auction.seller_id;
   const isEnded = countdownEnded || auction.status === 'ended';
   const isUpcoming =
     !isEnded &&
@@ -169,19 +172,25 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <TrendingUp style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
-              <span style={{
-                fontSize: '1.3rem', fontWeight: 800,
-                background: 'linear-gradient(to right, #818cf8, #c084fc)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>
+              <motion.span
+                key={auction.current_price}
+                initial={{ filter: 'brightness(2) drop-shadow(0 0 10px rgba(52, 211, 153, 0.8))', color: '#34d399' }}
+                animate={{ filter: 'brightness(1) drop-shadow(0 0 0px rgba(52, 211, 153, 0))', color: '#f3f4f6' }}
+                transition={{ duration: 1.5, ease: 'easeOut' }}
+                style={{
+                  fontSize: '1.3rem', fontWeight: 800,
+                  background: 'linear-gradient(to right, #818cf8, #c084fc)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}
+              >
                 {formatCurrency(auction.current_price)}
-              </span>
+              </motion.span>
             </div>
           </div>
 
           <Link
             to={`/auction/${auction.id}`}
-            className={isEnded ? '' : 'btn-gradient'}
+            className={isEnded ? '' : isOwnAuction ? '' : 'btn-gradient'}
             style={{
               display: 'inline-block',
               padding: '0.55rem 1.1rem',
@@ -194,10 +203,15 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
                 background: 'rgba(31,41,55,0.6)',
                 color: '#6b7280',
                 border: '1px solid rgba(55,65,81,0.5)',
+              } : isOwnAuction ? {
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                color: '#ffffff',
+                border: '1px solid rgba(59,130,246,0.5)',
+                boxShadow: '0 0 15px rgba(59,130,246,0.2)',
               } : {}),
             }}
           >
-            {isEnded ? 'View Results' : 'Place Bid →'}
+            {isEnded ? 'View Results' : isOwnAuction ? 'Manage Auction' : 'Place Bid →'}
           </Link>
         </div>
       </div>

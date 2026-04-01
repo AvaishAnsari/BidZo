@@ -9,10 +9,11 @@ import { generateMockTxHash, shortenTxHash, copyToClipboard } from '../utils/blo
 import { placeBidRPC } from '../services/bidService';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { placeBid as localPlaceBid, emitBidEvent, extendAuctionTime } from '../utils/localStore';
+import { initializeRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
 import {
   Loader2, Clock, TrendingUp, ArrowLeft, Gavel,
-  AlertCircle, CheckCircle2, Trophy, RefreshCw, Zap, Bell, Heart, Copy, ShieldCheck
+  AlertCircle, Trophy, RefreshCw, Zap, Bell, Copy, ShieldCheck, CreditCard
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,7 +53,7 @@ const SNIPE_MAX        = 3;       // max extensions
 export const AuctionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const { isWatched, toggleWatchlist } = useWatchlist();
 
   const {
@@ -70,6 +71,7 @@ export const AuctionDetail = () => {
 
   const [bidAmount, setBidAmount]     = useState('');
   const [isPlacingBid, setIsPlacingBid] = useState(false);
+  const [isPaid, setIsPaid]             = useState(false);
 
   // ── Step 4: Winning / Outbid state ─────────────────────────────────────────
   const isOwnAuction = !!(user && auction && auction.seller_id === user.id);
@@ -156,9 +158,9 @@ export const AuctionDetail = () => {
       navigate('/login');
       return;
     }
-    // Sellers cannot bid — especially on their own auctions
-    if (userRole === 'seller') {
-      toast.error('Sellers cannot place bids. Switch to a Buyer account to bid.');
+    // Sellers cannot bid on their own auctions
+    if (isOwnAuction) {
+      toast.error('You cannot place a bid on your own auction.');
       return;
     }
     if (!auction) return;
@@ -217,6 +219,17 @@ export const AuctionDetail = () => {
     } finally {
       setIsPlacingBid(false);
     }
+  };
+
+  const handlePayment = () => {
+    if (!auction || !user) return;
+    initializeRazorpayCheckout({
+      amount: auction.current_price,
+      auctionTitle: auction.title,
+      userEmail: user.email ?? 'buyer@bidzo.com',
+      userName: user.email?.split('@')[0] || 'Valued Bidder',
+      onSuccess: () => setIsPaid(true),
+    });
   };
 
   // ── Derived: is auction ending soon? (< 5 mins) ──────────────────────
@@ -412,23 +425,48 @@ export const AuctionDetail = () => {
                 <TrendingUp style={{ width: '0.875rem', height: '0.875rem', color: '#818cf8' }} />
                 Current Bid
               </p>
-              <AnimatePresence mode="wait">
+              <div style={{ position: 'relative', display: 'inline-block' }}>
                 <motion.p
                   key={auction.current_price}
-                  initial={{ scale: 0.8, opacity: 0, y: -8 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 1.1, opacity: 0, y: 8 }}
-                  transition={{ duration: 0.3, type: 'spring', stiffness: 300 }}
+                  initial={{ scale: 1.15, filter: 'brightness(2) drop-shadow(0 0 15px rgba(52, 211, 153, 0.9))' }}
+                  animate={{ scale: 1, filter: 'brightness(1) drop-shadow(0 0 0px rgba(52, 211, 153, 0))' }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
                   style={{
                     fontSize: '2.75rem', fontWeight: 900,
                     background: 'linear-gradient(to right, #818cf8, #c084fc)',
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                     lineHeight: 1,
+                    margin: 0,
                   }}
                 >
                   {formatCurrency(auction.current_price)}
                 </motion.p>
-              </AnimatePresence>
+                {/* Floating "NEW BID" Indicator */}
+                <motion.div
+                  key={`badge-${auction.current_price}`}
+                  initial={{ opacity: 1, y: -10, scale: 0.8 }}
+                  animate={{ opacity: 0, y: -40, scale: 1.1 }}
+                  transition={{ duration: 1.5, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute',
+                    top: '-15px',
+                    right: '-20px',
+                    background: 'rgba(52, 211, 153, 0.2)',
+                    border: '1px solid rgba(52, 211, 153, 0.5)',
+                    color: '#34d399',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    boxShadow: '0 0 10px rgba(52, 211, 153, 0.3)',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}
+                >
+                  New Bid 🔥
+                </motion.div>
+              </div>
 
               {/* ── Step 4: Winning / Outbid indicator ───────────────── */}
               {user && bids.length > 0 && (
@@ -510,21 +548,50 @@ export const AuctionDetail = () => {
             {/* Ended Banner */}
             {isEnded && (
               <div style={{
-                background: 'rgba(239,68,68,0.08)',
-                border: '1px solid rgba(239,68,68,0.25)',
+                background: isWinning ? (isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(99, 102, 241, 0.1)') : 'rgba(239, 68, 68, 0.08)',
+                border: `1px solid ${isWinning ? (isPaid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(99, 102, 241, 0.4)') : 'rgba(239, 68, 68, 0.25)'}`,
                 borderRadius: '1rem', padding: '1.25rem',
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                display: 'flex', flexDirection: 'column', gap: '1rem',
               }}>
-                <Trophy style={{ width: '1.5rem', height: '1.5rem', color: '#fbbf24', flexShrink: 0 }} />
-                <div>
-                  <p style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.95rem' }}>Auction Ended</p>
-                  <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.15rem' }}>Final price: {formatCurrency(auction.current_price)}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Trophy style={{ width: '1.5rem', height: '1.5rem', color: isWinning ? (isPaid ? '#4ade80' : '#818cf8') : '#fbbf24', flexShrink: 0 }} />
+                  <div>
+                    <p style={{ color: isWinning ? (isPaid ? '#4ade80' : '#818cf8') : '#fbbf24', fontWeight: 700, fontSize: '0.95rem' }}>
+                      {isWinning ? (isPaid ? 'Payment Settled ✅' : 'You Won This Auction! 🎉') : 'Auction Ended'}
+                    </p>
+                    <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                      Final price: {formatCurrency(auction.current_price)}
+                    </p>
+                  </div>
                 </div>
+
+                {isWinning && !isPaid && (
+                  <button
+                    onClick={handlePayment}
+                    className="btn-gradient"
+                    style={{
+                      width: '100%', padding: '0.85rem',
+                      borderRadius: '0.75rem', border: 'none', cursor: 'pointer',
+                      fontSize: '0.95rem', fontWeight: 700, color: 'white',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                      boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                    }}
+                  >
+                    <CreditCard style={{ width: '1.1rem', height: '1.1rem' }} />
+                    Pay Escrow Securely
+                  </button>
+                )}
+                
+                {isWinning && isPaid && (
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#4ade80', textAlign: 'center', fontWeight: 600 }}>
+                    Your item is being prepared for shipment.
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Bid Form — only for buyers, not for the auction's own seller */}
-            {!isEnded && !isUpcoming && userRole !== 'seller' && (
+            {/* Bid Form — for users who do not own the auction */}
+            {!isEnded && !isUpcoming && !isOwnAuction && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
                   <Gavel style={{ width: '1.125rem', height: '1.125rem', color: '#818cf8' }} />
@@ -618,7 +685,7 @@ export const AuctionDetail = () => {
             )}
 
             {/* Seller owns this listing — show info panel instead of bid form */}
-            {!isEnded && !isUpcoming && userRole === 'seller' && (
+            {!isEnded && !isUpcoming && isOwnAuction && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{
@@ -629,17 +696,14 @@ export const AuctionDetail = () => {
                   }}>🏷️</div>
                   <div>
                     <p style={{ color: '#d8b4fe', fontWeight: 700, fontSize: '0.95rem', margin: 0 }}>
-                      {isOwnAuction ? 'Your Listing' : 'Seller Account'}
+                      Your Listing Dashboard
                     </p>
                     <p style={{ color: '#6b7280', fontSize: '0.78rem', marginTop: '0.1rem' }}>
-                      {isOwnAuction
-                        ? 'You created this auction. Sellers cannot bid on their own listings.'
-                        : 'Sellers cannot place bids. Register a Buyer account to bid.'}
+                      You created this auction. Sellers cannot bid on their own listings.
                     </p>
                   </div>
                 </div>
-                {isOwnAuction && (
-                  <div style={{
+                <div style={{
                     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem',
                     paddingTop: '1rem', borderTop: '1px solid rgba(55,65,81,0.4)',
                   }}>
@@ -652,7 +716,6 @@ export const AuctionDetail = () => {
                       <p style={{ color: '#a5b4fc', fontWeight: 800, fontSize: '1rem' }}>{formatCurrency(auction.current_price)}</p>
                     </div>
                   </div>
-                )}
               </div>
             )}
             {isUpcoming && (

@@ -24,6 +24,7 @@ export const Layout = () => {
 
   const navLinks = [
     { name: 'Auctions', path: '/auctions' },
+    ...(user ? [{ name: 'Watchlist', path: '/watchlist' }] : []),
     ...(userRole === 'seller' ? [{ name: 'Create Auction', path: '/create-auction' }] : [])
   ];
 
@@ -103,33 +104,39 @@ export const Layout = () => {
 
               {user ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(55,65,81,0.6)' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.8rem',
-                    color: '#d1d5db',
-                    background: 'rgba(31,41,55,0.6)',
-                    border: '1px solid rgba(55,65,81,0.5)',
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: '9999px',
-                  }}>
-                    <UserIcon style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
-                    <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName ?? user.email}</span>
-                    <span style={{
-                      background: 'rgba(99,102,241,0.2)',
-                      color: '#a5b4fc',
-                      border: '1px solid rgba(99,102,241,0.3)',
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                      padding: '0.15rem 0.5rem',
+                  <Link to="/profile" style={{ textDecoration: 'none' }}>
+                    <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.8rem',
+                      color: '#d1d5db',
+                      background: 'rgba(31,41,55,0.6)',
+                      border: '1px solid rgba(55,65,81,0.5)',
+                      padding: '0.4rem 0.75rem',
                       borderRadius: '9999px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      cursor: 'pointer',
                     }}>
-                      {userRole}
-                    </span>
-                  </div>
+                      <UserIcon style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
+                      <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName ?? user.email}</span>
+                      <span style={{
+                        background: 'rgba(99,102,241,0.2)',
+                        color: '#a5b4fc',
+                        border: '1px solid rgba(99,102,241,0.3)',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '9999px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}>
+                        {userRole}
+                      </span>
+                    </motion.div>
+                  </Link>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
