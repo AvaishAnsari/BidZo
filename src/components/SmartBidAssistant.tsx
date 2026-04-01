@@ -50,7 +50,7 @@ export const SmartBidAssistant: React.FC<SmartBidAssistantProps> = ({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-        {suggestions.map((sug, idx) => {
+        {suggestions.map((sug) => {
           let badgeColor = '';
           let glowColor = '';
           if (sug.type === 'Conservative') {
