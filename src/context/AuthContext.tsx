@@ -49,6 +49,8 @@ export interface AuthContextType {
   ) => Promise<{ error: string | null }>;
   /** Sign out the current user */
   signOut: () => Promise<void>;
+  /** Sign in with Google OAuth */
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   /** Whether Supabase credentials are configured */
   isConfigured: boolean;
 }
@@ -153,11 +155,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           setUserName(session.user.user_metadata?.name ?? null);
+          
+          // Ensure Google/OAuth users have a profile in the public 'users' table
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            const { data: existingProfile } = await supabase
+              .from('users')
+              .select('id')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (!existingProfile) {
+              const { error: insertError } = await supabase.from('users').insert({
+                id: session.user.id,
+                email: session.user.email,
+                name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Google User',
+                role: 'buyer' // Default role for OAuth users
+              });
+              if (insertError) console.warn('[AuthContext] Profile auto-create failed:', insertError.message);
+            }
+          }
+
           await fetchUserRole(session.user.id);
         } else {
           setUserRole(null);
@@ -277,6 +299,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
+  // ── signInWithGoogle ───────────────────────────────────────────────────────
+  const signInWithGoogle = useCallback(async (): Promise<{ error: string | null }> => {
+    if (!isSupabaseConfigured()) {
+      return { error: 'Google Auth is not available in offline mode.' };
+    }
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    
+    if (error) return { error: error.message };
+    return { error: null };
+  }, []);
+
   // ── signOut ───────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -301,6 +340,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         userName,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut,
         isConfigured: isSupabaseConfigured(),
       }}

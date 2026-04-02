@@ -139,6 +139,7 @@ DECLARE
   v_current_price DECIMAL;
   v_min_bid DECIMAL;
   v_error_msg TEXT;
+  v_top_bidder_id UUID;
 BEGIN
   -- Fetch auction
   SELECT * INTO v_auction FROM auctions WHERE id = p_auction_id;
@@ -170,6 +171,12 @@ BEGIN
   -- Check if user is not the seller
   IF auth.uid() = v_auction.seller_id THEN
     RETURN jsonb_build_object('success', false, 'error', 'Seller cannot bid on own auction');
+  END IF;
+
+  -- Check if user is already the highest bidder
+  SELECT user_id INTO v_top_bidder_id FROM bids WHERE auction_id = p_auction_id ORDER BY amount DESC LIMIT 1;
+  IF v_top_bidder_id = auth.uid() THEN
+    RETURN jsonb_build_object('success', false, 'error', 'You already have the highest bid');
   END IF;
 
   -- Insert bid

@@ -88,6 +88,30 @@ export async function fetchBids(auctionId: string): Promise<BidRecord[]> {
 }
 
 /**
+ * Fetch ALL bids for an auction (newest first).
+ * Used for the Bid History modal.
+ */
+export async function fetchAllBids(auctionId: string): Promise<BidRecord[]> {
+  const { data, error } = await supabase
+    .from('bids')
+    .select('id, amount, created_at, users(email)')
+    .eq('auction_id', auctionId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[auctionService] fetchAllBids error:', error.message);
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((b: any) => ({
+    id: b.id,
+    amount: Number(b.amount),
+    created_at: b.created_at,
+    user_email: b.users?.email ?? 'Anonymous',
+  }));
+}
+
+/**
  * Mark an auction as 'ended'.
  * RLS on the server enforces that only the seller can do this.
  */

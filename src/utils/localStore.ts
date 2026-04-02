@@ -226,6 +226,22 @@ export function getBidsForAuction(auctionId: string): Bid[] {
 }
 
 export function placeBid(bid: Omit<Bid, 'id' | 'placedAt'>): Bid {
+  const auctions = loadAuctions();
+  const idx = auctions.findIndex(a => a.id === bid.auctionId);
+  if (idx < 0) throw new Error('Auction not found');
+
+  const auction = auctions[idx];
+  const minBid = auction.current_price + auction.min_increment;
+  
+  if (bid.amount < minBid) {
+    throw new Error(`Bid must be at least ${minBid} (current price + min increment)`);
+  }
+
+  const existingBids = getBidsForAuction(bid.auctionId);
+  if (existingBids.length > 0 && existingBids[0].bidderId === bid.bidderId) {
+    throw new Error('You already have the highest bid');
+  }
+
   const newBid: Bid = {
     ...bid,
     id: `bid-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -237,12 +253,8 @@ export function placeBid(bid: Omit<Bid, 'id' | 'placedAt'>): Bid {
   saveBids(bids);
 
   // Update auction current price
-  const auctions = loadAuctions();
-  const idx = auctions.findIndex(a => a.id === bid.auctionId);
-  if (idx >= 0) {
-    auctions[idx].current_price = bid.amount;
-    saveAuctions(auctions);
-  }
+  auctions[idx].current_price = bid.amount;
+  saveAuctions(auctions);
 
   return newBid;
 }

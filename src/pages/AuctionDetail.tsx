@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BidHistoryModal } from '../components/BidHistoryModal';
 
 // ── Sub-component: single countdown tile ─────────────────────────
 const TimeBlock = ({ value, label, urgent }: { value: number; label: string; urgent?: boolean }) => (
@@ -73,6 +74,7 @@ export const AuctionDetail = () => {
   const [bidAmount, setBidAmount]     = useState('');
   const [isPlacingBid, setIsPlacingBid] = useState(false);
   const [isPaid, setIsPaid]             = useState(false);
+  const [isBidHistoryModalOpen, setIsBidHistoryModalOpen] = useState(false);
 
   // ── Step 4: Winning / Outbid state ─────────────────────────────────────────
   const isOwnAuction = !!(user && auction && auction.seller_id === user.id);
@@ -180,6 +182,11 @@ export const AuctionDetail = () => {
     // Sellers cannot bid on their own auctions
     if (isOwnAuction) {
       toast.error('You cannot place a bid on your own auction.');
+      return;
+    }
+    // Prevent submitting bid against self
+    if (isWinning) {
+      toast.error('You already have the highest bid');
       return;
     }
     if (!auction) return;
@@ -644,14 +651,15 @@ export const AuctionDetail = () => {
                 )}
 
                 <form onSubmit={handlePlaceBid}>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
-                      Your Bid Amount <span style={{ color: '#818cf8' }}>— min {formatCurrency(minBid)}</span>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                      <span>Your Bid Amount</span>
+                      <span style={{ color: '#818cf8', fontWeight: 600 }}>Min {formatCurrency(minBid)}</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <span style={{
                         position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)',
-                        color: '#818cf8', fontWeight: 700, fontSize: '0.9rem',
+                        color: isWinning ? '#4b5563' : '#818cf8', fontWeight: 700, fontSize: '0.9rem',
                       }}>₹</span>
                       <input
                         type="number"
@@ -663,38 +671,70 @@ export const AuctionDetail = () => {
                         placeholder={String(minBid)}
                         style={{
                           width: '100%', padding: '0.85rem 1rem 0.85rem 2rem',
-                          background: 'rgba(17,24,39,0.7)',
-                          border: '1px solid rgba(75,85,99,0.6)',
-                          borderRadius: '0.75rem', color: 'white',
+                          background: isWinning ? 'rgba(17,24,39,0.3)' : 'rgba(17,24,39,0.7)',
+                          border: `1px solid ${isWinning ? 'rgba(75,85,99,0.3)' : 'rgba(75,85,99,0.6)'}`,
+                          borderRadius: '0.75rem', color: isWinning ? '#6b7280' : 'white',
                           fontSize: '1rem', fontWeight: 600,
                           outline: 'none', boxSizing: 'border-box',
                           transition: 'border-color 0.2s',
+                          cursor: isWinning ? 'not-allowed' : 'text',
                         }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.7)'}
-                        onBlur={e  => e.target.style.borderColor = 'rgba(75,85,99,0.6)'}
-                        disabled={!user || isPlacingBid}
+                        onFocus={e => { if (!isWinning) e.target.style.borderColor = 'rgba(99,102,241,0.7)'; }}
+                        onBlur={e  => { if (!isWinning) e.target.style.borderColor = 'rgba(75,85,99,0.6)'; }}
+                        disabled={!user || isPlacingBid || isWinning}
                       />
                     </div>
+                    {/* Real-time frontend validation feedback */}
+                    <AnimatePresence>
+                      {isWinning && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          style={{ marginTop: '0.5rem', color: '#4ade80', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <Trophy style={{ width: '0.75rem', height: '0.75rem' }} />
+                          You already have the highest bid!
+                        </motion.div>
+                      )}
+                      {!isWinning && bidAmount !== '' && (parseFloat(bidAmount) < minBid || isNaN(parseFloat(bidAmount))) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          style={{ marginTop: '0.5rem', color: '#f87171', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <AlertCircle style={{ width: '0.75rem', height: '0.75rem' }} />
+                          Amount must be at least {formatCurrency(minBid)}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <motion.button
                     type="submit"
-                    disabled={!user || isPlacingBid}
-                    whileHover={{ scale: user ? 1.02 : 1 }}
-                    whileTap={{ scale: user ? 0.97 : 1 }}
+                    disabled={!user || isPlacingBid || isWinning || (bidAmount !== '' && parseFloat(bidAmount) < minBid)}
+                    whileHover={{ scale: (!user || isPlacingBid || isWinning) ? 1 : 1.02 }}
+                    whileTap={{ scale: (!user || isPlacingBid || isWinning) ? 1 : 0.97 }}
                     style={{
                       width: '100%', padding: '0.9rem',
-                      background: user ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'rgba(55,65,81,0.5)',
-                      color: 'white', border: 'none',
-                      borderRadius: '0.75rem', cursor: user ? 'pointer' : 'not-allowed',
+                      background: isWinning 
+                        ? 'rgba(34,197,94,0.1)' 
+                        : user && !(bidAmount !== '' && parseFloat(bidAmount) < minBid) 
+                          ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' 
+                          : 'rgba(55,65,81,0.5)',
+                      color: isWinning ? '#4ade80' : (user && !(bidAmount !== '' && parseFloat(bidAmount) < minBid) ? 'white' : '#9ca3af'), 
+                      border: isWinning ? '1px solid rgba(34,197,94,0.3)' : 'none',
+                      borderRadius: '0.75rem', 
+                      cursor: (!user || isPlacingBid || isWinning || (bidAmount !== '' && parseFloat(bidAmount) < minBid)) ? 'not-allowed' : 'pointer',
                       fontSize: '0.95rem', fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                      boxShadow: user ? '0 0 20px rgba(99,102,241,0.35)' : 'none',
-                      transition: 'box-shadow 0.2s',
+                      boxShadow: (!user || isPlacingBid || isWinning || (bidAmount !== '' && parseFloat(bidAmount) < minBid)) ? 'none' : '0 0 20px rgba(99,102,241,0.35)',
+                      transition: 'all 0.2s',
                     }}
                   >
                     {isPlacingBid ? (
                       <><Loader2 style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} /> Placing Bid...</>
+                    ) : isWinning ? (
+                      <><Trophy style={{ width: '1rem', height: '1rem' }} /> Top Bidder</>
                     ) : (
                       <><Gavel style={{ width: '1rem', height: '1rem' }} /> Place Bid</>
                     )}
@@ -761,16 +801,41 @@ export const AuctionDetail = () => {
                   Transparent Bid Ledger 🔗
                 </h3>
                 {bids.length > 0 && (
-                  <span style={{
-                    fontSize: '0.7rem', fontWeight: 600,
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    color: '#34d399',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '9999px',
-                    padding: '0.2rem 0.6rem',
-                  }}>
-                    Top {Math.min(bids.length, 10)}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{
+                      fontSize: '0.7rem', fontWeight: 600,
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      color: '#34d399',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '9999px',
+                      padding: '0.2rem 0.6rem',
+                    }}>
+                      Top {Math.min(bids.length, 10)}
+                    </span>
+                    <button 
+                      onClick={() => setIsBidHistoryModalOpen(true)}
+                      style={{
+                        fontSize: '0.75rem', fontWeight: 600,
+                        background: 'rgba(99, 102, 241, 0.15)',
+                        color: '#a5b4fc',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        borderRadius: '0.5rem',
+                        padding: '0.25rem 0.75rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseOver={(e) => { 
+                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.25)'; 
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseOut={(e) => { 
+                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)'; 
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    >
+                      View All Bids
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -890,6 +955,13 @@ export const AuctionDetail = () => {
           </motion.div>
         </div>
       </div>
+
+      <BidHistoryModal 
+        isOpen={isBidHistoryModalOpen} 
+        onClose={() => setIsBidHistoryModalOpen(false)} 
+        auctionId={id ?? ''} 
+        currentUserEmail={user?.email} 
+      />
     </div>
   );
 };
