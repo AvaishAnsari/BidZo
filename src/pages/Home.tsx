@@ -2,9 +2,11 @@ import { useAuctions } from '../hooks/useAuctions';
 import { AuctionCard } from '../components/AuctionCard';
 import { Loader2, Zap, RefreshCw, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../context/ThemeContext';
 
 export const Home = () => {
   const { auctions, isLoading, error, refetch } = useAuctions();
+  const { isDark } = useTheme();
 
   const trendingAuctions = [...auctions]
     .filter(a => a.status === 'live')
@@ -49,7 +51,7 @@ export const Home = () => {
             fontWeight: 900,
             letterSpacing: '-0.035em',
             lineHeight: 1.08,
-            color: '#ffffff',
+            color: isDark ? '#ffffff' : '#111827',
             position: 'relative', zIndex: 1,
           }}
         >
@@ -70,7 +72,7 @@ export const Home = () => {
         {/* Sub-text */}
         <p style={{
           fontSize: 'clamp(1rem, 2vw, 1.2rem)',
-          color: '#9ca3af',
+          color: isDark ? '#9ca3af' : '#4b5563',
           maxWidth: '42rem',
           margin: '0 auto',
           fontWeight: 300,
@@ -113,10 +115,10 @@ export const Home = () => {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
               padding: '0.65rem 1.5rem',
-              background: 'rgba(99,102,241,0.15)',
+              background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
               border: '1px solid rgba(99,102,241,0.4)',
               borderRadius: '0.75rem',
-              color: '#a5b4fc', fontWeight: 600, fontSize: '0.875rem',
+              color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600, fontSize: '0.875rem',
               cursor: 'pointer',
             }}
           >
@@ -134,7 +136,7 @@ export const Home = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <Flame style={{ width: '1.5rem', height: '1.5rem', color: '#ef4444' }} />
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f3f4f6' }}>Trending Now</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#f3f4f6' : '#111827' }}>Trending Now</h2>
                 <span className="badge-urgent" style={{ marginLeft: 'auto', animation: 'none' }}>Ending Soon</span>
               </div>
               <div style={{
@@ -161,7 +163,7 @@ export const Home = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#e5e7eb' }}>All Live Auctions</h2>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#e5e7eb' : '#111827' }}>All Live Auctions</h2>
             </div>
             <div style={{
               display: 'grid',
@@ -197,10 +199,10 @@ export const Home = () => {
           }}
         >
           <div style={{ fontSize: '3.5rem', marginBottom: '1.25rem' }}>🎨</div>
-          <h3 style={{ color: '#e5e7eb', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+          <h3 style={{ color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>
             No active auctions
           </h3>
-          <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+          <p style={{ color: isDark ? '#6b7280' : '#4b5563', fontSize: '1rem' }}>
             The gallery is currently empty. Be the first to create one!
           </p>
         </motion.div>

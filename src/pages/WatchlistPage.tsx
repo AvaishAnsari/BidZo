@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuctions } from '../hooks/useAuctions';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { AuctionCard } from '../components/AuctionCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Loader2, ArrowRight } from 'lucide-react';
@@ -9,6 +10,7 @@ import { Link, Navigate } from 'react-router-dom';
 
 export const WatchlistPage: React.FC = () => {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const { auctions, isLoading: auctionsLoading } = useAuctions();
   const { watchedIds, isLoaded: watchlistLoaded } = useWatchlist();
 
@@ -32,8 +34,8 @@ export const WatchlistPage: React.FC = () => {
           <Heart style={{ width: '1.5rem', height: '1.5rem', color: '#ef4444', fill: '#ef4444' }} />
         </div>
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, color: '#f3f4f6' }}>Your Watchlist</h1>
-          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.9rem', marginTop: '0.1rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, color: isDark ? '#f3f4f6' : '#111827' }}>Your Watchlist</h1>
+          <p style={{ margin: 0, color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.9rem', marginTop: '0.1rem' }}>
             Tracked items auto-update with real-time bids
           </p>
         </div>
@@ -84,14 +86,14 @@ export const WatchlistPage: React.FC = () => {
           }}
         >
           <div style={{ 
-            width: '4rem', height: '4rem', borderRadius: '50%', background: 'rgba(31, 41, 55, 0.8)',
+            width: '4rem', height: '4rem', borderRadius: '50%', background: isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(243, 244, 246, 0.8)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem',
-            border: '1px solid rgba(75, 85, 99, 0.5)'
+            border: isDark ? '1px solid rgba(75, 85, 99, 0.5)' : '1px solid rgba(209, 213, 219, 0.8)'
           }}>
-            <Heart style={{ width: '2rem', height: '2rem', color: '#6b7280' }} />
+            <Heart style={{ width: '2rem', height: '2rem', color: isDark ? '#6b7280' : '#9ca3af' }} />
           </div>
-          <h2 style={{ color: '#e5e7eb', fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Your watchlist is empty</h2>
-          <p style={{ color: '#9ca3af', maxWidth: '400px', lineHeight: 1.6, marginBottom: '2rem' }}>
+          <h2 style={{ color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Your watchlist is empty</h2>
+          <p style={{ color: isDark ? '#9ca3af' : '#6b7280', maxWidth: '400px', lineHeight: 1.6, marginBottom: '2rem' }}>
             Start building your dream collection by tapping the heart icon on any active auction card.
           </p>
           <Link to="/auctions" className="btn-gradient" style={{

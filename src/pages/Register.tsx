@@ -4,10 +4,12 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Mail, Lock, User, Briefcase, Gavel, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import type { UserRole } from '../context/AuthContext';
 
 export const Register = () => {
   const { signUp, signInWithGoogle, isConfigured } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const [name,     setName]     = useState('');
@@ -51,7 +53,7 @@ export const Register = () => {
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative w-full z-10">
       {/* Glow blob */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-64 bg-accent-500/10 blur-[100px] rounded-full -z-10 pointer-events-none" />
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-64 blur-[100px] rounded-full -z-10 pointer-events-none ${isDark ? 'bg-accent-500/10' : 'bg-pink-400/20'}`} />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -64,10 +66,10 @@ export const Register = () => {
           <div className="bg-gradient-to-br from-brand-500 to-accent-500 p-3 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.4)] mb-6 inline-block border border-white/10">
             <Gavel className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
+          <h2 className={`text-3xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Create an account
           </h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Join BidZo to start bidding and selling
           </p>
 
@@ -115,7 +117,11 @@ export const Register = () => {
             whileTap={{ scale: 0.99 }}
             onClick={handleGoogleLogin}
             disabled={loading || !isConfigured}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-gray-700 bg-gray-900/50 text-white font-medium hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              isDark 
+              ? 'border-gray-700 bg-gray-900/50 text-white hover:bg-gray-800' 
+              : 'border-gray-300 bg-white shadow-sm text-gray-800 hover:bg-gray-50'
+            }`}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -140,10 +146,10 @@ export const Register = () => {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700"></div>
+              <div className={`w-full border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-950 text-gray-500 rounded-full">Or continue with</span>
+              <span className={`px-2 rounded-full ${isDark ? 'bg-gray-950 text-gray-500' : 'bg-white text-gray-400'}`}>Or continue with</span>
             </div>
           </div>
 
@@ -152,7 +158,7 @@ export const Register = () => {
 
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Full Name</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-500" />
@@ -164,7 +170,11 @@ export const Register = () => {
                   autoComplete="name"
                   value={name}
                   onChange={(e) => { setName(e.target.value); setErrorMsg(null); }}
-                  className="pl-10 block w-full rounded-xl border border-gray-700 bg-gray-900/50 px-3 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner"
+                  className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
+                    isDark 
+                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                  }`}
                   placeholder="John Doe"
                 />
               </div>
@@ -172,7 +182,7 @@ export const Register = () => {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Email address</label>
+              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-500" />
@@ -184,7 +194,11 @@ export const Register = () => {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setErrorMsg(null); }}
-                  className="pl-10 block w-full rounded-xl border border-gray-700 bg-gray-900/50 px-3 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner"
+                  className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
+                    isDark 
+                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                  }`}
                   placeholder="you@email.com"
                 />
               </div>
@@ -192,7 +206,7 @@ export const Register = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-500" />
@@ -205,7 +219,11 @@ export const Register = () => {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
-                  className="pl-10 block w-full rounded-xl border border-gray-700 bg-gray-900/50 px-3 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner"
+                  className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
+                    isDark 
+                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                  }`}
                   placeholder="Min. 6 characters"
                 />
               </div>
@@ -213,7 +231,7 @@ export const Register = () => {
 
             {/* Role */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Account Type</label>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Account Type</label>
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
@@ -221,11 +239,11 @@ export const Register = () => {
                   onClick={() => setRole('buyer')}
                   className={`flex items-center justify-center px-4 py-3 border rounded-xl shadow-sm space-x-2 transition-all ${
                     role === 'buyer'
-                      ? 'border-brand-500 bg-brand-500/10 text-brand-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
-                      : 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800 focus:outline-none'
+                      ? 'border-brand-500 bg-brand-500/10 text-brand-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
+                      : (isDark ? 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800 focus:outline-none' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 focus:outline-none')
                   }`}
                 >
-                  <User className={`w-5 h-5 ${role === 'buyer' ? 'text-brand-400' : 'text-gray-500'}`} />
+                  <User className={`w-5 h-5 ${role === 'buyer' ? 'text-brand-500' : 'text-gray-500'}`} />
                   <span className="font-medium">Buyer</span>
                 </button>
 
@@ -235,11 +253,11 @@ export const Register = () => {
                   onClick={() => setRole('seller')}
                   className={`flex items-center justify-center px-4 py-3 border rounded-xl shadow-sm space-x-2 transition-all ${
                     role === 'seller'
-                      ? 'border-brand-500 bg-brand-500/10 text-brand-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
-                      : 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800 focus:outline-none'
+                      ? 'border-brand-500 bg-brand-500/10 text-brand-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
+                      : (isDark ? 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800 focus:outline-none' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 focus:outline-none')
                   }`}
                 >
-                  <Briefcase className={`w-5 h-5 ${role === 'seller' ? 'text-brand-400' : 'text-gray-500'}`} />
+                  <Briefcase className={`w-5 h-5 ${role === 'seller' ? 'text-brand-500' : 'text-gray-500'}`} />
                   <span className="font-medium">Seller</span>
                 </button>
               </div>
@@ -269,11 +287,11 @@ export const Register = () => {
       </div>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Already have an account?{' '}
             <Link
               to="/login"
-              className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+              className="font-semibold text-brand-500 hover:text-brand-400 transition-colors"
             >
               Sign in
             </Link>

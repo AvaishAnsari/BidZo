@@ -4,9 +4,11 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Mail, Lock, Gavel, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export const Login = () => {
   const { signIn, signInWithGoogle, isConfigured } = useAuth();
+  const { isDark } = useTheme();
   const navigate  = useNavigate();
   const location  = useLocation();
 
@@ -50,7 +52,7 @@ export const Login = () => {
       className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10 w-full"
     >
       {/* Glow blob */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-64 bg-brand-500/10 blur-[100px] rounded-full -z-10 pointer-events-none" />
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-64 blur-[100px] rounded-full -z-10 pointer-events-none ${isDark ? 'bg-brand-500/10' : 'bg-pink-400/20'}`} />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -63,10 +65,10 @@ export const Login = () => {
           <div className="bg-gradient-to-br from-brand-500 to-accent-500 p-3 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.4)] mb-6 inline-block border border-white/10">
             <Gavel className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
+          <h2 className={`text-3xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Welcome back
           </h2>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Sign in to your BidZo account to continue
           </p>
 
@@ -114,7 +116,11 @@ export const Login = () => {
             whileTap={{ scale: 0.99 }}
             onClick={handleGoogleLogin}
             disabled={loading || !isConfigured}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-gray-700 bg-gray-900/50 text-white font-medium hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              isDark 
+              ? 'border-gray-700 bg-gray-900/50 text-white hover:bg-gray-800' 
+              : 'border-gray-300 bg-white shadow-sm text-gray-800 hover:bg-gray-50'
+            }`}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -139,10 +145,10 @@ export const Login = () => {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700"></div>
+              <div className={`w-full border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-950 text-gray-500 rounded-full">Or continue with</span>
+              <span className={`px-2 rounded-full ${isDark ? 'bg-gray-950 text-gray-500' : 'bg-white text-gray-400'}`}>Or continue with</span>
             </div>
           </div>
 
@@ -150,7 +156,7 @@ export const Login = () => {
           <div className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Email address
               </label>
               <div className="relative">
@@ -164,7 +170,11 @@ export const Login = () => {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setErrorMsg(null); }}
-                  className="pl-10 block w-full rounded-xl border border-gray-700 bg-gray-900/50 px-3 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner"
+                  className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
+                    isDark 
+                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                  }`}
                   placeholder="you@email.com"
                 />
               </div>
@@ -172,7 +182,7 @@ export const Login = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Password
               </label>
               <div className="relative">
@@ -186,7 +196,11 @@ export const Login = () => {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
-                  className="pl-10 block w-full rounded-xl border border-gray-700 bg-gray-900/50 px-3 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner"
+                  className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
+                    isDark 
+                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                  }`}
                   placeholder="••••••••"
                 />
               </div>
@@ -199,9 +213,9 @@ export const Login = () => {
               <input
                 id="remember-me"
                 type="checkbox"
-                className="h-4 w-4 text-brand-500 focus:ring-brand-500 border-gray-700 bg-gray-900 rounded"
+                className={`h-4 w-4 text-brand-500 focus:ring-brand-500 rounded ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-300 bg-white'}`}
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+              <label htmlFor="remember-me" className={`ml-2 block text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                 Remember me
               </label>
             </div>
@@ -230,9 +244,9 @@ export const Login = () => {
       </div>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Don't have an account?{' '}
-            <Link to="/register" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">
+            <Link to="/register" className="font-semibold text-brand-500 hover:text-brand-400 transition-colors">
               Sign up
             </Link>
           </p>
