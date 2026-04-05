@@ -14,6 +14,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { SupabaseStatus } from './components/SupabaseStatus';
 import { syncServerTime } from './utils/timeSync';
 import { useEffect } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
   useEffect(() => {
@@ -21,8 +22,9 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -59,7 +61,8 @@ function App() {
           </Route>
         </Routes>
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

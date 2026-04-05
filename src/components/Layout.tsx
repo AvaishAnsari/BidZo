@@ -1,7 +1,8 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Gavel, LogOut, User as UserIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useTheme } from '../context/ThemeContext';
+import { Gavel, LogOut, User as UserIcon, Sun, Moon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const centerStyle: React.CSSProperties = {
   maxWidth: '1280px',
@@ -14,6 +15,7 @@ const centerStyle: React.CSSProperties = {
 
 export const Layout = () => {
   const { user, userRole, userName, signOut } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -102,8 +104,44 @@ export const Layout = () => {
                 );
               })}
 
+              {/* Theme Toggle */}
+              <motion.button
+                onClick={toggleTheme}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:text-white transition-colors ml-2"
+                style={{ overflow: 'hidden' }}
+                title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+              >
+                <AnimatePresence mode="wait">
+                  {isDark ? (
+                    <motion.div
+                      key="sun"
+                      initial={{ y: 20, opacity: 0, rotate: -45 }}
+                      animate={{ y: 0, opacity: 1, rotate: 0 }}
+                      exit={{ y: -20, opacity: 0, rotate: 45 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ position: 'absolute' }}
+                    >
+                      <Sun size={18} />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="moon"
+                      initial={{ y: 20, opacity: 0, rotate: -45 }}
+                      animate={{ y: 0, opacity: 1, rotate: 0 }}
+                      exit={{ y: -20, opacity: 0, rotate: 45 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ position: 'absolute' }}
+                    >
+                      <Moon size={18} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+
               {user ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(55,65,81,0.6)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>
                   <Link to="/profile" style={{ textDecoration: 'none' }}>
                     <motion.div 
                     whileHover={{ scale: 1.02 }}
@@ -158,7 +196,7 @@ export const Layout = () => {
                   </motion.button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(55,65,81,0.6)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>
                   <Link
                     to="/login"
                     style={{

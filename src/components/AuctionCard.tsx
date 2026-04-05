@@ -8,6 +8,7 @@ import { useWatchlist } from '../hooks/useWatchlist';
 import { useAuth } from '../context/AuthContext';
 import { VerifiedBadge, SellerRating } from './TrustBadges';
 import { motion } from 'framer-motion';
+import { useTheme } from '../context/ThemeContext';
 
 interface AuctionCardProps {
   auction: Auction;
@@ -18,6 +19,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   const { timeLeft, isEnded: countdownEnded, isUrgent } = useCountdown(auction.end_time);
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { user } = useAuth();
+  const { isDark } = useTheme();
 
   const isWatchedItem = isWatched(auction.id);
   const isOwnAuction = user?.id === auction.seller_id;
@@ -30,22 +32,18 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   return (
     <motion.div
       whileHover={{ y: -6, transition: { duration: 0.25 } }}
+      className="glass-card"
       style={{
-        background: 'rgba(17,24,39,0.55)',
-        backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(55,65,81,0.5)',
         borderRadius: '1.25rem',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         cursor: 'pointer',
-        transition: 'border-color 0.3s, box-shadow 0.3s',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
       }}
     >
       {/* Image */}
-      <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', background: '#111827', flexShrink: 0 }}>
+      <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', background: isDark ? '#111827' : '#e5e7eb', flexShrink: 0 }}>
         {auction.image_url ? (
           <>
             <img
@@ -68,7 +66,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
             <div style={{
               display: 'none', width: '100%', height: '100%',
               alignItems: 'center', justifyContent: 'center',
-              background: 'linear-gradient(135deg, #1e1b4b 0%, #111827 100%)',
+              background: isDark ? 'linear-gradient(135deg, #1e1b4b 0%, #111827 100%)' : 'linear-gradient(135deg, #f3e8ff 0%, #e5e7eb 100%)',
               flexDirection: 'column', gap: '0.5rem',
             }}>
               <span style={{ fontSize: '2.5rem' }}>🖼️</span>
@@ -77,7 +75,9 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
             {/* Gradient overlay */}
             <div style={{
               position: 'absolute', inset: 0,
-              background: 'linear-gradient(to top, rgba(3,7,18,0.85) 0%, rgba(3,7,18,0.2) 50%, transparent 100%)',
+              background: isDark 
+                ? 'linear-gradient(to top, rgba(3,7,18,0.85) 0%, rgba(3,7,18,0.2) 50%, transparent 100%)'
+                : 'linear-gradient(to top, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
             }} />
           </>
         ) : (
@@ -133,12 +133,12 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
       {/* Content */}
       <div style={{ padding: '1.25rem 1.35rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500 }}>Verified Seller</span>
+          <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280', fontWeight: 500 }}>Verified Seller</span>
           <VerifiedBadge userId={auction.seller_id} />
         </div>
         <h3 style={{
           fontSize: '1.1rem', fontWeight: 700,
-          color: '#f3f4f6', margin: '0 0 0.5rem 0',
+          color: isDark ? '#f3f4f6' : '#111827', margin: '0 0 0.5rem 0',
           lineHeight: 1.3,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
@@ -163,11 +163,11 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
         <div style={{
           marginTop: 'auto',
           paddingTop: '1rem',
-          borderTop: '1px solid rgba(55,65,81,0.4)',
+          borderTop: isDark ? '1px solid rgba(55,65,81,0.4)' : '1px solid rgba(209,213,219,0.8)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div>
-            <p style={{ color: '#4b5563', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '0 0 0.25rem 0' }}>
+            <p style={{ color: isDark ? '#4b5563' : '#6b7280', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '0 0 0.25rem 0' }}>
               Current Bid
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -175,12 +175,15 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
               <motion.span
                 key={auction.current_price}
                 initial={{ filter: 'brightness(2) drop-shadow(0 0 10px rgba(52, 211, 153, 0.8))', color: '#34d399' }}
-                animate={{ filter: 'brightness(1) drop-shadow(0 0 0px rgba(52, 211, 153, 0))', color: '#f3f4f6' }}
+                animate={{ filter: 'brightness(1) drop-shadow(0 0 0px rgba(52, 211, 153, 0))', color: isDark ? '#f3f4f6' : '#1f2937' }}
                 transition={{ duration: 1.5, ease: 'easeOut' }}
+                className={isDark ? "" : "gradient-text"}
                 style={{
                   fontSize: '1.3rem', fontWeight: 800,
-                  background: 'linear-gradient(to right, #818cf8, #c084fc)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  ...(isDark ? {
+                    background: 'linear-gradient(to right, #818cf8, #c084fc)',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  } : {})
                 }}
               >
                 {formatCurrency(auction.current_price)}

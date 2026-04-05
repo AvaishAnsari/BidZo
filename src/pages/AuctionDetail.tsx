@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useAuction } from '../hooks/useAuction';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { VerifiedBadge, SellerRating } from '../components/TrustBadges';
@@ -21,11 +22,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BidHistoryModal } from '../components/BidHistoryModal';
 
 // ── Sub-component: single countdown tile ─────────────────────────
-const TimeBlock = ({ value, label, urgent }: { value: number; label: string; urgent?: boolean }) => (
+const TimeBlock = ({ value, label, urgent, isDark }: { value: number; label: string; urgent?: boolean; isDark: boolean }) => (
   <div style={{ textAlign: 'center' }}>
     <div style={{
-      background: urgent ? 'rgba(239,68,68,0.15)' : 'rgba(17,24,39,0.8)',
-      border: `1px solid ${urgent ? 'rgba(239,68,68,0.4)' : 'rgba(99,102,241,0.3)'}`,
+      background: urgent ? (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.05)') : (isDark ? 'rgba(17,24,39,0.8)' : '#ffffff'),
+      border: `1px solid ${urgent ? 'rgba(239,68,68,0.4)' : (isDark ? 'rgba(99,102,241,0.3)' : 'rgba(209,213,219,0.8)')}`,
       borderRadius: '0.75rem',
       padding: '0.75rem 1rem',
       minWidth: '60px',
@@ -35,7 +36,7 @@ const TimeBlock = ({ value, label, urgent }: { value: number; label: string; urg
     }}>
       <span style={{
         fontSize: '1.75rem', fontWeight: 800,
-        color: urgent ? '#f87171' : 'white',
+        color: urgent ? '#f87171' : (isDark ? 'white' : '#111827'),
         display: 'block', lineHeight: 1,
       }}>
         {String(value).padStart(2, '0')}
@@ -57,6 +58,7 @@ export const AuctionDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isWatched, toggleWatchlist } = useWatchlist();
+  const { isDark } = useTheme();
 
   const {
     auction,
@@ -560,13 +562,13 @@ export const AuctionDetail = () => {
                   )}
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                  <TimeBlock value={parts.days}    label="Days"  urgent={urgentTimer} />
+                  <TimeBlock value={parts.days}    label="Days"  urgent={urgentTimer} isDark={isDark} />
                   <div style={{ color: '#4b5563', fontSize: '1.5rem', fontWeight: 300, paddingTop: '0.5rem' }}>:</div>
-                  <TimeBlock value={parts.hours}   label="Hours" urgent={urgentTimer} />
+                  <TimeBlock value={parts.hours}   label="Hours" urgent={urgentTimer} isDark={isDark} />
                   <div style={{ color: '#4b5563', fontSize: '1.5rem', fontWeight: 300, paddingTop: '0.5rem' }}>:</div>
-                  <TimeBlock value={parts.minutes} label="Min"   urgent={urgentTimer} />
+                  <TimeBlock value={parts.minutes} label="Min"   urgent={urgentTimer} isDark={isDark} />
                   <div style={{ color: '#4b5563', fontSize: '1.5rem', fontWeight: 300, paddingTop: '0.5rem' }}>:</div>
-                  <TimeBlock value={parts.seconds} label="Sec"   urgent={urgentTimer} />
+                  <TimeBlock value={parts.seconds} label="Sec"   urgent={urgentTimer} isDark={isDark} />
                 </div>
               </div>
             )}
