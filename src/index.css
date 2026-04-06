@@ -468,39 +468,37 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; }
    ───────────────────────────────────────────────────────────────────────── */
 [data-theme="light"] body {
   color: #1f2937;
-  background-color: #fafafa;
+  background-color: #ffffff;
   background-image:
-    radial-gradient(ellipse 70% 55% at 10% 15%, rgba(216, 180, 254, 0.4) 0%, transparent 65%),
-    radial-gradient(ellipse 60% 45% at 90% 10%, rgba(251, 207, 232, 0.35) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 50% at 50% 60%, rgba(233, 213, 255, 0.4) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 35% at 85% 90%, rgba(206, 212, 218, 0.5) 0%, transparent 60%),
-    linear-gradient(160deg, #ffffff 0%, #f9fafb 40%, #f3f4f6 100%);
+    radial-gradient(ellipse 70% 60% at 20% 10%, rgba(251, 207, 232, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(254, 240, 138, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% 50%, rgba(206, 212, 218, 0.15) 0%, transparent 70%);
 }
 
 [data-theme="light"] .glass {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.8) 100%);
-  border-bottom: 1px solid rgba(156, 163, 175, 0.2);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(243, 244, 246, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
 [data-theme="light"] .glass-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(243, 244, 246, 0.7) 100%);
-  border: 1px solid rgba(209, 213, 219, 0.6);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  background: #ffffff;
+  border: 1px solid rgba(229, 231, 235, 1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="light"] .glass-card:hover {
-  border-color: rgba(168, 85, 247, 0.4);
+  border-color: rgba(139, 92, 246, 0.15);
   box-shadow: 
-    0 0 0 1px rgba(168, 85, 247, 0.1),
-    0 8px 30px rgba(0, 0, 0, 0.08),
-    0 4px 15px rgba(168, 85, 247, 0.05);
+    0 20px 40px -10px rgba(0, 0, 0, 0.08),
+    0 10px 15px -3px rgba(139, 92, 246, 0.04);
 }
 
 [data-theme="light"] .gradient-text {
-  background: linear-gradient(135deg, #4f46e5 0%, #9333ea 45%, #c084fc 100%);
+  background: linear-gradient(135deg, #7e22ce 0%, #db2777 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 [data-theme="light"] .gradient-text-warm {
@@ -536,7 +534,53 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; }
 }
 
 [data-theme="light"] .section-label {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.06) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  color: #4f46e5;
+  background: linear-gradient(135deg, rgba(126, 34, 206, 0.08) 0%, rgba(219, 39, 119, 0.06) 100%);
+  border: 1px solid rgba(126, 34, 206, 0.15);
+  color: #7e22ce;
+}
+
+[data-theme="light"] .btn-gradient {
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  border: none;
+  box-shadow: 0 8px 20px -6px rgba(139, 92, 246, 0.4);
+  color: #ffffff;
+}
+
+[data-theme="light"] .btn-gradient:hover {
+  box-shadow: 0 12px 25px -8px rgba(139, 92, 246, 0.5);
+  transform: translateY(-2px);
+}
+
+[data-theme="light"] .btn-gradient::before {
+  display: none;
+}
+
+/* Light Theme Badges */
+[data-theme="light"] .badge-ended {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="light"] .badge-urgent {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+  animation: pulse-urgent 1.5s infinite;
+}
+
+[data-theme="light"] .badge-live {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+[data-theme="light"] .badge-upcoming {
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
 }

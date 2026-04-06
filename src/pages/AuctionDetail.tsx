@@ -582,9 +582,9 @@ export const AuctionDetail = () => {
                 display: 'flex', flexDirection: 'column', gap: '1rem',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Trophy style={{ width: '1.5rem', height: '1.5rem', color: isWinning ? (isPaid ? '#4ade80' : '#818cf8') : '#fbbf24', flexShrink: 0 }} />
+                  <Trophy style={{ width: '1.5rem', height: '1.5rem', color: isWinning ? (isPaid ? '#4ade80' : '#eab308') : (isDark ? '#4b5563' : '#9ca3af'), flexShrink: 0 }} />
                   <div>
-                    <p style={{ color: isWinning ? (isPaid ? '#4ade80' : '#818cf8') : '#fbbf24', fontWeight: 700, fontSize: '0.95rem' }}>
+                    <p style={{ color: isWinning ? (isPaid ? '#4ade80' : '#eab308') : (isDark ? '#9ca3af' : '#6b7280'), fontWeight: 700, fontSize: '0.95rem' }}>
                       {isWinning ? (isPaid ? 'Payment Settled ✅' : 'You Won This Auction! 🎉') : 'Auction Ended'}
                     </p>
                     <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.15rem' }}>
@@ -736,7 +736,9 @@ export const AuctionDetail = () => {
                     {isPlacingBid ? (
                       <><Loader2 style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} /> Placing Bid...</>
                     ) : isWinning ? (
-                      <><Trophy style={{ width: '1rem', height: '1rem' }} /> Top Bidder</>
+                      isEnded 
+                        ? <><Trophy style={{ width: '1rem', height: '1rem' }} /> You won this auction</>
+                        : <><Trophy style={{ width: '1rem', height: '1rem' }} /> Top Bidder</>
                     ) : (
                       <><Gavel style={{ width: '1rem', height: '1rem' }} /> Place Bid</>
                     )}

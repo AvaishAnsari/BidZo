@@ -182,11 +182,11 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                         borderRadius: '50%',
                         background: isHighest 
                           ? (isMe ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.2)')
-                          : 'rgba(55,65,81,0.5)',
+                          : (isDark ? 'rgba(55,65,81,0.5)' : 'rgba(229, 231, 235, 0.8)'),
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: isHighest 
                           ? (isMe ? '#4ade80' : '#a5b4fc')
-                          : '#9ca3af',
+                          : (isDark ? '#9ca3af' : '#6b7280'),
                       }}>
                         {isHighest ? <Trophy style={{ width: '1rem', height: '1rem' }} /> : `#${i + 1}`}
                       </div>
@@ -218,9 +218,9 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                             onClick={(e) => { e.stopPropagation(); copyToClipboard(generateMockTxHash(bid.id), 'Transaction Hash'); }}
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-                              background: isHighest ? 'rgba(52, 211, 153, 0.08)' : 'rgba(55, 65, 81, 0.2)',
-                              border: isHighest ? '1px solid rgba(52, 211, 153, 0.2)' : '1px solid rgba(75, 85, 99, 0.2)',
-                              color: isHighest ? '#10b981' : '#9ca3af',
+                              background: isHighest ? 'rgba(52, 211, 153, 0.08)' : (isDark ? 'rgba(55, 65, 81, 0.2)' : 'rgba(229, 231, 235, 0.5)'),
+                              border: isHighest ? '1px solid rgba(52, 211, 153, 0.2)' : (isDark ? '1px solid rgba(75, 85, 99, 0.2)' : '1px solid rgba(209, 213, 219, 0.6)'),
+                              color: isHighest ? '#10b981' : (isDark ? '#9ca3af' : '#4b5563'),
                               padding: '0.15rem 0.4rem', borderRadius: '0.25rem',
                               cursor: 'pointer', fontSize: '0.7rem',
                               fontFamily: 'monospace'

@@ -131,9 +131,9 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '1.25rem 1.35rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div style={{ padding: '1.25rem 1.35rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280', fontWeight: 500 }}>Verified Seller</span>
+          <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', fontWeight: 500 }}>Verified Seller</span>
           <VerifiedBadge userId={auction.seller_id} />
         </div>
         <h3 style={{
@@ -147,7 +147,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
 
         {auction.description && (
           <p style={{
-            color: '#6b7280', fontSize: '0.83rem', lineHeight: 1.65,
+            color: isDark ? '#9ca3af' : '#374151', fontSize: '0.83rem', lineHeight: 1.65,
             margin: '0 0 1.25rem 0',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
@@ -167,7 +167,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div>
-            <p style={{ color: isDark ? '#4b5563' : '#6b7280', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '0 0 0.25rem 0' }}>
+            <p style={{ color: isDark ? '#4b5563' : '#4b5563', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '0 0 0.25rem 0' }}>
               Current Bid
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -203,9 +203,9 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
               textDecoration: 'none',
               transition: 'all 0.2s',
               ...(isEnded ? {
-                background: 'rgba(31,41,55,0.6)',
-                color: '#6b7280',
-                border: '1px solid rgba(55,65,81,0.5)',
+                background: isDark ? 'rgba(31,41,55,0.6)' : '#e5e7eb',
+                color: isDark ? '#6b7280' : '#374151',
+                border: isDark ? '1px solid rgba(55,65,81,0.5)' : '1px solid #d1d5db',
               } : isOwnAuction ? {
                 background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                 color: '#ffffff',
