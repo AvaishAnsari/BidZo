@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuctions } from '../hooks/useAuctions';
 import { AuctionCard } from '../components/AuctionCard';
+import { useTheme } from '../context/ThemeContext';
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */
 const centerStyle: React.CSSProperties = {
@@ -177,6 +178,7 @@ export const LandingPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { auctions } = useAuctions();
+  const { isDark } = useTheme();
   
   const [tickerIdx, setTickerIdx] = useState(0);
   const [headingIdx, setHeadingIdx] = useState(0);
@@ -228,7 +230,7 @@ export const LandingPage = () => {
               </motion.div>
               <span style={{
                 fontSize: '1.5rem', fontWeight: 800,
-                background: 'linear-gradient(to right, #ffffff, #a5b4fc)',
+                background: isDark ? 'linear-gradient(to right, #ffffff, #a5b4fc)' : 'linear-gradient(to right, #4f46e5, #7e22ce)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text', letterSpacing: '-0.02em',
               }}>
@@ -253,12 +255,12 @@ export const LandingPage = () => {
                   <Link
                     to="/login"
                     style={{
-                      color: '#9ca3af', fontWeight: 500, textDecoration: 'none',
+                      color: isDark ? '#9ca3af' : '#4b5563', fontWeight: 500, textDecoration: 'none',
                       padding: '0.5rem 1rem', borderRadius: '0.75rem', fontSize: '0.95rem',
                       transition: 'all 0.2s',
                     }}
-                    onMouseOver={(e) => (e.currentTarget.style.color = 'white')}
-                    onMouseOut={(e) => (e.currentTarget.style.color = '#9ca3af')}
+                    onMouseOver={(e) => (e.currentTarget.style.color = isDark ? 'white' : '#111827')}
+                    onMouseOut={(e) => (e.currentTarget.style.color = isDark ? '#9ca3af' : '#4b5563')}
                   >
                     Log in
                   </Link>
@@ -278,8 +280,8 @@ export const LandingPage = () => {
 
       {/* ════ LIVE TICKER BAR ═══════════════════════════════════════ */}
       <div style={{
-        background: 'linear-gradient(90deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.12) 100%)',
-        borderBottom: '1px solid rgba(99,102,241,0.15)',
+        background: isDark ? 'linear-gradient(90deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.12) 100%)' : 'rgba(249,250,251,1)',
+        borderBottom: isDark ? '1px solid rgba(99,102,241,0.15)' : '1px solid #e5e7eb',
         padding: '0.5rem 0',
         overflow: 'hidden',
       }}>
@@ -292,19 +294,19 @@ export const LandingPage = () => {
             style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}
           >
             <span style={{
-              background: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.15))',
-              color: '#4ade80', border: '1px solid rgba(34,197,94,0.35)',
+              background: isDark ? 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.15))' : '#10b981',
+              color: isDark ? '#4ade80' : '#ffffff', border: isDark ? '1px solid rgba(34,197,94,0.35)' : 'none',
               borderRadius: '9999px', padding: '0.1rem 0.55rem',
               fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
             }}>● LIVE</span>
-            <span style={{ color: '#6b7280' }}>Latest bid:</span>
-            <span style={{ color: '#e5e7eb', fontWeight: 600 }}>
+            <span style={{ color: isDark ? '#6b7280' : '#4b5563' }}>Latest bid:</span>
+            <span style={{ color: isDark ? '#e5e7eb' : '#111827', fontWeight: 600 }}>
               {TICKER_BIDS[tickerIdx].item}
             </span>
             <span style={{ color: '#818cf8', fontWeight: 700 }}>
               {TICKER_BIDS[tickerIdx].bid}
             </span>
-            <span style={{ color: '#4b5563' }}>by {TICKER_BIDS[tickerIdx].user}</span>
+            <span style={{ color: isDark ? '#4b5563' : '#6b7280' }}>by {TICKER_BIDS[tickerIdx].user}</span>
           </motion.div>
         </div>
       </div>
@@ -355,12 +357,12 @@ export const LandingPage = () => {
               style={{ 
                 display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
                 margin: '0 auto 2rem', padding: '0.5rem 1.25rem',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(139,92,246,0.08)',
+                border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(139,92,246,0.2)',
                 backdropFilter: 'blur(16px)',
                 borderRadius: '9999px',
-                color: '#e2e8f0', fontSize: '0.875rem', fontWeight: 600,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)'
+                color: isDark ? '#e2e8f0' : '#6d28d9', fontSize: '0.875rem', fontWeight: 600,
+                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)' : '0 2px 10px rgba(139,92,246,0.1)'
               }}
             >
               <Zap style={{ width: '1rem', height: '1rem', color: '#c084fc' }} />
@@ -379,7 +381,7 @@ export const LandingPage = () => {
                 maxWidth: '1000px',
               }}
             >
-              <span style={{ color: '#f8fafc', display: 'block', fontSize: 'clamp(2.5rem, 6vw, 4.5rem)' }}>
+              <span style={{ color: isDark ? '#f8fafc' : '#111827', display: 'block', fontSize: 'clamp(2.5rem, 6vw, 4.5rem)' }}>
                 Discover Premium
               </span>
               <AnimatePresence mode="popLayout">
@@ -403,7 +405,7 @@ export const LandingPage = () => {
             <p
               style={{
                 fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
-                color: '#94a3b8',
+                color: isDark ? '#94a3b8' : '#374151',
                 maxWidth: '650px',
                 margin: '0 auto 3rem',
                 lineHeight: 1.7,
@@ -443,21 +445,22 @@ export const LandingPage = () => {
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
                     padding: '1rem 2.5rem',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #d1d5db',
                     borderRadius: '1rem',
-                    color: '#e2e8f0', fontWeight: 600, fontSize: '1.05rem',
+                    color: isDark ? '#e2e8f0' : '#374151', fontWeight: 600, fontSize: '1.05rem',
                     textDecoration: 'none',
-                    background: 'rgba(255,255,255,0.03)',
+                    background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
                     backdropFilter: 'blur(20px)',
                     transition: 'all 0.3s',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.08)',
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                    e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f9fafb';
+                    e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.2)' : '#9ca3af';
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : '#ffffff';
+                    e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db';
                   }}
                 >
                   Explore Auctions
@@ -469,7 +472,7 @@ export const LandingPage = () => {
           
           {/* Trust strip */}
           <FadeUp delay={0.8}>
-            <p style={{ marginTop: '3rem', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
+            <p style={{ marginTop: '3rem', fontSize: '0.85rem', color: isDark ? '#64748b' : '#6b7280', fontWeight: 500 }}>
               No credit card required · Instant setup · Bank-grade security
             </p>
           </FadeUp>
@@ -558,28 +561,29 @@ export const LandingPage = () => {
                 transition={{ type: 'spring', stiffness: 300 }}
                 style={{ 
                   textAlign: 'center', 
-                  background: 'rgba(255,255,255,0.02)',
+                  background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
                   backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255,255,255,0.05)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e5e7eb',
                   borderRadius: '1.5rem',
                   padding: '2rem 1.5rem',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+                  boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.2)' : '0 10px 25px rgba(0,0,0,0.07)'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                  <div style={{ background: 'rgba(99,102,241,0.1)', padding: '0.75rem', borderRadius: '1rem' }}>
+                  <div style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(139,92,246,0.1)', padding: '0.75rem', borderRadius: '1rem' }}>
                     <Icon style={{ width: '1.75rem', height: '1.75rem', color: '#818cf8' }} />
                   </div>
                 </div>
                 <div style={{
                   fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
                   fontWeight: 900, letterSpacing: '-0.03em',
-                  background: 'linear-gradient(135deg, #e0e7ff, #a5b4fc)',
+                  background: isDark ? 'linear-gradient(135deg, #e0e7ff, #a5b4fc)' : 'linear-gradient(135deg, #7e22ce, #4f46e5)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
                 }}>
                   <AnimatedStat num={num} prefix={prefix} suffix={suffix} decimals={decimals} isComma={isComma} />
                 </div>
-                <div style={{ fontSize: '0.95rem', color: '#94a3b8', marginTop: '0.5rem', fontWeight: 500 }}>{label}</div>
+                <div style={{ fontSize: '0.95rem', color: isDark ? '#94a3b8' : '#4b5563', marginTop: '0.5rem', fontWeight: 500 }}>{label}</div>
               </motion.div>
             </FadeUp>
           ))}
@@ -598,12 +602,12 @@ export const LandingPage = () => {
               <h2 style={{
                 fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
                 fontWeight: 800, letterSpacing: '-0.03em',
-                color: '#f8fafc', margin: '0 0 1rem',
+                color: isDark ? '#f8fafc' : '#111827', margin: '0 0 1rem',
               }}>
                 Everything you need to{' '}
                 <span className="gradient-text">win auctions</span>
               </h2>
-              <p style={{ color: '#6b7280', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
+              <p style={{ color: isDark ? '#6b7280' : '#374151', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
                 BidZo is packed with tools that make bidding fast, safe, and transparent.
               </p>
             </div>
@@ -626,8 +630,8 @@ export const LandingPage = () => {
                   }}>
                     <Icon style={{ width: '1.25rem', height: '1.25rem', color }} />
                   </div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#e5e7eb', marginBottom: '0.5rem' }}>{title}</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: isDark ? '#e5e7eb' : '#111827', marginBottom: '0.5rem' }}>{title}</h3>
+                  <p style={{ fontSize: '0.875rem', color: isDark ? '#6b7280' : '#374151', lineHeight: 1.65, margin: 0 }}>{desc}</p>
                 </motion.div>
               </FadeUp>
             ))}
@@ -650,7 +654,7 @@ export const LandingPage = () => {
               <h2 style={{
                 fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
                 fontWeight: 800, letterSpacing: '-0.03em',
-                color: '#f8fafc', margin: 0,
+                color: isDark ? '#f8fafc' : '#111827', margin: 0,
               }}>
                 Start bidding in{' '}
                 <span className="gradient-text">4 simple steps</span>
@@ -672,9 +676,9 @@ export const LandingPage = () => {
                   {/* Step number and icon */}
                   <div style={{
                     width: '7rem', height: '7rem', borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    boxShadow: '0 0 40px rgba(99,102,241,0.1), inset 0 0 20px rgba(255,255,255,0.02)',
+                    background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
+                    border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e5e7eb',
+                    boxShadow: isDark ? '0 0 40px rgba(99,102,241,0.1), inset 0 0 20px rgba(255,255,255,0.02)' : '0 8px 20px rgba(0,0,0,0.08)',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 1.5rem', position: 'relative', backdropFilter: 'blur(10px)',
                   }}>
@@ -688,11 +692,11 @@ export const LandingPage = () => {
                     }}>
                       {n}
                     </div>
-                    <Icon style={{ width: '2rem', height: '2rem', color: '#a5b4fc', marginBottom: '0.25rem' }} />
+                    <Icon style={{ width: '2rem', height: '2rem', color: '#818cf8', marginBottom: '0.25rem' }} />
                   </div>
                   
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.6rem' }}>{title}</h3>
-                  <p style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6, maxWidth: '240px', margin: '0 auto' }}>{desc}</p>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: isDark ? '#e2e8f0' : '#111827', marginBottom: '0.6rem' }}>{title}</h3>
+                  <p style={{ fontSize: '0.9rem', color: isDark ? '#94a3b8' : '#374151', lineHeight: 1.6, maxWidth: '240px', margin: '0 auto' }}>{desc}</p>
                 </div>
               </FadeUp>
             ))}
@@ -729,14 +733,14 @@ export const LandingPage = () => {
 
               <h2 style={{
                 fontSize: 'clamp(1.75rem, 4vw, 3rem)',
-                fontWeight: 900, letterSpacing: '-0.035em', color: '#f8fafc',
+                fontWeight: 900, letterSpacing: '-0.035em', color: isDark ? '#f8fafc' : '#111827',
                 margin: '0 auto 1rem', maxWidth: '600px',
               }}>
                 Join <span className="gradient-text">10,000+ bidders</span> competing right now
               </h2>
 
               <p style={{
-                color: '#6b7280', fontSize: '1rem', lineHeight: 1.75,
+                color: isDark ? '#6b7280' : '#374151', fontSize: '1rem', lineHeight: 1.75,
                 maxWidth: '440px', margin: '0 auto 2.5rem',
               }}>
                 Create your free account in under 60 seconds and start bidding on
@@ -760,11 +764,12 @@ export const LandingPage = () => {
                     style={{
                       display: 'inline-flex', alignItems: 'center',
                       padding: '0.9rem 2rem',
-                      border: '1px solid rgba(55,65,81,0.6)',
+                      border: isDark ? '1px solid rgba(55,65,81,0.6)' : '1px solid #d1d5db',
                       borderRadius: '0.875rem',
-                      color: '#9ca3af', fontWeight: 600, fontSize: '1rem',
-                      textDecoration: 'none', background: 'rgba(17,24,39,0.4)',
+                      color: isDark ? '#9ca3af' : '#374151', fontWeight: 600, fontSize: '1rem',
+                      textDecoration: 'none', background: isDark ? 'rgba(17,24,39,0.4)' : '#ffffff',
                       transition: 'all 0.2s',
+                      boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
                     }}
                   >
                     Already have an account? Sign in
