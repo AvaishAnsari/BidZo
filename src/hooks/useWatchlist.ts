@@ -32,6 +32,16 @@ export function useWatchlist() {
         } catch (error) {
           console.error("Failed to load watchlist from Supabase:", error);
         }
+      } else {
+        // Load from local storage fallback
+        const localWatchlist = localStorage.getItem(`watchlist_${user.id}`);
+        if (localWatchlist) {
+          try {
+            setWatchedIds(JSON.parse(localWatchlist));
+          } catch (e) {
+            console.error("Failed to parse local watchlist");
+          }
+        }
       }
       setIsLoaded(true);
     }
@@ -63,13 +73,15 @@ export function useWatchlist() {
 
     const previouslyWatched = watchedIds.includes(auctionId);
     
-    // 1. Optimistic UI update instantly!
     const updatedIds = previouslyWatched
       ? watchedIds.filter(id => id !== auctionId)
       : [...watchedIds, auctionId];
       
     setWatchedIds(updatedIds);
     syncAcrossTabs(updatedIds);
+    
+    // Save to localStorage as a fallback immediately
+    localStorage.setItem(`watchlist_${user.id}`, JSON.stringify(updatedIds));
 
     // 2. Database Sync
     if (isSupabaseConfigured()) {
