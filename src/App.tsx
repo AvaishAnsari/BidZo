@@ -10,12 +10,13 @@ import { CreateAuction } from './pages/CreateAuction';
 import { AuctionDetail } from './pages/AuctionDetail';
 import { WatchlistPage } from './pages/WatchlistPage';
 import { ProfilePage } from './pages/Profile';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SupabaseStatus } from './components/SupabaseStatus';
 import { syncServerTime } from './utils/timeSync';
 import { useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
-
+import { NotificationProvider } from './context/NotificationContext';
 function App() {
   useEffect(() => {
     syncServerTime();
@@ -24,6 +25,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <NotificationProvider>
         <Router>
         <Toaster
           position="top-right"
@@ -58,9 +60,15 @@ function App() {
             <Route element={<ProtectedRoute requiredRole="seller" />}>
               <Route path="create-auction" element={<CreateAuction />} />
             </Route>
+
+            {/* Admin only */}
+            <Route element={<ProtectedRoute requiredRole="admin" />}>
+              <Route path="admin" element={<AdminDashboard />} />
+            </Route>
           </Route>
         </Routes>
       </Router>
+      </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

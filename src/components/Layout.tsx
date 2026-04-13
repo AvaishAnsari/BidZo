@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Gavel, LogOut, User as UserIcon, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import LanguageSwitcher from './LanguageSwitcher';
 const centerStyle: React.CSSProperties = {
   maxWidth: '1280px',
   marginLeft: 'auto',
@@ -27,7 +27,8 @@ export const Layout = () => {
   const navLinks = [
     { name: 'Auctions', path: '/auctions' },
     ...(user ? [{ name: 'Watchlist', path: '/watchlist' }] : []),
-    ...(userRole === 'seller' ? [{ name: 'Create Auction', path: '/create-auction' }] : [])
+    ...(userRole === 'seller' ? [{ name: 'Create Auction', path: '/create-auction' }] : []),
+    ...(userRole === 'admin' ? [{ name: 'Admin Dashboard', path: '/admin' }] : []),
   ];
 
   return (
@@ -139,6 +140,8 @@ export const Layout = () => {
                   )}
                 </AnimatePresence>
               </motion.button>
+              
+              <LanguageSwitcher />
 
               {user ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>

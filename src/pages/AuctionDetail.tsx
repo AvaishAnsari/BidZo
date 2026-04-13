@@ -13,6 +13,7 @@ import { isSupabaseConfigured } from '../utils/supabase';
 import { placeBid as localPlaceBid, emitBidEvent, extendAuctionTime } from '../utils/localStore';
 import { initializeRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
+import { predictFinalBid, detectFraud } from '../utils/ai';
 import {
   Loader2, Clock, TrendingUp, ArrowLeft, Gavel,
   AlertCircle, Trophy, RefreshCw, Zap, Bell, Copy, ShieldCheck, CreditCard
@@ -194,6 +195,14 @@ export const AuctionDetail = () => {
     if (!auction) return;
 
     const amount = parseFloat(bidAmount);
+    
+    // AI Fraud Detection check
+    const fraudCheck = detectFraud(amount, auction.current_price, isWinning);
+    if (fraudCheck.isFraud) {
+      toast.error(`⚠️ ${fraudCheck.reason}`, { duration: 6000 });
+      return;
+    }
+
     if (isNaN(amount) || amount < minBid) {
       toast.error(`Minimum bid is ${formatCurrency(minBid)}`);
       return;
@@ -495,6 +504,18 @@ export const AuctionDetail = () => {
                   New Bid 🔥
                 </motion.div>
               </div>
+
+              {/* AI Prediction Box */}
+              {!isEnded && !isUpcoming && (
+                <div style={{ marginTop: '1rem', background: 'rgba(99,102,241,0.05)', borderRadius: '0.75rem', padding: '0.75rem', border: '1px dashed rgba(99,102,241,0.3)' }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <Zap style={{ width: '0.8rem', height: '0.8rem' }} /> AI Predicted Final Bid
+                  </p>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#e0e7ff' }}>
+                    {formatCurrency(predictFinalBid(auction.current_price, auction.start_price, msLeft, bids.length))}
+                  </p>
+                </div>
+              )}
 
               {/* ── Step 4: Winning / Outbid indicator ───────────────── */}
               {user && bids.length > 0 && (

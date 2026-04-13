@@ -25,7 +25,7 @@ import { supabase, isSupabaseConfigured } from '../utils/supabase';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type UserRole = 'buyer' | 'seller';
+import type { UserRole } from '../types';
 
 export interface AuthContextType {
   /** Supabase User object (or mock equivalent in offline mode) */

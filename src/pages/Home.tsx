@@ -1,12 +1,49 @@
+import { useState, useMemo } from 'react';
 import { useAuctions } from '../hooks/useAuctions';
 import { AuctionCard } from '../components/AuctionCard';
-import { Loader2, Zap, RefreshCw, Flame } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Loader2, Zap, RefreshCw, Flame, Search, Filter } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 
 export const Home = () => {
   const { auctions, isLoading, error, refetch } = useAuctions();
   const { isDark } = useTheme();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'live' | 'upcoming' | 'ended'>('all');
+  const [sortBy, setSortBy] = useState<'ending_soon' | 'newly_listed' | 'price_asc' | 'price_desc'>('ending_soon');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Apply filters and sorting
+  const filteredAndSortedAuctions = useMemo(() => {
+    let result = [...auctions];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(a => a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q));
+    }
+
+    if (filterStatus !== 'all') {
+      result = result.filter(a => a.status === filterStatus);
+    }
+
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'ending_soon':
+          return new Date(a.end_time).getTime() - new Date(b.end_time).getTime();
+        case 'newly_listed':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'price_asc':
+          return a.current_price - b.current_price;
+        case 'price_desc':
+          return b.current_price - a.current_price;
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [auctions, searchQuery, filterStatus, sortBy]);
 
   const trendingAuctions = [...auctions]
     .filter(a => a.status === 'live')
@@ -128,6 +165,92 @@ export const Home = () => {
       ) : auctions.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
           
+          {/* Advanced Search & Filtering Bar */}
+          <div className="glass-card" style={{ padding: '1rem', borderRadius: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280', width: '1.2rem', height: '1.2rem' }} />
+                <input
+                  type="text"
+                  placeholder="Search auctions by title or keywords..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%', padding: '0.85rem 1rem 0.85rem 2.8rem',
+                    background: isDark ? 'rgba(17,24,39,0.7)' : '#ffffff',
+                    border: isDark ? '1px solid rgba(75,85,99,0.6)' : '1px solid #d1d5db',
+                    borderRadius: '0.75rem', color: isDark ? 'white' : '#111827',
+                    outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  padding: '0.85rem 1.25rem', background: showFilters ? 'rgba(99,102,241,0.2)' : 'rgba(75,85,99,0.2)',
+                  border: `1px solid ${showFilters ? 'rgba(99,102,241,0.5)' : 'rgba(75,85,99,0.4)'}`,
+                  color: showFilters ? '#a5b4fc' : (isDark ? '#d1d5db' : '#4b5563'),
+                  borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600
+                }}
+              >
+                <Filter style={{ width: '1.1rem', height: '1.1rem' }} />
+                Filters
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ display: 'flex', gap: '2rem', paddingTop: '1rem', borderTop: '1px solid rgba(75,85,99,0.3)', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Status</label>
+                      <select
+                        value={filterStatus}
+                        onChange={e => setFilterStatus(e.target.value as any)}
+                        style={{
+                          padding: '0.65rem', borderRadius: '0.5rem',
+                          background: isDark ? '#1f2937' : '#f3f4f6',
+                          border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
+                          color: isDark ? 'white' : 'black', outline: 'none'
+                        }}
+                      >
+                        <option value="all">All Auctions</option>
+                        <option value="live">Live Now</option>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="ended">Ended</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Sort By</label>
+                      <select
+                        value={sortBy}
+                        onChange={e => setSortBy(e.target.value as any)}
+                        style={{
+                          padding: '0.65rem', borderRadius: '0.5rem',
+                          background: isDark ? '#1f2937' : '#f3f4f6',
+                          border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
+                          color: isDark ? 'white' : 'black', outline: 'none'
+                        }}
+                      >
+                        <option value="ending_soon">Ending Soonest</option>
+                        <option value="newly_listed">Newly Listed</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                      </select>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
           {/* Trending Section */}
           {trendingAuctions.length > 0 && (
             <motion.div
@@ -170,7 +293,7 @@ export const Home = () => {
               gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
               gap: '1.75rem',
             }}>
-          {auctions.map((auction) => (
+          {filteredAndSortedAuctions.length > 0 ? filteredAndSortedAuctions.map((auction) => (
             <motion.div
               key={auction.id}
               variants={{
@@ -180,7 +303,11 @@ export const Home = () => {
             >
               <AuctionCard auction={auction} />
               </motion.div>
-            ))}
+            )) : (
+              <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+                No auctions match your search criteria.
+              </div>
+            )}
             </div>
           </motion.div>
         </div>

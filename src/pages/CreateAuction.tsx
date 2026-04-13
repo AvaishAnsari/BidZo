@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
@@ -7,30 +7,50 @@ import { Loader2, Sparkles, Link as LinkIcon, AlertCircle, IndianRupee } from 'l
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
 const inputClass = `block w-full rounded-xl border border-gray-700 bg-gray-900/50 py-3 px-4
   text-white placeholder-gray-500 focus:outline-none focus:ring-2
   focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner`;
+
+const auctionSchema = z.object({
+  imageUrl: z.string().url("Please drop a valid public image URL."),
+  title: z.string().min(5, "Title must be at least 5 characters long.").max(100, "Title is too long"),
+  description: z.string().min(10, "Description needs to be more detailed (min 10 chars)."),
+  startPrice: z.string().min(1, "Starting price must be greater than 0"),
+  minIncrement: z.string().min(1, "Minimum increment must be greater than 0"),
+  endTime: z.string().refine((val) => new Date(val) > new Date(), {
+    message: "End time must be in the future."
+  })
+});
+
+type AuctionFormValues = z.infer<typeof auctionSchema>;
 
 export const CreateAuction = () => {
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    title:        '',
-    description:  '',
-    imageUrl:     '',
-    startPrice:   '',
-    minIncrement: '',
-    endTime:      '',
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors }
+  } = useForm<AuctionFormValues>({
+    resolver: zodResolver(auctionSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      imageUrl: '',
+      startPrice: '',
+      minIncrement: '',
+      endTime: '',
+    }
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const watchImageUrl = watch("imageUrl");
 
   // ── Security: only sellers can reach this page ──────────────────────────
   if (userRole !== 'seller') {
@@ -60,40 +80,20 @@ export const CreateAuction = () => {
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onAuctionSubmit = async (data: AuctionFormValues) => {
     if (!user) return;
-
-    const startPrice   = parseFloat(formData.startPrice);
-    const minIncrement = parseFloat(formData.minIncrement);
-    const endTime      = new Date(formData.endTime);
-
-    if (startPrice <= 0 || minIncrement <= 0) {
-      toast.error('Price and increment must be greater than 0');
-      return;
-    }
-
-    if (endTime <= new Date()) {
-      toast.error('End time must be in the future');
-      return;
-    }
-
-    if (!formData.imageUrl.trim()) {
-      toast.error('Please provide an image URL');
-      return;
-    }
 
     setIsSubmitting(true);
     try {
       // ── Offline mode ────────────────────────────────────────────────────
       if (!isSupabaseConfigured()) {
         localCreateAuction({
-          title:        formData.title.trim(),
-          description:  formData.description.trim(),
-          imageUrl:     formData.imageUrl.trim(),
-          startPrice,
-          minIncrement,
-          endTime:      endTime.toISOString(),
+          title:        data.title.trim(),
+          description:  data.description.trim(),
+          imageUrl:     data.imageUrl.trim(),
+          startPrice:   parseFloat(data.startPrice),
+          minIncrement: parseFloat(data.minIncrement),
+          endTime:      new Date(data.endTime).toISOString(),
           sellerId:     user.id,
         });
         toast.success('Auction created! 🎉');
@@ -103,14 +103,14 @@ export const CreateAuction = () => {
 
       // ── Supabase mode ────────────────────────────────────────────────────
       const { error: dbError } = await supabase.from('auctions').insert({
-        title:         formData.title.trim(),
-        description:   formData.description.trim(),
-        image_url:     formData.imageUrl.trim(),
-        start_price:   startPrice,
-        current_price: startPrice,
-        min_increment: minIncrement,
+        title:         data.title.trim(),
+        description:   data.description.trim(),
+        image_url:     data.imageUrl.trim(),
+        start_price:   parseFloat(data.startPrice),
+        current_price: parseFloat(data.startPrice),
+        min_increment: parseFloat(data.minIncrement),
         start_time:    new Date().toISOString(),
-        end_time:      endTime.toISOString(),
+        end_time:      new Date(data.endTime).toISOString(),
         seller_id:     user.id,
         status:        'live',
       });
@@ -160,7 +160,7 @@ export const CreateAuction = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit(onAuctionSubmit)} className="space-y-8">
             {/* Image URL */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -172,20 +172,18 @@ export const CreateAuction = () => {
                 </div>
                 <input
                   type="url"
-                  name="imageUrl"
-                  id="imageUrl"
-                  required
-                  value={formData.imageUrl}
-                  onChange={handleChange}
-                  className={`${inputClass} pl-10`}
+                  {...register("imageUrl")}
+                  className={`${inputClass} pl-10 ${errors.imageUrl ? 'border-red-500' : ''}`}
                   placeholder="https://images.unsplash.com/photo-..."
                 />
               </div>
+              {errors.imageUrl && <p className="mt-1 text-sm text-red-500">{errors.imageUrl.message}</p>}
+              
               {/* Live preview */}
-              {formData.imageUrl && (
+              {watchImageUrl && !errors.imageUrl && (
                 <div style={{ marginTop: '0.75rem', borderRadius: '0.75rem', overflow: 'hidden', maxHeight: '200px' }}>
                   <img
-                    src={formData.imageUrl}
+                    src={watchImageUrl}
                     alt="Preview"
                     style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }}
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -205,14 +203,11 @@ export const CreateAuction = () => {
                 </label>
                 <input
                   type="text"
-                  name="title"
-                  id="title"
-                  required
-                  value={formData.title}
-                  onChange={handleChange}
-                  className={inputClass}
+                  {...register("title")}
+                  className={`${inputClass} ${errors.title ? 'border-red-500' : ''}`}
                   placeholder="e.g. Vintage Rolex Submariner 1965"
                 />
+                {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>}
               </div>
 
               <div>
@@ -220,15 +215,12 @@ export const CreateAuction = () => {
                   Description
                 </label>
                 <textarea
-                  id="description"
-                  name="description"
                   rows={4}
-                  required
-                  value={formData.description}
-                  onChange={handleChange}
-                  className={`${inputClass} resize-none`}
+                  {...register("description")}
+                  className={`${inputClass} resize-none ${errors.description ? 'border-red-500' : ''}`}
                   placeholder="Detailed description of the item — provenance, condition, certificates..."
                 />
+                {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>}
               </div>
             </div>
 
@@ -244,17 +236,14 @@ export const CreateAuction = () => {
                   </div>
                   <input
                     type="number"
-                    name="startPrice"
-                    id="startPrice"
-                    required
                     min="1"
                     step="1"
-                    value={formData.startPrice}
-                    onChange={handleChange}
-                    className={`${inputClass} pl-10`}
+                    {...register("startPrice")}
+                    className={`${inputClass} pl-10 ${errors.startPrice ? 'border-red-500' : ''}`}
                     placeholder="5000"
                   />
                 </div>
+                {errors.startPrice && <p className="mt-1 text-sm text-red-500">{errors.startPrice.message}</p>}
               </div>
 
               <div>
@@ -267,17 +256,14 @@ export const CreateAuction = () => {
                   </div>
                   <input
                     type="number"
-                    name="minIncrement"
-                    id="minIncrement"
-                    required
                     min="1"
                     step="1"
-                    value={formData.minIncrement}
-                    onChange={handleChange}
-                    className={`${inputClass} pl-10`}
+                    {...register("minIncrement")}
+                    className={`${inputClass} pl-10 ${errors.minIncrement ? 'border-red-500' : ''}`}
                     placeholder="500"
                   />
                 </div>
+                {errors.minIncrement && <p className="mt-1 text-sm text-red-500">{errors.minIncrement.message}</p>}
               </div>
             </div>
 
@@ -288,13 +274,10 @@ export const CreateAuction = () => {
               </label>
               <input
                 type="datetime-local"
-                name="endTime"
-                id="endTime"
-                required
-                value={formData.endTime}
-                onChange={handleChange}
-                className={`${inputClass} [color-scheme:dark]`}
+                {...register("endTime")}
+                className={`${inputClass} [color-scheme:dark] ${errors.endTime ? 'border-red-500' : ''}`}
               />
+              {errors.endTime && <p className="mt-1 text-sm text-red-500">{errors.endTime.message}</p>}
             </div>
 
             {/* Submit */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Loader2, Mail, Lock, Gavel, AlertCircle } from 'lucide-react';
@@ -6,26 +6,46 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(1, "Password is required.")
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export const Login = () => {
   const { signIn, signInWithGoogle, isConfigured } = useAuth();
   const { isDark } = useTheme();
   const navigate  = useNavigate();
   const location  = useLocation();
 
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: ''
+    }
+  });
 
   // Redirect back to the page the user came from (or home)
   const from = (location.state as any)?.from?.pathname ?? '/';
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onLoginSubmit = async (data: LoginFormValues) => {
     setErrorMsg(null);
     setLoading(true);
 
-    const { error } = await signIn(email.trim(), password);
+    const { error } = await signIn(data.email.trim(), data.password);
 
     setLoading(false);
 
@@ -152,7 +172,7 @@ export const Login = () => {
             </div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleSubmit(onLoginSubmit)} className="space-y-6">
           <div className="space-y-4">
             {/* Email */}
             <div>
@@ -164,20 +184,15 @@ export const Login = () => {
                   <Mail className="h-5 w-5 text-gray-500" />
                 </div>
                 <input
-                  id="login-email"
                   type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setErrorMsg(null); }}
+                  {...register("email")}
                   className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
-                    isDark 
-                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                    errors.email ? 'border-red-500' : (isDark ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400')
                   }`}
                   placeholder="you@email.com"
                 />
               </div>
+              {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
@@ -190,20 +205,15 @@ export const Login = () => {
                   <Lock className="h-5 w-5 text-gray-500" />
                 </div>
                 <input
-                  id="login-password"
                   type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
+                  {...register("password")}
                   className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
-                    isDark 
-                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                    errors.password ? 'border-red-500' : (isDark ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400')
                   }`}
                   placeholder="••••••••"
                 />
               </div>
+              {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
             </div>
           </div>
 

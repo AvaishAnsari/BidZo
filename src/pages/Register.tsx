@@ -1,35 +1,56 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Loader2, Mail, Lock, User, Briefcase, Gavel, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import type { UserRole } from '../context/AuthContext';
+import type { UserRole } from '../types';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const registerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  role: z.enum(['buyer', 'seller'] as const, { message: "Please select a role." }),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const Register = () => {
   const { signUp, signInWithGoogle, isConfigured } = useAuth();
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
-  const [name,     setName]     = useState('');
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [role,     setRole]     = useState<UserRole>('buyer');
   const [loading,  setLoading]  = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
-      return;
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors }
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: 'buyer',
     }
+  });
 
+  const selectedRole = watch('role');
+
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    setErrorMsg(null);
     setLoading(true);
-    const { error } = await signUp(email.trim(), password, name.trim(), role);
+    
+    const { error } = await signUp(data.email.trim(), data.password, data.name.trim(), data.role as UserRole);
     setLoading(false);
 
     if (error) {
@@ -153,7 +174,7 @@ export const Register = () => {
             </div>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onRegisterSubmit)}>
           <div className="space-y-4">
 
             {/* Name */}
@@ -164,20 +185,15 @@ export const Register = () => {
                   <User className="h-5 w-5 text-gray-500" />
                 </div>
                 <input
-                  id="register-name"
                   type="text"
-                  required
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => { setName(e.target.value); setErrorMsg(null); }}
+                  {...register("name")}
                   className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
-                    isDark 
-                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                    errors.name ? 'border-red-500' : (isDark ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400')
                   }`}
                   placeholder="John Doe"
                 />
               </div>
+              {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>}
             </div>
 
             {/* Email */}
@@ -188,20 +204,15 @@ export const Register = () => {
                   <Mail className="h-5 w-5 text-gray-500" />
                 </div>
                 <input
-                  id="register-email"
                   type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setErrorMsg(null); }}
+                  {...register("email")}
                   className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
-                    isDark 
-                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                    errors.email ? 'border-red-500' : (isDark ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400')
                   }`}
                   placeholder="you@email.com"
                 />
               </div>
+              {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
@@ -212,21 +223,15 @@ export const Register = () => {
                   <Lock className="h-5 w-5 text-gray-500" />
                 </div>
                 <input
-                  id="register-password"
                   type="password"
-                  required
-                  minLength={6}
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
+                  {...register("password")}
                   className={`pl-10 block w-full rounded-xl border px-3 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner ${
-                    isDark 
-                    ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'
+                    errors.password ? 'border-red-500' : (isDark ? 'border-gray-700 bg-gray-900/50 text-white placeholder-gray-500' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400')
                   }`}
                   placeholder="Min. 6 characters"
                 />
               </div>
+              {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
             </div>
 
             {/* Role */}
@@ -235,34 +240,33 @@ export const Register = () => {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
-                  id="role-buyer"
-                  onClick={() => setRole('buyer')}
+                  onClick={() => setValue('role', 'buyer', { shouldValidate: true })}
                   className={`flex items-center justify-center px-4 py-3 border rounded-xl shadow-sm space-x-2 transition-all ${
-                    role === 'buyer'
+                    selectedRole === 'buyer'
                       ? 'border-brand-500 bg-brand-500/10 text-brand-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
-                      : (isDark ? 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800 focus:outline-none' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 focus:outline-none')
+                      : (isDark ? 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50')
                   }`}
                 >
-                  <User className={`w-5 h-5 ${role === 'buyer' ? 'text-brand-500' : 'text-gray-500'}`} />
+                  <User className={`w-5 h-5 ${selectedRole === 'buyer' ? 'text-brand-500' : 'text-gray-500'}`} />
                   <span className="font-medium">Buyer</span>
                 </button>
 
                 <button
                   type="button"
-                  id="role-seller"
-                  onClick={() => setRole('seller')}
+                  onClick={() => setValue('role', 'seller', { shouldValidate: true })}
                   className={`flex items-center justify-center px-4 py-3 border rounded-xl shadow-sm space-x-2 transition-all ${
-                    role === 'seller'
+                    selectedRole === 'seller'
                       ? 'border-brand-500 bg-brand-500/10 text-brand-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
-                      : (isDark ? 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800 focus:outline-none' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50 focus:outline-none')
+                      : (isDark ? 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-800' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50')
                   }`}
                 >
-                  <Briefcase className={`w-5 h-5 ${role === 'seller' ? 'text-brand-500' : 'text-gray-500'}`} />
+                  <Briefcase className={`w-5 h-5 ${selectedRole === 'seller' ? 'text-brand-500' : 'text-gray-500'}`} />
                   <span className="font-medium">Seller</span>
                 </button>
               </div>
+              {errors.role && <p className="mt-1 text-sm text-red-500">{errors.role.message}</p>}
               <p className="mt-1.5 text-xs text-gray-500">
-                {role === 'seller'
+                {selectedRole === 'seller'
                   ? '✓ Sellers can list items and create auctions'
                   : '✓ Buyers can browse and bid on auctions'}
               </p>

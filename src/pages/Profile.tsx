@@ -4,6 +4,7 @@ import { useAuctions } from '../hooks/useAuctions';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { loadBids } from '../utils/localStore';
 import { AuctionCard } from '../components/AuctionCard';
+import { RatingBadge } from '../components/RatingBadge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, PackageOpen, Gavel, FileSignature } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
@@ -91,6 +92,9 @@ export const ProfilePage: React.FC = () => {
               {userRole} Account
             </span>
           </p>
+          <div style={{ marginTop: '0.75rem' }}>
+            <RatingBadge score={4.8} totalReviews={124} />
+          </div>
         </div>
       </div>
 
