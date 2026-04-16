@@ -104,7 +104,7 @@ export function useAuctions(): UseAuctionsResult {
     return () => {
       channel.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   return { auctions, isLoading, error, refetch: load };

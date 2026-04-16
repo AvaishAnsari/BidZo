@@ -59,7 +59,7 @@ export function calculateSmartBids(
   // 3. Knockout (Intimidation jump)
   // Win Prob: Very High. Tries to jump to the next major psychological threshold.
   const magnitude = Math.pow(10, Math.floor(Math.log10(currentPrice || 100)));
-  let knockoutRaw = currentPrice + Math.max(minIncrement * 4, magnitude * 0.5);
+  const knockoutRaw = currentPrice + Math.max(minIncrement * 4, magnitude * 0.5);
   
   // Push it slightly over the exact round number to break ties psychologically (e.g. 1010 instead of 1000)
   let knockoutAmt = roundToPrettyNumber(knockoutRaw);
