@@ -10,7 +10,7 @@ Built on a scalable serverless architecture using Supabase and PostgreSQL, the s
 
 The platform is future-ready, with planned enhancements including AI-based price prediction models, blockchain-backed transparency, and intelligent automation to further optimize the auction ecosystem.
 
-## 🚀 Features
+##  Features
 
 - **User Authentication**: Secure registration and login with Supabase Auth
 - **Role-Based Access**: Buyer and Seller roles with different permissions
@@ -21,7 +21,7 @@ The platform is future-ready, with planned enhancements including AI-based price
 - **Row-Level Security**: Database security with RLS policies
 - **Responsive Design**: Mobile-friendly UI with Tailwind CSS
 
-## 📋 Project Structure
+##  Project Structure
 
 ```
 src/
@@ -42,7 +42,7 @@ src/
 └── index.css          # Global styles with Tailwind
 ```
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **React 18** - UI library
@@ -60,7 +60,7 @@ src/
 ### Payment
 - **Razorpay** - Payment gateway integration
 
-## 🔧 Setup Guide
+##  Setup Guide
 
 ### Prerequisites
 - Node.js 16.x or higher
@@ -108,7 +108,7 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
-## 🔐 Authentication Module
+##  Authentication Module
 
 ### Overview
 
@@ -153,7 +153,7 @@ Wraps routes that require authentication:
 4. Authentication state is updated
 5. User is redirected to home page
 
-## 📁 Database Schema
+##  Database Schema
 
 ### Tables
 
@@ -181,7 +181,7 @@ Database-level security ensures:
 - Only authenticated users can place bids
 - Users can only see orders they are involved in
 
-## 🚀 Deployment
+##  Deployment
 
 ### Frontend (Vercel)
 
@@ -194,7 +194,7 @@ Database-level security ensures:
 
 Supabase is hosted and managed - no additional deployment needed.
 
-## 📚 Next Modules to Implement
+##  Next Modules to Implement
 
 - [x] Authentication Module (✅ completed)
 - [ ] Auction Management Module
@@ -203,7 +203,7 @@ Supabase is hosted and managed - no additional deployment needed.
 - [ ] User Dashboard Module
 - [ ] Image Upload Module
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please follow these guidelines:
 1. Create a feature branch
@@ -215,6 +215,6 @@ Contributions are welcome! Please follow these guidelines:
 
 This project is licensed under the MIT License - see LICENSE file for details.
 
-## 💬 Support
+##  Support
 
 For issues and questions, please open a GitHub issue or contact the development team.
