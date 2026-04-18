@@ -37,6 +37,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 5 * DAY).toISOString(),
     seller_id: 'seller-1',
     status: 'live',
+    category: 'Antiques',
     created_at: new Date().toISOString(),
   },
   {
@@ -52,6 +53,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 3 * DAY).toISOString(),
     seller_id: 'seller-2',
     status: 'live',
+    category: 'Art',
     created_at: new Date().toISOString(),
   },
   {
@@ -67,6 +69,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 4 * DAY).toISOString(),
     seller_id: 'seller-3',
     status: 'live',
+    category: 'Vehicles',
     created_at: new Date().toISOString(),
   },
   {
@@ -82,6 +85,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 6 * DAY).toISOString(),
     seller_id: 'seller-4',
     status: 'live',
+    category: 'Jewelry',
     created_at: new Date().toISOString(),
   },
   {
@@ -97,6 +101,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 2 * DAY).toISOString(),
     seller_id: 'seller-5',
     status: 'live',
+    category: 'Art',
     created_at: new Date().toISOString(),
   },
   {
@@ -112,6 +117,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 1 * DAY).toISOString(),
     seller_id: 'seller-6',
     status: 'live',
+    category: 'Antiques',
     created_at: new Date().toISOString(),
   },
   // ── UPCOMING auctions ────────────────────────────────────────────────────
@@ -128,6 +134,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 8 * DAY).toISOString(),
     seller_id: 'seller-7',
     status: 'upcoming',
+    category: 'Electronics',
     created_at: new Date().toISOString(),
   },
   {
@@ -143,6 +150,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 9 * DAY).toISOString(),
     seller_id: 'seller-8',
     status: 'upcoming',
+    category: 'Antiques',
     created_at: new Date().toISOString(),
   },
   {
@@ -158,6 +166,7 @@ export const DUMMY_AUCTIONS: Auction[] = [
     end_time:   new Date(now + 12 * DAY).toISOString(),
     seller_id: 'seller-9',
     status: 'upcoming',
+    category: 'Antiques',
     created_at: new Date().toISOString(),
   },
 ];
@@ -304,6 +313,7 @@ export function createAuction(params: {
   minIncrement: number;
   endTime: string;
   sellerId: string;
+  category: string;
 }): Auction {
   const newAuction: Auction = {
     id: `auction-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -316,6 +326,7 @@ export function createAuction(params: {
     start_time:    new Date().toISOString(),
     end_time:      params.endTime,
     seller_id:     params.sellerId,
+    category:      params.category,
     status:        'live',
     created_at:    new Date().toISOString(),
     extension_count: 0,

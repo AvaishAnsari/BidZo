@@ -15,6 +15,7 @@ export const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bids' | 'listings'>('bids');
   const [participatedAuctionIds, setParticipatedAuctionIds] = useState<Set<string>>(new Set());
   const [bidsLoading, setBidsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     async function fetchUserBids() {
@@ -29,6 +30,11 @@ export const ProfilePage: React.FC = () => {
             const uniqueIds = new Set(data.map(b => b.auction_id));
             setParticipatedAuctionIds(uniqueIds);
           }
+
+          // Fetch profile metadata
+          const { data: profileData } = await supabase.from('users').select('*').eq('id', user!.id).single();
+          if (profileData) setUserProfile(profileData);
+
         } catch (err) {
           console.error("Failed to fetch bids for profile", err);
         }
@@ -38,6 +44,14 @@ export const ProfilePage: React.FC = () => {
         const userBids = localBids.filter(b => b.user_id === user!.id || b.userEmail === user!.email || b.user_email === user!.email);
         const uniqueIds = new Set(userBids.map(b => b.auction_id || b.auctionId));
         setParticipatedAuctionIds(uniqueIds);
+        
+        // Fetch offline profile metadata
+        const accountsStr = localStorage.getItem('bidzo_mock_accounts');
+        if (accountsStr && user?.email) {
+           const accounts = JSON.parse(accountsStr);
+           const p = accounts[user.email.toLowerCase()];
+           if (p) setUserProfile(p);
+        }
       }
       setBidsLoading(false);
     }
@@ -58,6 +72,10 @@ export const ProfilePage: React.FC = () => {
   const myListings = auctions.filter(a => a.seller_id === user.id);
 
   const displayAuctions = activeTab === 'bids' ? myBidsAuctions : myListings;
+
+  const trustScore = userProfile?.trust_score ?? 50;
+  const isTrusted = trustScore >= 10;
+  const isNewUser = (userProfile?.total_reviews === 0) || !userProfile;
 
   return (
     <div style={{ padding: '2rem 0', width: '100%', minHeight: '80vh' }}>
@@ -82,18 +100,32 @@ export const ProfilePage: React.FC = () => {
               background: userRole === 'seller' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(52, 211, 153, 0.15)',
               color: userRole === 'seller' ? '#c084fc' : '#34d399',
               border: `1px solid ${userRole === 'seller' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(52, 211, 153, 0.3)'}`,
-              padding: '0.1rem 0.6rem',
-              borderRadius: '9999px',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
+              padding: '0.1rem 0.6rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em'
             }}>
               {userRole} Account
             </span>
+
+            {isTrusted && (
+              <span title="Trust Score Verified" style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)', padding: '0.1rem 0.6rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                🛡️ Trusted
+              </span>
+            )}
+
+            {isNewUser && !isTrusted && (
+              <span title="New to BidZo" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', padding: '0.1rem 0.6rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                🌱 New User
+              </span>
+            )}
           </p>
-          <div style={{ marginTop: '0.75rem' }}>
-            <RatingBadge score={4.8} totalReviews={124} />
+          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <RatingBadge score={userProfile?.rating ?? 0.0} totalReviews={userProfile?.total_reviews ?? 0} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.8 }} title="Internal Trust Index">
+              <div style={{ width: '80px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ width: `${trustScore}%`, height: '100%', background: trustScore >= 50 ? '#34d399' : trustScore >= 30 ? '#fbbf24' : '#ef4444' }} />
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600 }}>{trustScore} TS</span>
+            </div>
           </div>
         </div>
       </div>

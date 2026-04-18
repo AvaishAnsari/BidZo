@@ -1,9 +1,12 @@
+import React, { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Gavel, LogOut, User as UserIcon, Sun, Moon } from 'lucide-react';
+import { Gavel, LogOut, User as UserIcon, Sun, Moon, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
+import { useNotifications } from '../context/NotificationContext';
 const centerStyle: React.CSSProperties = {
   maxWidth: '1280px',
   marginLeft: 'auto',
@@ -18,6 +21,10 @@ export const Layout = () => {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
+  
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -27,7 +34,7 @@ export const Layout = () => {
   const navLinks = [
     { name: 'Auctions', path: '/auctions' },
     ...(user ? [{ name: 'Watchlist', path: '/watchlist' }] : []),
-    ...(userRole === 'seller' ? [{ name: 'Create Auction', path: '/create-auction' }] : []),
+    ...(userRole === 'seller' ? [{ name: t('createAuction'), path: '/create-auction' }] : []),
     ...(userRole === 'admin' ? [{ name: 'Admin Dashboard', path: '/admin' }] : []),
   ];
 
@@ -142,6 +149,74 @@ export const Layout = () => {
               </motion.button>
               
               <LanguageSwitcher />
+
+              {/* Notification Bell */}
+              {user && (
+                <div style={{ position: 'relative' }}>
+                  <motion.button
+                    onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:text-white transition-colors"
+                  >
+                    <Bell size={18} />
+                    {unreadCount > 0 && (
+                      <div style={{
+                        position: 'absolute', top: -2, right: -2,
+                        background: '#ef4444', color: 'white',
+                        fontSize: '0.65rem', fontWeight: 800,
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        {unreadCount}
+                      </div>
+                    )}
+                  </motion.button>
+                  
+                  <AnimatePresence>
+                    {showNotifDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="glass"
+                        style={{
+                          position: 'absolute', top: '130%', right: 0,
+                          width: '320px', borderRadius: '1rem',
+                          border: isDark ? '1px solid rgba(156,163,175,0.2)' : '1px solid rgba(156,163,175,0.5)',
+                          background: isDark ? 'rgba(31,41,55,0.95)' : 'rgba(255,255,255,0.95)',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                          overflow: 'hidden', zIndex: 100,
+                        }}
+                      >
+                        <div style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isDark ? 'white' : '#111827' }}>Notifications</h3>
+                          {unreadCount > 0 && (
+                            <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>Mark all read</button>
+                          )}
+                        </div>
+                        <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                          {notifications.length === 0 ? (
+                            <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>No notifications yet.</p>
+                          ) : (
+                            notifications.map(n => (
+                              <div key={n.id} onClick={() => !n.read && markAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.1)', background: n.read ? 'transparent' : (isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)'), cursor: n.read ? 'default' : 'pointer', transition: 'background 0.2s' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isDark ? '#e5e7eb' : '#1f2937' }}>{n.title}</span>
+                                  {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />}
+                                </div>
+                                <p style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 0.5rem 0', lineHeight: 1.4 }}>{n.message}</p>
+                                <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>{new Date(n.created_at).toLocaleString()}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
 
               {user ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>

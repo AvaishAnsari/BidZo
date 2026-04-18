@@ -66,6 +66,9 @@ interface MockAccount {
   password: string;
   name: string;
   role: UserRole;
+  trust_score?: number;
+  rating?: number;
+  total_reviews?: number;
 }
 
 function getMockAccounts(): Record<string, MockAccount> {
@@ -254,6 +257,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           password,
           name,
           role,
+          trust_score: 50,
+          rating: 0.0,
+          total_reviews: 0,
         };
 
         saveMockAccount(newAccount);

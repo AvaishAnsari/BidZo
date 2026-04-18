@@ -4,6 +4,7 @@ import { AuctionCard } from '../components/AuctionCard';
 import { Loader2, Zap, RefreshCw, Flame, Search, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import { AUCTION_CATEGORIES } from './CreateAuction';
 
 export const Home = () => {
   const { auctions, isLoading, error, refetch } = useAuctions();
@@ -11,8 +12,28 @@ export const Home = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'live' | 'upcoming' | 'ended'>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [timeRemaining, setTimeRemaining] = useState<'all' | '24_hours' | '7_days'>('all');
   const [sortBy, setSortBy] = useState<'ending_soon' | 'newly_listed' | 'price_asc' | 'price_desc'>('ending_soon');
   const [showFilters, setShowFilters] = useState(false);
+
+  const activeFiltersCount = 
+    (filterStatus !== 'all' ? 1 : 0) + 
+    (filterCategory !== 'all' ? 1 : 0) + 
+    (minPrice !== '' ? 1 : 0) + 
+    (maxPrice !== '' ? 1 : 0) + 
+    (timeRemaining !== 'all' ? 1 : 0);
+
+  const resetFilters = () => {
+    setFilterStatus('all');
+    setFilterCategory('all');
+    setMinPrice('');
+    setMaxPrice('');
+    setTimeRemaining('all');
+    setSortBy('ending_soon');
+  };
 
   // Apply filters and sorting
   const filteredAndSortedAuctions = useMemo(() => {
@@ -25,6 +46,30 @@ export const Home = () => {
 
     if (filterStatus !== 'all') {
       result = result.filter(a => a.status === filterStatus);
+    }
+
+    if (filterCategory !== 'all') {
+      result = result.filter(a => a.category === filterCategory);
+    }
+
+    if (minPrice) {
+      const min = parseFloat(minPrice);
+      if (!isNaN(min)) result = result.filter(a => a.current_price >= min);
+    }
+
+    if (maxPrice) {
+      const max = parseFloat(maxPrice);
+      if (!isNaN(max)) result = result.filter(a => a.current_price <= max);
+    }
+
+    if (timeRemaining !== 'all') {
+      const now = Date.now();
+      result = result.filter(a => {
+        const remaining = new Date(a.end_time).getTime() - now;
+        if (timeRemaining === '24_hours') return remaining > 0 && remaining <= 86400000;
+        if (timeRemaining === '7_days') return remaining > 0 && remaining <= 604800000;
+        return true;
+      });
     }
 
     result.sort((a, b) => {
@@ -43,7 +88,7 @@ export const Home = () => {
     });
 
     return result;
-  }, [auctions, searchQuery, filterStatus, sortBy]);
+  }, [auctions, searchQuery, filterStatus, filterCategory, minPrice, maxPrice, timeRemaining, sortBy]);
 
   const trendingAuctions = [...auctions]
     .filter(a => a.status === 'live')
@@ -191,11 +236,22 @@ export const Home = () => {
                   padding: '0.85rem 1.25rem', background: showFilters ? 'rgba(99,102,241,0.2)' : 'rgba(75,85,99,0.2)',
                   border: `1px solid ${showFilters ? 'rgba(99,102,241,0.5)' : 'rgba(75,85,99,0.4)'}`,
                   color: showFilters ? '#a5b4fc' : (isDark ? '#d1d5db' : '#4b5563'),
-                  borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600
+                  borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600,
+                  position: 'relative'
                 }}
               >
                 <Filter style={{ width: '1.1rem', height: '1.1rem' }} />
                 Filters
+                {activeFiltersCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-0.4rem', right: '-0.4rem',
+                    background: '#6366f1', color: 'white', borderRadius: '50%',
+                    width: '1.25rem', height: '1.25rem', fontSize: '0.75rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
+                  }}>
+                    {activeFiltersCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -207,8 +263,9 @@ export const Home = () => {
                   exit={{ height: 0, opacity: 0 }}
                   style={{ overflow: 'hidden' }}
                 >
-                  <div style={{ display: 'flex', gap: '2rem', paddingTop: '1rem', borderTop: '1px solid rgba(75,85,99,0.3)', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(75,85,99,0.3)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Status</label>
                       <select
                         value={filterStatus}
@@ -224,6 +281,54 @@ export const Home = () => {
                         <option value="live">Live Now</option>
                         <option value="upcoming">Upcoming</option>
                         <option value="ended">Ended</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Category</label>
+                      <select
+                        value={filterCategory}
+                        onChange={e => setFilterCategory(e.target.value)}
+                        style={{
+                          padding: '0.65rem', borderRadius: '0.5rem',
+                          background: isDark ? '#1f2937' : '#f3f4f6', border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
+                          color: isDark ? 'white' : 'black', outline: 'none'
+                        }}
+                      >
+                        <option value="all">All Categories</option>
+                        {AUCTION_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Price Range</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          type="number" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)}
+                          style={{ width: '80px', padding: '0.65rem', borderRadius: '0.5rem', background: isDark ? '#1f2937' : '#f3f4f6', border: isDark ? '1px solid #374151' : '1px solid #d1d5db', color: isDark ? 'white' : 'black', outline: 'none' }}
+                        />
+                        <span style={{ color: '#6b7280' }}>-</span>
+                        <input
+                          type="number" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)}
+                          style={{ width: '80px', padding: '0.65rem', borderRadius: '0.5rem', background: isDark ? '#1f2937' : '#f3f4f6', border: isDark ? '1px solid #374151' : '1px solid #d1d5db', color: isDark ? 'white' : 'black', outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Ends In</label>
+                      <select
+                        value={timeRemaining}
+                        onChange={e => setTimeRemaining(e.target.value as any)}
+                        style={{
+                          padding: '0.65rem', borderRadius: '0.5rem',
+                          background: isDark ? '#1f2937' : '#f3f4f6', border: isDark ? '1px solid #374151' : '1px solid #d1d5db',
+                          color: isDark ? 'white' : 'black', outline: 'none'
+                        }}
+                      >
+                        <option value="all">Any Time</option>
+                        <option value="24_hours">&lt; 24 Hours</option>
+                        <option value="7_days">&lt; 7 Days</option>
                       </select>
                     </div>
 
@@ -244,6 +349,25 @@ export const Home = () => {
                         <option value="price_asc">Price: Low to High</option>
                         <option value="price_desc">Price: High to Low</option>
                       </select>
+                    </div>
+                    </div>
+
+                    {/* Filter Actions */}
+                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                       <button
+                         onClick={resetFilters}
+                         style={{
+                           display: 'flex', alignItems: 'center', gap: '0.5rem',
+                           background: 'transparent', border: 'none', color: '#f87171',
+                           fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                           padding: '0.5rem 1rem', borderRadius: '0.5rem',
+                           transition: 'background 0.2s',
+                         }}
+                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.1)'}
+                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                       >
+                         <RefreshCw style={{ width: '1rem', height: '1rem' }} /> Reset Filters
+                       </button>
                     </div>
                   </div>
                 </motion.div>

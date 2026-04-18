@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
 import { useAuth } from './AuthContext';
 import type { Notification } from '../types';
@@ -16,6 +16,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const alertedAuctions = useRef<Set<string>>(new Set());
   
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -62,8 +63,50 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       )
       .subscribe();
 
+    // Poll every 60 seconds to check for ending auctions
+    const endingCheckInterval = setInterval(async () => {
+      if (!isSupabaseConfigured() || !user) return;
+      
+      const now = new Date();
+      const in5Mins = new Date(now.getTime() + 5 * 60000).toISOString();
+      const nowIso = now.toISOString();
+
+      const { data: endingAuctions } = await supabase
+        .from('auctions')
+        .select('id, title, end_time')
+        .gt('end_time', nowIso)
+        .lt('end_time', in5Mins)
+        .eq('status', 'live');
+
+      if (endingAuctions && endingAuctions.length > 0) {
+        for (const auction of endingAuctions) {
+          if (alertedAuctions.current.has(auction.id)) continue;
+          
+          // Check if user has participated in this auction
+          const { count } = await supabase
+            .from('bids')
+            .select('*', { count: 'exact', head: true })
+            .eq('auction_id', auction.id)
+            .eq('user_id', user.id);
+            
+          if (count && count > 0) {
+            alertedAuctions.current.add(auction.id);
+            
+            // Generate standard notification object mapping to our DB
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              title: 'Auction About to End!',
+              message: `Hurry! The auction "${auction.title}" you bidded on is ending in less than 5 minutes.`,
+              type: 'auction_ending'
+            });
+          }
+        }
+      }
+    }, 60000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(endingCheckInterval);
     };
   }, [user]);
 

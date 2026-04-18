@@ -17,7 +17,16 @@ import { syncServerTime } from './utils/timeSync';
 import { useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { useTranslation } from 'react-i18next';
+
 function App() {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    document.documentElement.dir = i18n.dir();
+    document.documentElement.lang = i18n.language;
+  }, [i18n, i18n.language]);
+
   useEffect(() => {
     syncServerTime();
   }, []);

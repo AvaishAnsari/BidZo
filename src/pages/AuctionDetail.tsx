@@ -21,6 +21,7 @@ import {
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BidHistoryModal } from '../components/BidHistoryModal';
+import { useTranslation } from 'react-i18next';
 
 // ── Sub-component: single countdown tile ─────────────────────────
 const TimeBlock = ({ value, label, urgent, isDark }: { value: number; label: string; urgent?: boolean; isDark: boolean }) => (
@@ -60,6 +61,7 @@ export const AuctionDetail = () => {
   const { user } = useAuth();
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { isDark } = useTheme();
+  const { t } = useTranslation();
 
   const {
     auction,
@@ -460,7 +462,7 @@ export const AuctionDetail = () => {
             <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem', textAlign: 'center' }}>
               <p style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                 <TrendingUp style={{ width: '0.875rem', height: '0.875rem', color: '#818cf8' }} />
-                Current Bid
+                {t('currentBid')}
               </p>
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <motion.p
@@ -761,7 +763,7 @@ export const AuctionDetail = () => {
                         ? <><Trophy style={{ width: '1rem', height: '1rem' }} /> You won this auction</>
                         : <><Trophy style={{ width: '1rem', height: '1rem' }} /> Top Bidder</>
                     ) : (
-                      <><Gavel style={{ width: '1rem', height: '1rem' }} /> Place Bid</>
+                      <><Gavel style={{ width: '1rem', height: '1rem' }} /> {t('placeBid')}</>
                     )}
                   </motion.button>
                 </form>

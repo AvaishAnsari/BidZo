@@ -9,6 +9,7 @@ import {
 import { useAuctions } from '../hooks/useAuctions';
 import { AuctionCard } from '../components/AuctionCard';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */
 const centerStyle: React.CSSProperties = {
@@ -179,6 +180,7 @@ export const LandingPage = () => {
   const navigate = useNavigate();
   const { auctions } = useAuctions();
   const { isDark } = useTheme();
+  const { t } = useTranslation();
   
   const [tickerIdx, setTickerIdx] = useState(0);
   const [headingIdx, setHeadingIdx] = useState(0);
@@ -269,7 +271,7 @@ export const LandingPage = () => {
                     className="btn-gradient"
                     style={{ textDecoration: 'none', fontSize: '0.95rem', padding: '0.6rem 1.5rem', boxShadow: '0 0 20px rgba(168,85,247,0.4)' }}
                   >
-                    Get Started
+                    {t('getStarted')}
                   </Link>
                 </>
               )}
@@ -282,17 +284,22 @@ export const LandingPage = () => {
       <div style={{
         background: isDark ? 'linear-gradient(90deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.12) 100%)' : 'rgba(249,250,251,1)',
         borderBottom: isDark ? '1px solid rgba(99,102,241,0.15)' : '1px solid #e5e7eb',
-        padding: '0.5rem 0',
+        padding: '0.65rem 0',
         overflow: 'hidden',
+        minHeight: '2.5rem',
+        display: 'flex',
+        alignItems: 'center'
       }}>
         <div style={centerStyle}>
-          <motion.div
-            key={tickerIdx}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}
-          >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tickerIdx}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}
+            >
             <span style={{
               background: isDark ? 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.15))' : '#10b981',
               color: isDark ? '#4ade80' : '#ffffff', border: isDark ? '1px solid rgba(34,197,94,0.35)' : 'none',
@@ -307,18 +314,19 @@ export const LandingPage = () => {
               {TICKER_BIDS[tickerIdx].bid}
             </span>
             <span style={{ color: isDark ? '#4b5563' : '#6b7280' }}>by {TICKER_BIDS[tickerIdx].user}</span>
-          </motion.div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
       {/* ════ HERO ══════════════════════════════════════════════════ */}
       <section style={{ 
         position: 'relative', 
-        minHeight: '100vh', 
         display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center', 
-        justifyContent: 'center',
-        padding: '6rem 1.5rem',
+        justifyContent: 'flex-start',
+        padding: '3.5rem 1.5rem 7rem',
         overflow: 'hidden' 
       }}>
         {/* Deep Glowing Premium Backgrounds */}
@@ -382,7 +390,7 @@ export const LandingPage = () => {
               }}
             >
               <span style={{ color: isDark ? '#f8fafc' : '#111827', display: 'block', fontSize: 'clamp(2.5rem, 6vw, 4.5rem)' }}>
-                Discover Premium
+                {t('discoverPremium')}
               </span>
               <AnimatePresence mode="popLayout">
                 <motion.span
@@ -463,7 +471,7 @@ export const LandingPage = () => {
                     e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db';
                   }}
                 >
-                  Explore Auctions
+                  {t('exploreAuctions')}
                   <ChevronRight style={{ width: '1.2rem', height: '1.2rem' }} />
                 </Link>
               </motion.div>

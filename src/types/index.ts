@@ -5,8 +5,11 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-  created_at: string;
+  trust_score?: number;
+  rating?: number;
+  total_reviews?: number;
   avatar_url?: string;
+  created_at: string;
 }
 
 export interface AuthContextType {
@@ -32,6 +35,7 @@ export interface Auction {
   seller_id: string;
   winner_id?: string;
   status: 'upcoming' | 'live' | 'ended';
+  category?: string;
   created_at: string;
   /** How many times the end_time has been extended by anti-sniping (max 3) */
   extension_count?: number;

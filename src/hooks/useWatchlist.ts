@@ -38,7 +38,7 @@ export function useWatchlist() {
         if (localWatchlist) {
           try {
             setWatchedIds(JSON.parse(localWatchlist));
-          } catch (e) {
+          } catch {
             console.error("Failed to parse local watchlist");
           }
         }
@@ -51,10 +51,11 @@ export function useWatchlist() {
 
   // Sync mechanism across components
   useEffect(() => {
-    const handleSync = (e: any) => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<string[]>;
       // Sync local state if a custom event was fired
-      if (e.detail && Array.isArray(e.detail)) {
-        setWatchedIds(e.detail);
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setWatchedIds(customEvent.detail);
       }
     };
     window.addEventListener('watchlistUpdated', handleSync);
@@ -104,7 +105,7 @@ export function useWatchlist() {
           if (error) throw error;
           toast.success('Added to Watchlist!', { icon: '❤️' });
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Watchlist sync error:", error);
         // Rollback state if DB request failed securely
         toast.error('Failed to sync watchlist. Reverting changes.');

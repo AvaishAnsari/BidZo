@@ -23,8 +23,11 @@ const auctionSchema = z.object({
   minIncrement: z.string().min(1, "Minimum increment must be greater than 0"),
   endTime: z.string().refine((val) => new Date(val) > new Date(), {
     message: "End time must be in the future."
-  })
+  }),
+  category: z.string().min(1, "Please select a category")
 });
+
+export const AUCTION_CATEGORIES = ['Art', 'Vehicles', 'Jewelry', 'Electronics', 'Antiques', 'Other'];
 
 type AuctionFormValues = z.infer<typeof auctionSchema>;
 
@@ -47,6 +50,7 @@ export const CreateAuction = () => {
       startPrice: '',
       minIncrement: '',
       endTime: '',
+      category: 'Other',
     }
   });
 
@@ -95,6 +99,7 @@ export const CreateAuction = () => {
           minIncrement: parseFloat(data.minIncrement),
           endTime:      new Date(data.endTime).toISOString(),
           sellerId:     user.id,
+          category:     data.category,
         });
         toast.success('Auction created! 🎉');
         navigate('/');
@@ -112,6 +117,7 @@ export const CreateAuction = () => {
         start_time:    new Date().toISOString(),
         end_time:      new Date(data.endTime).toISOString(),
         seller_id:     user.id,
+        category:      data.category,
         status:        'live',
       });
 
@@ -221,6 +227,22 @@ export const CreateAuction = () => {
                   placeholder="Detailed description of the item — provenance, condition, certificates..."
                 />
                 {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-2">
+                  Category
+                </label>
+                <select
+                  {...register("category")}
+                  className={`${inputClass} ${errors.category ? 'border-red-500' : ''}`}
+                >
+                  <option value="" disabled>Select a category...</option>
+                  {AUCTION_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category.message}</p>}
               </div>
             </div>
 

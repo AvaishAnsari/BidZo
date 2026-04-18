@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { VerifiedBadge, SellerRating } from './TrustBadges';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 interface AuctionCardProps {
   auction: Auction;
@@ -20,6 +21,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { user } = useAuth();
   const { isDark } = useTheme();
+  const { t } = useTranslation();
 
   const isWatchedItem = isWatched(auction.id);
   const isOwnAuction = user?.id === auction.seller_id;
@@ -168,7 +170,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
         }}>
           <div>
             <p style={{ color: isDark ? '#4b5563' : '#4b5563', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, margin: '0 0 0.25rem 0' }}>
-              Current Bid
+              {t('currentBid')}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <TrendingUp style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
@@ -214,7 +216,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
               } : {}),
             }}
           >
-            {isEnded ? 'View Results' : isOwnAuction ? 'Manage Auction' : 'Place Bid →'}
+            {isEnded ? 'View Results' : isOwnAuction ? 'Manage Auction' : `${t('placeBid')} →`}
           </Link>
         </div>
       </div>
