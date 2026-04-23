@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, TrendingUp } from 'lucide-react';
 import type { Auction } from '../types';
@@ -29,7 +29,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   const isUpcoming =
     !isEnded &&
     (new Date(auction.start_time) > new Date() || auction.status === 'upcoming');
-
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <motion.div
@@ -48,12 +48,18 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
       <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', background: isDark ? '#111827' : '#e5e7eb', flexShrink: 0 }}>
         {auction.image_url ? (
           <>
+            {/* Skeleton while loading */}
+            {!imgLoaded && (
+              <div className="skeleton" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} />
+            )}
             <img
               src={auction.image_url}
               alt={auction.title}
+              onLoad={() => setImgLoaded(true)}
               style={{
                 width: '100%', height: '100%', objectFit: 'cover',
-                display: 'block', transition: 'transform 0.6s ease',
+                display: 'block', transition: 'transform 0.6s ease, opacity 0.4s',
+                opacity: imgLoaded ? 1 : 0,
               }}
               onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.07)')}
               onMouseOut={e  => (e.currentTarget.style.transform = 'scale(1)')}
@@ -134,10 +140,33 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
 
       {/* Content */}
         <div style={{ padding: '1.25rem 1.35rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', fontWeight: 500 }}>{t('verifiedSeller')}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+          {auction.category && (
+            <span style={{
+              fontSize: '0.64rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+              background: 'rgba(99,102,241,0.12)', color: '#818cf8',
+              border: '1px solid rgba(99,102,241,0.22)',
+              padding: '0.15rem 0.5rem', borderRadius: '9999px',
+            }}>
+              {auction.category}
+            </span>
+          )}
+          {(auction.bid_count ?? 0) > 0 && (
+            <span style={{
+              fontSize: '0.64rem', fontWeight: 700,
+              background: 'rgba(52,211,153,0.1)', color: '#34d399',
+              border: '1px solid rgba(52,211,153,0.22)',
+              padding: '0.15rem 0.5rem', borderRadius: '9999px',
+            }}>
+              {auction.bid_count} bids
+            </span>
+          )}
+          <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#4b5563', fontWeight: 500 }}>
+            {t('verifiedSeller')}
+          </span>
           <VerifiedBadge userId={auction.seller_id} />
         </div>
+
         <h3 style={{
           fontSize: '1.1rem', fontWeight: 700,
           color: isDark ? '#f3f4f6' : '#111827', margin: '0 0 0.5rem 0',

@@ -148,14 +148,14 @@ export const LandingPage = () => {
 
   // Auto-advance ticker
   useEffect(() => {
-    const t = setInterval(() => setTickerIdx(i => (i + 1) % TICKER_BIDS.length), 3200);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setTickerIdx(i => (i + 1) % TICKER_BIDS.length), 3200);
+    return () => clearInterval(timer);
   }, []);
 
   // Auto-advance heading
   useEffect(() => {
-    const t = setInterval(() => setHeadingIdx(i => (i + 1) % HEADINGS.length), 3500);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setHeadingIdx(i => (i + 1) % HEADINGS.length), 3500);
+    return () => clearInterval(timer);
   }, []);
 
   // If already logged in, still show landing but CTA routes to /auctions
@@ -580,7 +580,7 @@ export const LandingPage = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {FEATURE_KEYS.map(({ icon: Icon, color, bg, border, titleKey, descKey }, i) => (
-              <FadeUp key={title} delay={i * 0.07}>
+              <FadeUp key={titleKey} delay={i * 0.07}>
                 <motion.div
                   whileHover={{ translateY: -4 }}
                   className="glass-card"

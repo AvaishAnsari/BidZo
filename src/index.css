@@ -584,3 +584,132 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; }
   border: none;
   box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   HIDE SCROLLBAR UTILITY
+   ───────────────────────────────────────────────────────────────────────── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SKELETON LOADERS
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes skeleton-wave {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.10) 40%,
+    rgba(255,255,255,0.04) 80%
+  );
+  background-size: 800px 100%;
+  animation: skeleton-wave 1.6s infinite linear;
+  border-radius: 0.5rem;
+}
+
+[data-theme="light"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.05) 0%,
+    rgba(0,0,0,0.10) 40%,
+    rgba(0,0,0,0.05) 80%
+  );
+  background-size: 800px 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STAT COUNT CHIP (home page live bar)
+   ───────────────────────────────────────────────────────────────────────── */
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #a5b4fc;
+  letter-spacing: 0.02em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RING GLOW — used for active category selection
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes ring-pulse {
+  0%,100% { box-shadow: 0 0 0 0px rgba(99,102,241,0.3); }
+  50%      { box-shadow: 0 0 0 4px rgba(99,102,241,0.15); }
+}
+
+.ring-pulse-active {
+  animation: ring-pulse 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FLOATING CARD — extra depth shadow for featured items
+   ───────────────────────────────────────────────────────────────────────── */
+.card-featured {
+  box-shadow:
+    0 0 0 1px rgba(139,92,246,0.2),
+    0 4px 6px rgba(0,0,0,0.3),
+    0 20px 50px rgba(139,92,246,0.12);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SPIN ANIMATION (used on loaders)
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CATEGORY PILL ACTIVE GLOW
+   ───────────────────────────────────────────────────────────────────────── */
+.category-active-glow {
+  animation: cat-glow 2s ease-in-out infinite;
+}
+@keyframes cat-glow {
+  0%,100% { filter: brightness(1); }
+  50%     { filter: brightness(1.15); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SMOOTH FADE SLIDE — general purpose entrance
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-slide-up {
+  animation: fadeSlideUp 0.5s ease-out forwards;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SHIMMER CARD SKELETON PLACEHOLDER
+   ───────────────────────────────────────────────────────────────────────── */
+.card-skeleton {
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: rgba(17,20,50,0.55);
+  border: 1px solid rgba(99,102,241,0.1);
+}
+
+.card-skeleton-img {
+  width: 100%;
+  height: 220px;
+}
+
+.card-skeleton-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+

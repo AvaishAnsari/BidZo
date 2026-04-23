@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../context/NotificationContext';
+import BackToTop from './BackToTop';
 const centerStyle: React.CSSProperties = {
   maxWidth: '1280px',
   marginLeft: 'auto',
@@ -334,6 +335,7 @@ export const Layout = () => {
           </div>
         </div>
       </footer>
+      <BackToTop />
     </div>
   );
 };
