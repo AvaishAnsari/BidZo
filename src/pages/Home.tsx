@@ -5,10 +5,12 @@ import { Loader2, Zap, RefreshCw, Flame, Search, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import { AUCTION_CATEGORIES } from './CreateAuction';
+import { useTranslation } from 'react-i18next';
 
 export const Home = () => {
   const { auctions, isLoading, error, refetch } = useAuctions();
   const { isDark } = useTheme();
+  const { t } = useTranslation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'live' | 'upcoming' | 'ended'>('all');
@@ -122,7 +124,7 @@ export const Home = () => {
           style={{ marginBottom: '2rem' }}
         >
           <Zap style={{ width: '0.9rem', height: '0.9rem', color: '#c084fc' }} />
-          The next generation of bidding
+          {t('nextGenerationBidding')}
         </motion.div>
 
         <h1
@@ -138,7 +140,7 @@ export const Home = () => {
           }}
         >
           <span style={{ display: 'block', fontSize: 'clamp(2.8rem, 7vw, 5.5rem)' }}>
-            Discover Premium
+            {t('discoverPremium')}
           </span>
           <span
             className="gradient-text"
@@ -147,7 +149,7 @@ export const Home = () => {
               fontSize: 'clamp(2.8rem, 7vw, 5.5rem)',
             }}
           >
-            Live Auctions
+            {t('liveAuctions')}
           </span>
         </h1>
 
@@ -160,8 +162,7 @@ export const Home = () => {
           fontWeight: 300,
           lineHeight: 1.75,
         }}>
-          Bid on exclusive items, track real-time prices, and secure magnificent pieces
-          with BidZo's high-performance bidding engine.
+          {t('heroSubtext')}
         </p>
       </motion.section>
 
@@ -170,7 +171,7 @@ export const Home = () => {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', gap: '1rem' }}>
           <Loader2 style={{ width: '3rem', height: '3rem', color: '#6366f1', animation: 'spin 1s linear infinite' }} />
           <p style={{ color: '#818cf8', fontSize: '0.8rem', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
-            Loading Auctions
+            {t('loadingAuctions')}
           </p>
         </div>
       ) : error ? (
@@ -189,7 +190,7 @@ export const Home = () => {
         >
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
           <h3 style={{ color: '#f87171', fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-            Failed to load auctions
+            {t('failedToLoad')}
           </h3>
           <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{error}</p>
           <button
@@ -204,7 +205,7 @@ export const Home = () => {
               cursor: 'pointer',
             }}
           >
-            <RefreshCw style={{ width: '0.9rem', height: '0.9rem' }} /> Try again
+            <RefreshCw style={{ width: '0.9rem', height: '0.9rem' }} /> {t('tryAgain')}
           </button>
         </motion.div>
       ) : auctions.length > 0 ? (
@@ -217,7 +218,7 @@ export const Home = () => {
                 <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280', width: '1.2rem', height: '1.2rem' }} />
                 <input
                   type="text"
-                  placeholder="Search auctions by title or keywords..."
+                  placeholder={t('searchPlaceholder')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   style={{
@@ -241,7 +242,7 @@ export const Home = () => {
                 }}
               >
                 <Filter style={{ width: '1.1rem', height: '1.1rem' }} />
-                Filters
+                {t('filters')}
                 {activeFiltersCount > 0 && (
                   <span style={{
                     position: 'absolute', top: '-0.4rem', right: '-0.4rem',
@@ -266,7 +267,7 @@ export const Home = () => {
                   <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(75,85,99,0.3)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Status</label>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>{t('status')}</label>
                       <select
                         value={filterStatus}
                         onChange={e => setFilterStatus(e.target.value as any)}
@@ -277,15 +278,15 @@ export const Home = () => {
                           color: isDark ? 'white' : 'black', outline: 'none'
                         }}
                       >
-                        <option value="all">All Auctions</option>
-                        <option value="live">Live Now</option>
-                        <option value="upcoming">Upcoming</option>
-                        <option value="ended">Ended</option>
+                        <option value="all">{t('allAuctions')}</option>
+                        <option value="live">{t('liveNow')}</option>
+                        <option value="upcoming">{t('upcoming')}</option>
+                        <option value="ended">{t('ended')}</option>
                       </select>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Category</label>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>{t('category')}</label>
                       <select
                         value={filterCategory}
                         onChange={e => setFilterCategory(e.target.value)}
@@ -295,28 +296,28 @@ export const Home = () => {
                           color: isDark ? 'white' : 'black', outline: 'none'
                         }}
                       >
-                        <option value="all">All Categories</option>
+                        <option value="all">{t('allCategories')}</option>
                         {AUCTION_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                       </select>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Price Range</label>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>{t('priceRange')}</label>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <input
-                          type="number" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)}
+                          type="number" placeholder={t('min')} value={minPrice} onChange={e => setMinPrice(e.target.value)}
                           style={{ width: '80px', padding: '0.65rem', borderRadius: '0.5rem', background: isDark ? '#1f2937' : '#f3f4f6', border: isDark ? '1px solid #374151' : '1px solid #d1d5db', color: isDark ? 'white' : 'black', outline: 'none' }}
                         />
                         <span style={{ color: '#6b7280' }}>-</span>
                         <input
-                          type="number" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)}
+                          type="number" placeholder={t('max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)}
                           style={{ width: '80px', padding: '0.65rem', borderRadius: '0.5rem', background: isDark ? '#1f2937' : '#f3f4f6', border: isDark ? '1px solid #374151' : '1px solid #d1d5db', color: isDark ? 'white' : 'black', outline: 'none' }}
                         />
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Ends In</label>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>{t('endsIn')}</label>
                       <select
                         value={timeRemaining}
                         onChange={e => setTimeRemaining(e.target.value as any)}
@@ -326,14 +327,14 @@ export const Home = () => {
                           color: isDark ? 'white' : 'black', outline: 'none'
                         }}
                       >
-                        <option value="all">Any Time</option>
-                        <option value="24_hours">&lt; 24 Hours</option>
-                        <option value="7_days">&lt; 7 Days</option>
+                        <option value="all">{t('anyTime')}</option>
+                        <option value="24_hours">{t('lessThan24Hours')}</option>
+                        <option value="7_days">{t('lessThan7Days')}</option>
                       </select>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>Sort By</label>
+                      <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>{t('sortBy')}</label>
                       <select
                         value={sortBy}
                         onChange={e => setSortBy(e.target.value as any)}
@@ -344,10 +345,10 @@ export const Home = () => {
                           color: isDark ? 'white' : 'black', outline: 'none'
                         }}
                       >
-                        <option value="ending_soon">Ending Soonest</option>
-                        <option value="newly_listed">Newly Listed</option>
-                        <option value="price_asc">Price: Low to High</option>
-                        <option value="price_desc">Price: High to Low</option>
+                        <option value="ending_soon">{t('endingSoonest')}</option>
+                        <option value="newly_listed">{t('newlyListed')}</option>
+                        <option value="price_asc">{t('priceLowHigh')}</option>
+                        <option value="price_desc">{t('priceHighLow')}</option>
                       </select>
                     </div>
                     </div>
@@ -366,7 +367,7 @@ export const Home = () => {
                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.1)'}
                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                        >
-                         <RefreshCw style={{ width: '1rem', height: '1rem' }} /> Reset Filters
+                         <RefreshCw style={{ width: '1rem', height: '1rem' }} /> {t('resetFilters')}
                        </button>
                     </div>
                   </div>
@@ -383,8 +384,8 @@ export const Home = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <Flame style={{ width: '1.5rem', height: '1.5rem', color: '#ef4444' }} />
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#f3f4f6' : '#111827' }}>Trending Now</h2>
-                <span className="badge-urgent" style={{ marginLeft: 'auto', animation: 'none' }}>Ending Soon</span>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#f3f4f6' : '#111827' }}>{t('trendingNow')}</h2>
+                <span className="badge-urgent" style={{ marginLeft: 'auto', animation: 'none' }}>{t('endingSoon')}</span>
               </div>
               <div style={{
                 display: 'grid',
@@ -410,7 +411,7 @@ export const Home = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#e5e7eb' : '#111827' }}>All Live Auctions</h2>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#e5e7eb' : '#111827' }}>{t('allLiveAuctions')}</h2>
             </div>
             <div style={{
               display: 'grid',
@@ -429,7 +430,7 @@ export const Home = () => {
               </motion.div>
             )) : (
               <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
-                No auctions match your search criteria.
+                {t('noAuctionsMatch')}
               </div>
             )}
             </div>
@@ -451,10 +452,10 @@ export const Home = () => {
         >
           <div style={{ fontSize: '3.5rem', marginBottom: '1.25rem' }}>🎨</div>
           <h3 style={{ color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-            No active auctions
+            {t('noActiveAuctions')}
           </h3>
           <p style={{ color: isDark ? '#6b7280' : '#4b5563', fontSize: '1rem' }}>
-            The gallery is currently empty. Be the first to create one!
+            {t('galleryEmpty')}
           </p>
         </motion.div>
       )}
