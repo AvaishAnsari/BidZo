@@ -103,70 +103,28 @@ const TICKER_BIDS = [
 ];
 
 /* ─── features ─────────────────────────────────────────────────── */
-const FEATURES = [
-  {
-    icon: Zap,
-    color: '#818cf8',
-    bg: 'rgba(99,102,241,0.12)',
-    border: 'rgba(99,102,241,0.25)',
-    title: 'Real-Time Bidding',
-    desc: 'Live price updates the instant someone outbids you — no page refresh needed.',
-  },
-  {
-    icon: Shield,
-    color: '#4ade80',
-    bg: 'rgba(74,222,128,0.10)',
-    border: 'rgba(74,222,128,0.22)',
-    title: 'Secure Platform',
-    desc: 'Powered by Supabase with RLS policies ensuring every bid is tamper-proof.',
-  },
-  {
-    icon: Clock,
-    color: '#fbbf24',
-    bg: 'rgba(251,191,36,0.10)',
-    border: 'rgba(251,191,36,0.22)',
-    title: 'Anti-Sniping Timer',
-    desc: "Last-second bids auto-extend the auction by 30 s — fair for every bidder.",
-  },
-  {
-    icon: Bell,
-    color: '#c084fc',
-    bg: 'rgba(192,132,252,0.12)',
-    border: 'rgba(192,132,252,0.25)',
-    title: 'Smart Notifications',
-    desc: "Instant alerts when you're outbid or when an auction is about to close.",
-  },
-  {
-    icon: TrendingUp,
-    color: '#f87171',
-    bg: 'rgba(248,113,113,0.10)',
-    border: 'rgba(248,113,113,0.22)',
-    title: 'Price Tracking',
-    desc: 'Full bid history with timestamps for every auction, visible to all users.',
-  },
-  {
-    icon: IndianRupee,
-    color: '#34d399',
-    bg: 'rgba(52,211,153,0.10)',
-    border: 'rgba(52,211,153,0.22)',
-    title: 'Indian Rupee Native',
-    desc: 'Built for India — all bids, prices and increments display in ₹ natively.',
-  },
+const FEATURE_KEYS = [
+  { icon: Zap,         color: '#818cf8', bg: 'rgba(99,102,241,0.12)',  border: 'rgba(99,102,241,0.25)',  titleKey: 'realTimeBidding',    descKey: 'realTimeBiddingDesc' },
+  { icon: Shield,      color: '#4ade80', bg: 'rgba(74,222,128,0.10)',  border: 'rgba(74,222,128,0.22)',  titleKey: 'securePlatform',     descKey: 'securePlatformDesc' },
+  { icon: Clock,       color: '#fbbf24', bg: 'rgba(251,191,36,0.10)',  border: 'rgba(251,191,36,0.22)',  titleKey: 'antiSnipingTimer',   descKey: 'antiSnipingTimerDesc' },
+  { icon: Bell,        color: '#c084fc', bg: 'rgba(192,132,252,0.12)', border: 'rgba(192,132,252,0.25)', titleKey: 'smartNotifications', descKey: 'smartNotificationsDesc' },
+  { icon: TrendingUp,  color: '#f87171', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.22)', titleKey: 'priceTracking',      descKey: 'priceTrackingDesc' },
+  { icon: IndianRupee, color: '#34d399', bg: 'rgba(52,211,153,0.10)',  border: 'rgba(52,211,153,0.22)',  titleKey: 'indianRupeeNative',  descKey: 'indianRupeeNativeDesc' },
 ];
 
-const STEPS = [
-  { n: '1', title: 'Create Account', desc: 'Sign up securely as a buyer or seller via email.', icon: Users },
-  { n: '2', title: 'Find Grails', desc: 'Browse our curated gallery of premium auctions.', icon: Star },
-  { n: '3', title: 'Place Bids',  desc: 'Engage in real-time, zero-latency bidding wars.', icon: Zap },
-  { n: '4', title: 'Win Securely', desc: 'Checkout safely with encrypted payments.', icon: Shield },
+const STEP_KEYS = [
+  { n: '1', titleKey: 'createAccount', descKey: 'createAccountDesc', icon: Users },
+  { n: '2', titleKey: 'findGrails',    descKey: 'findGrailsDesc',    icon: Star },
+  { n: '3', titleKey: 'placeBidsStep', descKey: 'placeBidsStepDesc', icon: Zap },
+  { n: '4', titleKey: 'winSecurely',   descKey: 'winSecurelyDesc',   icon: Shield },
 ];
 
 /* ─── stats ─────────────────────────────────────────────────────── */
-const STATS = [
-  { num: 500, suffix: '+', label: 'Premium Items', icon: Star },
-  { num: 10000, suffix: '+', label: 'Active Bidders', icon: Users, isComma: true },
-  { num: 50, prefix: '₹', suffix: ' Cr+', label: 'Total Bids Placed', icon: IndianRupee },
-  { num: 99.9, suffix: '%', decimals: 1, label: 'Uptime Guarantee', icon: Shield },
+const STAT_KEYS = [
+  { num: 500,   suffix: '+',    labelKey: 'premiumItems',    icon: Star },
+  { num: 10000, suffix: '+',    labelKey: 'activeBidders',   icon: Users, isComma: true },
+  { num: 50,    prefix: '₹',   suffix: ' Cr+', labelKey: 'totalBidsPlaced', icon: IndianRupee },
+  { num: 99.9,  suffix: '%',   decimals: 1, labelKey: 'uptimeGuarantee', icon: Shield },
 ];
 
 /* ─── dynamic headings ─────────────────────────────────────────── */
@@ -306,14 +264,14 @@ export const LandingPage = () => {
               borderRadius: '9999px', padding: '0.1rem 0.55rem',
               fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
             }}>● LIVE</span>
-            <span style={{ color: isDark ? '#6b7280' : '#4b5563' }}>Latest bid:</span>
+            <span style={{ color: isDark ? '#6b7280' : '#4b5563' }}>{t('latestBid')}</span>
             <span style={{ color: isDark ? '#e5e7eb' : '#111827', fontWeight: 600 }}>
               {TICKER_BIDS[tickerIdx].item}
             </span>
             <span style={{ color: '#818cf8', fontWeight: 700 }}>
               {TICKER_BIDS[tickerIdx].bid}
             </span>
-            <span style={{ color: isDark ? '#4b5563' : '#6b7280' }}>by {TICKER_BIDS[tickerIdx].user}</span>
+            <span style={{ color: isDark ? '#4b5563' : '#6b7280' }}>{t('by')} {TICKER_BIDS[tickerIdx].user}</span>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -355,7 +313,7 @@ export const LandingPage = () => {
           <FadeUp delay={0.05}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(34,197,94,0.08)', padding: '0.35rem 1rem', borderRadius: '9999px', border: '1px solid rgba(34,197,94,0.25)', marginBottom: '1.5rem', backdropFilter: 'blur(10px)' }}>
               <div className="pulse-live" style={{ width: '8px', height: '8px', background: '#4ade80', borderRadius: '50%' }} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80', letterSpacing: '0.08em' }}>LIVE AUCTIONS RUNNING</span>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80', letterSpacing: '0.08em' }}>{t('liveAuctionsRunning')}</span>
             </div>
           </FadeUp>
 
@@ -374,7 +332,7 @@ export const LandingPage = () => {
               }}
             >
               <Zap style={{ width: '1rem', height: '1rem', color: '#c084fc' }} />
-              India's Premier Real-Time Auction Platform
+              {t('indiasPremierPlatform')}
             </div>
           </FadeUp>
 
@@ -420,8 +378,7 @@ export const LandingPage = () => {
                 fontWeight: 400,
               }}
             >
-              Bid on rare antiques, art, and exquisite pieces — with real-time prices,
-              bank-grade security, and built-in anti-sniping protection.
+              {t('heroBodyText')}
             </p>
           </FadeUp>
 
@@ -443,7 +400,7 @@ export const LandingPage = () => {
                 onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 20px 40px -5px rgba(168,85,247,0.6), inset 0 1px 0 rgba(255,255,255,0.3)')}
                 onMouseOut={(e) => (e.currentTarget.style.boxShadow = '0 10px 30px -5px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)')}
               >
-                Get Started Free
+                {t('getStartedFree')}
                 <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} />
               </motion.button>
               
@@ -481,7 +438,7 @@ export const LandingPage = () => {
           {/* Trust strip */}
           <FadeUp delay={0.8}>
             <p style={{ marginTop: '3rem', fontSize: '0.85rem', color: isDark ? '#64748b' : '#6b7280', fontWeight: 500 }}>
-              No credit card required · Instant setup · Bank-grade security
+              {t('noCreditCard')}
             </p>
           </FadeUp>
         </div>
@@ -551,7 +508,7 @@ export const LandingPage = () => {
                     boxShadow: '0 10px 25px rgba(0,0,0,0.5), 0 0 20px rgba(99,102,241,0.3)',
                   }}
                 >
-                  View Live Gallery
+                  {t('viewLiveGallery')}
                 </button>
               </motion.div>
             </motion.div>
@@ -562,8 +519,8 @@ export const LandingPage = () => {
       {/* ════ STATS ════════════════════════════════════════════════ */}
       <section style={{ padding: '2rem 0 6rem 0' }}>
         <div style={{ ...centerStyle, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-          {STATS.map(({ num, prefix, suffix, decimals, isComma, label, icon: Icon }, i) => (
-            <FadeUp key={label} delay={i * 0.1}>
+          {STAT_KEYS.map(({ num, prefix, suffix, decimals, isComma, labelKey, icon: Icon }, i) => (
+            <FadeUp key={labelKey} delay={i * 0.1}>
               <motion.div 
                 whileHover={{ scale: 1.05, y: -5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
@@ -591,7 +548,7 @@ export const LandingPage = () => {
                 }}>
                   <AnimatedStat num={num} prefix={prefix} suffix={suffix} decimals={decimals} isComma={isComma} />
                 </div>
-                <div style={{ fontSize: '0.95rem', color: isDark ? '#94a3b8' : '#4b5563', marginTop: '0.5rem', fontWeight: 500 }}>{label}</div>
+                <div style={{ fontSize: '0.95rem', color: isDark ? '#94a3b8' : '#4b5563', marginTop: '0.5rem', fontWeight: 500 }}>{t(labelKey)}</div>
               </motion.div>
             </FadeUp>
           ))}
@@ -605,24 +562,24 @@ export const LandingPage = () => {
             <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
               <div className="section-label" style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
                 <Star style={{ width: '0.85rem', height: '0.85rem' }} />
-                Platform Features
+                {t('platformFeatures')}
               </div>
               <h2 style={{
                 fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
                 fontWeight: 800, letterSpacing: '-0.03em',
                 color: isDark ? '#f8fafc' : '#111827', margin: '0 0 1rem',
               }}>
-                Everything you need to{' '}
-                <span className="gradient-text">win auctions</span>
+                {t('everythingYouNeed')}{' '}
+                <span className="gradient-text">{t('winAuctions')}</span>
               </h2>
               <p style={{ color: isDark ? '#6b7280' : '#374151', maxWidth: '480px', margin: '0 auto', lineHeight: 1.7 }}>
-                BidZo is packed with tools that make bidding fast, safe, and transparent.
+                {t('featuresSubtext')}
               </p>
             </div>
           </FadeUp>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            {FEATURES.map(({ icon: Icon, color, bg, border, title, desc }, i) => (
+            {FEATURE_KEYS.map(({ icon: Icon, color, bg, border, titleKey, descKey }, i) => (
               <FadeUp key={title} delay={i * 0.07}>
                 <motion.div
                   whileHover={{ translateY: -4 }}
@@ -638,8 +595,8 @@ export const LandingPage = () => {
                   }}>
                     <Icon style={{ width: '1.25rem', height: '1.25rem', color }} />
                   </div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: isDark ? '#e5e7eb' : '#111827', marginBottom: '0.5rem' }}>{title}</h3>
-                  <p style={{ fontSize: '0.875rem', color: isDark ? '#6b7280' : '#374151', lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: isDark ? '#e5e7eb' : '#111827', marginBottom: '0.5rem' }}>{t(titleKey)}</h3>
+                  <p style={{ fontSize: '0.875rem', color: isDark ? '#6b7280' : '#374151', lineHeight: 1.65, margin: 0 }}>{t(descKey)}</p>
                 </motion.div>
               </FadeUp>
             ))}
@@ -657,15 +614,15 @@ export const LandingPage = () => {
             <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
               <div className="section-label" style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
                 <ChevronRight style={{ width: '0.85rem', height: '0.85rem' }} />
-                How It Works
+                {t('howItWorks')}
               </div>
               <h2 style={{
                 fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
                 fontWeight: 800, letterSpacing: '-0.03em',
                 color: isDark ? '#f8fafc' : '#111827', margin: 0,
               }}>
-                Start bidding in{' '}
-                <span className="gradient-text">4 simple steps</span>
+                {t('startBiddingIn')}{' '}
+                <span className="gradient-text">{t('simpleSteps')}</span>
               </h2>
             </div>
           </FadeUp>
@@ -678,7 +635,7 @@ export const LandingPage = () => {
               background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.5) 20%, rgba(168,85,247,0.5) 80%, transparent)',
             }} />
 
-            {STEPS.map(({ n, title, desc, icon: Icon }, i) => (
+            {STEP_KEYS.map(({ n, titleKey, descKey, icon: Icon }, i) => (
               <FadeUp key={n} delay={i * 0.15}>
                 <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
                   {/* Step number and icon */}
@@ -703,8 +660,8 @@ export const LandingPage = () => {
                     <Icon style={{ width: '2rem', height: '2rem', color: '#818cf8', marginBottom: '0.25rem' }} />
                   </div>
                   
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: isDark ? '#e2e8f0' : '#111827', marginBottom: '0.6rem' }}>{title}</h3>
-                  <p style={{ fontSize: '0.9rem', color: isDark ? '#94a3b8' : '#374151', lineHeight: 1.6, maxWidth: '240px', margin: '0 auto' }}>{desc}</p>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: isDark ? '#e2e8f0' : '#111827', marginBottom: '0.6rem' }}>{t(titleKey)}</h3>
+                  <p style={{ fontSize: '0.9rem', color: isDark ? '#94a3b8' : '#374151', lineHeight: 1.6, maxWidth: '240px', margin: '0 auto' }}>{t(descKey)}</p>
                 </div>
               </FadeUp>
             ))}
@@ -736,7 +693,7 @@ export const LandingPage = () => {
 
               <div className="section-label" style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
                 <Gavel style={{ width: '0.85rem', height: '0.85rem' }} />
-                Ready to Bid?
+                {t('readyToBid')}
               </div>
 
               <h2 style={{
@@ -744,15 +701,14 @@ export const LandingPage = () => {
                 fontWeight: 900, letterSpacing: '-0.035em', color: isDark ? '#f8fafc' : '#111827',
                 margin: '0 auto 1rem', maxWidth: '600px',
               }}>
-                Join <span className="gradient-text">10,000+ bidders</span> competing right now
+                {t('joinBidders')} <span className="gradient-text">{t('bidderCount')}</span> {t('competingRightNow')}
               </h2>
 
               <p style={{
                 color: isDark ? '#6b7280' : '#374151', fontSize: '1rem', lineHeight: 1.75,
                 maxWidth: '440px', margin: '0 auto 2.5rem',
               }}>
-                Create your free account in under 60 seconds and start bidding on
-                India's most exclusive online auction platform.
+                {t('ctaSubtext')}
               </p>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
@@ -763,7 +719,7 @@ export const LandingPage = () => {
                   className="btn-gradient"
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', padding: '0.9rem 2.25rem' }}
                 >
-                  {user ? 'Go to Auctions' : 'Create Free Account'}
+                  {user ? t('goToAuctions') : t('createFreeAccount')}
                   <ArrowRight style={{ width: '1rem', height: '1rem' }} />
                 </motion.button>
                 {!user && (
@@ -780,7 +736,7 @@ export const LandingPage = () => {
                       boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
                     }}
                   >
-                    Already have an account? Sign in
+                    {t('alreadyHaveAccount')}
                   </Link>
                 )}
               </div>
@@ -808,8 +764,8 @@ export const LandingPage = () => {
             </span>
           </div>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
-            {['Privacy Policy', 'Terms of Service', 'Contact'].map(lbl => (
-              <a key={lbl} href="#" style={{ color: '#4b5563', textDecoration: 'none', fontSize: '0.85rem', transition: 'color 0.2s' }}>
+            {([['privacyPolicy', t('privacyPolicy')], ['termsOfService', t('termsOfService')], ['contact', t('contact')]] as [string,string][]).map(([key, lbl]) => (
+              <a key={key} href="#" style={{ color: '#4b5563', textDecoration: 'none', fontSize: '0.85rem', transition: 'color 0.2s' }}>
                 {lbl}
               </a>
             ))}

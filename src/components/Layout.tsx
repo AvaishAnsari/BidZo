@@ -32,10 +32,10 @@ export const Layout = () => {
   };
 
   const navLinks = [
-    { name: 'Auctions', path: '/auctions' },
-    ...(user ? [{ name: 'Watchlist', path: '/watchlist' }] : []),
+    { name: t('auctions'), path: '/auctions' },
+    ...(user ? [{ name: t('watchlist'), path: '/watchlist' }] : []),
     ...(userRole === 'seller' ? [{ name: t('createAuction'), path: '/create-auction' }] : []),
-    ...(userRole === 'admin' ? [{ name: 'Admin Dashboard', path: '/admin' }] : []),
+    ...(userRole === 'admin' ? [{ name: t('adminDashboard'), path: '/admin' }] : []),
   ];
 
   return (
@@ -191,14 +191,14 @@ export const Layout = () => {
                         }}
                       >
                         <div style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isDark ? 'white' : '#111827' }}>Notifications</h3>
+                          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isDark ? 'white' : '#111827' }}>{t('notifications')}</h3>
                           {unreadCount > 0 && (
-                            <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>Mark all read</button>
+                            <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{t('markAllRead')}</button>
                           )}
                         </div>
                         <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
                           {notifications.length === 0 ? (
-                            <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>No notifications yet.</p>
+                            <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>{t('noNotificationsYet')}</p>
                           ) : (
                             notifications.map(n => (
                               <div key={n.id} onClick={() => !n.read && markAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.1)', background: n.read ? 'transparent' : (isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)'), cursor: n.read ? 'default' : 'pointer', transition: 'background 0.2s' }}>
@@ -288,7 +288,7 @@ export const Layout = () => {
                       fontSize: '0.9rem',
                     }}
                   >
-                    Log in
+                  {t('logIn')}
                   </Link>
                   <Link
                     to="/register"
@@ -305,7 +305,7 @@ export const Layout = () => {
                       transition: 'all 0.2s',
                     }}
                   >
-                    Register
+                    {t('register')}
                   </Link>
                 </div>
               )}
@@ -329,8 +329,8 @@ export const Layout = () => {
             {' '}© {new Date().getFullYear()} All rights reserved.
           </p>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <a href="#" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem', transition: 'color 0.2s' }}>Privacy Policy</a>
-            <a href="#" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem', transition: 'color 0.2s' }}>Terms of Service</a>
+            <a href="#" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem', transition: 'color 0.2s' }}>{t('privacyPolicy')}</a>
+            <a href="#" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem', transition: 'color 0.2s' }}>{t('termsOfService')}</a>
           </div>
         </div>
       </footer>

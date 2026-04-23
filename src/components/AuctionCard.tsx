@@ -84,7 +84,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
           </>
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', fontSize: '0.875rem' }}>
-            No Image
+            {t('noImage')}
           </div>
         )}
 
@@ -128,14 +128,14 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
           }}
         >
           <Clock style={{ width: '0.75rem', height: '0.75rem' }} />
-          {isEnded ? 'Ended' : isUpcoming ? 'Upcoming' : timeLeft}
+          {isEnded ? t('ended') : isUpcoming ? t('upcoming') : timeLeft}
         </div>
       </div>
 
       {/* Content */}
         <div style={{ padding: '1.25rem 1.35rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', fontWeight: 500 }}>Verified Seller</span>
+          <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', fontWeight: 500 }}>{t('verifiedSeller')}</span>
           <VerifiedBadge userId={auction.seller_id} />
         </div>
         <h3 style={{
@@ -216,7 +216,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
               } : {}),
             }}
           >
-            {isEnded ? 'View Results' : isOwnAuction ? 'Manage Auction' : `${t('placeBid')} →`}
+            {isEnded ? t('viewResults') : isOwnAuction ? t('manageAuction') : `${t('placeBid')} →`}
           </Link>
         </div>
       </div>
