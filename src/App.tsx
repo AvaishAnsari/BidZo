@@ -52,10 +52,12 @@ function App() {
           {/* ── Public landing (no Layout wrapper) ── */}
           <Route index element={<LandingPage />} />
 
+          {/* ── Auth pages (full-screen, no Layout wrapper) ── */}
+          <Route path="login"    element={<Login />} />
+          <Route path="register" element={<Register />} />
+
           {/* ── App shell (Layout = navbar + footer) ── */}
           <Route element={<Layout />}>
-            <Route path="login"    element={<Login />} />
-            <Route path="register" element={<Register />} />
 
             {/* Any logged-in user */}
             <Route element={<ProtectedRoute />}>
