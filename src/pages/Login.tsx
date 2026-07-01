@@ -47,6 +47,14 @@ export const Login = () => {
   const [showPw, setShowPw]     = useState(false);
   const [reviewIdx, setReviewIdx] = useState(0);
 
+  // Auto-slide reviews carousel
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setReviewIdx((prev) => (prev + 1) % REVIEWS.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   const { register, handleSubmit, formState:{errors} } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: { email:'', password:'' },
@@ -70,8 +78,8 @@ export const Login = () => {
   };
 
   const inp = (err:boolean) => `
-    w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all
-    border ${err ? 'border-red-500/50 bg-red-900/10' : 'border-white/8 bg-white/5 focus:border-brand-500/60 focus:bg-white/8'}
+    w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300
+    border ${err ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}
   `;
 
   return (

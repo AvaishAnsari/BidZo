@@ -87,8 +87,8 @@ export const Register = () => {
   };
 
   const inp = (err: boolean) => `
-    w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-600 outline-none transition-all
-    border ${err ? 'border-red-500/50 bg-red-900/10' : 'border-white/8 bg-white/5 focus:border-brand-500/60 focus:bg-white/8'}
+    w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300
+    border ${err ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}
   `;
 
   return (
@@ -295,17 +295,25 @@ export const Register = () => {
                   </button>
                 </div>
                 {/* Strength bar */}
-                {(pw?.length ?? 0) > 0 && (
-                  <div className="mt-2 space-y-1">
-                    <div className="flex gap-1">
-                      {[1,2,3,4,5].map(i => (
-                        <div key={i} className="flex-1 h-1 rounded-full transition-all duration-400"
-                          style={{ background: i <= str.score ? str.color : 'rgba(255,255,255,0.07)' }} />
-                      ))}
-                    </div>
-                    {str.label && <p className="text-xs font-semibold" style={{color:str.color}}>{str.label}</p>}
-                  </div>
-                )}
+                <AnimatePresence>
+                  {(pw?.length ?? 0) > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="mt-2 space-y-1 overflow-hidden"
+                    >
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(i => (
+                          <div key={i} className="flex-1 h-1 rounded-full transition-all duration-400"
+                            style={{ background: i <= str.score ? str.color : 'rgba(255,255,255,0.07)' }} />
+                        ))}
+                      </div>
+                      {str.label && <p className="text-xs font-semibold" style={{color:str.color}}>{str.label}</p>}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {errors.password && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.password.message}</p>}
               </div>
 
