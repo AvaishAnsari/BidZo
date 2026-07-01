@@ -7,7 +7,7 @@ export const CATEGORIES_WITH_META = [
   { key: 'all',          label: 'All',          emoji: '✨', color: '#818cf8' },
   { key: 'Watches',      label: 'Watches',       emoji: '⌚', color: '#fbbf24' },
   { key: 'Art',          label: 'Art',           emoji: '🎨', color: '#f87171' },
-  { key: 'Jewellery',    label: 'Jewellery',     emoji: '💎', color: '#c084fc' },
+  { key: 'Jewelry',     label: 'Jewelry',      emoji: '💎', color: '#c084fc' },
   { key: 'Antiques',     label: 'Antiques',      emoji: '🏺', color: '#34d399' },
   { key: 'Electronics',  label: 'Electronics',   emoji: '📱', color: '#60a5fa' },
   { key: 'Vehicles',     label: 'Vehicles',      emoji: '🚗', color: '#f97316' },

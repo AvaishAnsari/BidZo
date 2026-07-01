@@ -27,7 +27,7 @@ const auctionSchema = z.object({
   category: z.string().min(1, "Please select a category")
 });
 
-export const AUCTION_CATEGORIES = ['Art', 'Vehicles', 'Jewelry', 'Electronics', 'Antiques', 'Other'];
+export const AUCTION_CATEGORIES = ['Art', 'Vehicles', 'Jewelry', 'Electronics', 'Antiques', 'Fashion', 'Sports', 'Other'];
 
 type AuctionFormValues = z.infer<typeof auctionSchema>;
 
