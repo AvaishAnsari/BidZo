@@ -239,7 +239,7 @@ export const Register = () => {
 
           {/* Form card */}
           <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:0.25}}
-            className="rounded-2xl p-6 space-y-5"
+            className="w-full rounded-2xl p-6 space-y-5"
             style={{ background:'linear-gradient(145deg,rgba(20,15,60,0.7) 0%,rgba(12,8,35,0.8) 100%)', border:'1px solid rgba(99,102,241,0.15)', backdropFilter:'blur(24px)', boxShadow:'0 25px 80px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05)' }}>
 
             {/* Google */}
@@ -269,7 +269,7 @@ export const Register = () => {
                 <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Full Name</label>
                 <div className="relative group">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors" />
-                  <input id="reg-name" type="text" autoComplete="name" {...register('name')} placeholder="Jane Doe" className={inp(!!errors.name)} />
+                  <input id="reg-name" type="text" autoComplete="name" {...register('name')} placeholder="Jane Doe" className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.name ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`} />
                 </div>
                 {errors.name && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.name.message}</p>}
               </div>
@@ -279,7 +279,7 @@ export const Register = () => {
                 <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Email</label>
                 <div className="relative group">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors" />
-                  <input id="reg-email" type="email" autoComplete="email" {...register('email')} placeholder="you@example.com" className={inp(!!errors.email)} />
+                  <input id="reg-email" type="email" autoComplete="email" {...register('email')} placeholder="you@example.com" className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.email ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`} />
                 </div>
                 {errors.email && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.email.message}</p>}
               </div>
@@ -289,7 +289,7 @@ export const Register = () => {
                 <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Password</label>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors" />
-                  <input id="reg-pw" type={showPw?'text':'password'} autoComplete="new-password" {...register('password')} placeholder="Min. 6 characters" className={`${inp(!!errors.password)} pr-11`} />
+                  <input id="reg-pw" type={showPw?'text':'password'} autoComplete="new-password" {...register('password')} placeholder="Min. 6 characters" className={`w-full pl-10 pr-11 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.password ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`} />
                   <button type="button" onClick={()=>setShowPw(v=>!v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-brand-400 transition-colors">
                     {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                   </button>

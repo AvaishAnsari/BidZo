@@ -39,6 +39,7 @@ export interface Auction {
   created_at: string;
   /** How many times the end_time has been extended by anti-sniping (max 3) */
   extension_count?: number;
+  bid_count?: number;
 }
 
 export interface Bid {

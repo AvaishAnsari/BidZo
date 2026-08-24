@@ -109,11 +109,18 @@ export const Login = () => {
         style={{backgroundImage:'linear-gradient(rgba(99,102,241,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.03) 1px,transparent 1px)',backgroundSize:'60px 60px'}}/>
 
       {/* ─── LEFT PANEL ─── */}
-      <div className="hidden lg:flex lg:w-[46%] xl:w-[50%] flex-col justify-between p-12 xl:p-16 relative">
-        <div className="absolute right-0 top-[10%] bottom-[10%] w-px"
+      <div className="hidden lg:flex lg:w-[46%] xl:w-[50%] flex-col justify-between p-12 xl:p-16 relative overflow-hidden rounded-r-[3rem] shadow-2xl border-r border-white/5">
+        <div className="absolute inset-0 z-0">
+          <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" alt="Premium Abstract Art" className="w-full h-full object-cover opacity-50 transition-transform duration-10000 hover:scale-110" />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(4,2,26,0.2) 0%, rgba(4,2,26,0.9) 100%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(4,2,26,0.1) 0%, #060215 100%)' }} />
+        </div>
+
+        <div className="absolute right-0 top-[10%] bottom-[10%] w-px z-10"
           style={{background:'linear-gradient(180deg,transparent,rgba(99,102,241,0.5) 30%,rgba(168,85,247,0.5) 70%,transparent)'}}/>
 
         {/* Logo */}
+        <div className="relative z-10 flex flex-col justify-between h-full">
         <motion.div initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} transition={{duration:0.6}}
           className="flex items-center gap-3">
           <div className="relative">
@@ -196,6 +203,7 @@ export const Login = () => {
           <ShieldCheck className="w-4 h-4 text-brand-600"/>
           <span>Bank-grade encryption · 2FA supported · Zero fees</span>
         </motion.div>
+        </div>
       </div>
 
       {/* ─── RIGHT PANEL ─── */}
@@ -241,7 +249,7 @@ export const Login = () => {
 
           {/* Form card */}
           <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:0.25}}
-            className="rounded-2xl p-6 space-y-5"
+            className="w-full rounded-2xl p-6 space-y-5"
             style={{background:'linear-gradient(145deg,rgba(20,15,60,0.7) 0%,rgba(12,8,35,0.8) 100%)',border:'1px solid rgba(99,102,241,0.15)',backdropFilter:'blur(24px)',boxShadow:'0 25px 80px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05)'}}>
 
             {/* Google */}
@@ -271,7 +279,7 @@ export const Login = () => {
                 <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Email</label>
                 <div className="relative group">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors"/>
-                  <input id="login-email" type="email" autoComplete="email" {...register('email')} placeholder="you@example.com" className={inp(!!errors.email)}/>
+                  <input id="login-email" type="email" autoComplete="email" {...register('email')} placeholder="you@example.com" className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.email ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`}/>
                 </div>
                 {errors.email && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.email.message}</p>}
               </div>
@@ -284,7 +292,7 @@ export const Login = () => {
                 </div>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors"/>
-                  <input id="login-pw" type={showPw?'text':'password'} autoComplete="current-password" {...register('password')} placeholder="••••••••" className={`${inp(!!errors.password)} pr-11`}/>
+                  <input id="login-pw" type={showPw?'text':'password'} autoComplete="current-password" {...register('password')} placeholder="••••••••" className={`w-full pl-10 pr-11 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.password ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`}/>
                   <button type="button" onClick={()=>setShowPw(v=>!v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-brand-400 transition-colors">
                     {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                   </button>
