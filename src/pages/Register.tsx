@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Lock, User, Briefcase, Gavel, AlertCircle, Eye, EyeOff, ShieldCheck, CheckCircle2, Sparkles, Zap } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Briefcase, Gavel, Eye, EyeOff, ShieldCheck, Shield, Zap, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import type { UserRole } from '../types';
@@ -31,37 +31,12 @@ function pwStrength(pw: string) {
   return { score: s, label: 'Strong', color: '#22c55e' };
 }
 
-const PERKS = ['Live auction bidding', 'Instant win alerts', 'Secure payments', 'Seller dashboard'];
-
-/* Floating particle component */
-const Particle = ({ style }: { style: React.CSSProperties }) => (
-  <motion.div
-    className="absolute rounded-full pointer-events-none"
-    style={style}
-    animate={{ y: [0, -120, 0], opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] }}
-    transition={{ duration: Math.random() * 6 + 5, repeat: Infinity, delay: Math.random() * 4, ease: 'easeInOut' }}
-  />
-);
-
 export const Register = () => {
   const { signUp, signInWithGoogle, isConfigured } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
-  const [particles] = useState(() =>
-    Array.from({ length: 18 }, (_, i) => ({
-      id: i,
-      style: {
-        width: `${Math.random() * 6 + 2}px`,
-        height: `${Math.random() * 6 + 2}px`,
-        left: `${Math.random() * 100}%`,
-        bottom: `${Math.random() * 30}%`,
-        background: i % 3 === 0 ? 'rgba(99,102,241,0.8)' : i % 3 === 1 ? 'rgba(168,85,247,0.8)' : 'rgba(236,72,153,0.8)',
-        filter: 'blur(1px)',
-      } as React.CSSProperties,
-    }))
-  );
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormVals>({
     resolver: zodResolver(schema),
@@ -84,289 +59,256 @@ export const Register = () => {
     setLoading(true);
     const { error } = await signInWithGoogle();
     if (error) { toast.error(error); setLoading(false); }
+    else if (!isConfigured) {
+      toast.success('Welcome to BidZo! 🎉'); 
+      navigate('/');
+    }
   };
 
-  const inp = (err: boolean) => `
-    w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300
-    border ${err ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}
-  `;
-
   return (
-    <div className="min-h-screen w-full flex relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg,#04021a 0%,#070420 40%,#0a0320 70%,#060215 100%)' }}>
-
-      {/* Ambient orbs */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <motion.div animate={{ scale: [1,1.15,1], opacity: [0.3,0.5,0.3] }} transition={{ duration:8, repeat:Infinity }}
-          className="absolute -top-64 -left-64 w-[700px] h-[700px] rounded-full"
-          style={{ background:'radial-gradient(circle,rgba(99,102,241,0.35) 0%,transparent 70%)', filter:'blur(80px)' }} />
-        <motion.div animate={{ scale: [1,1.2,1], opacity: [0.2,0.4,0.2] }} transition={{ duration:10, repeat:Infinity, delay:2 }}
-          className="absolute -bottom-48 -right-48 w-[600px] h-[600px] rounded-full"
-          style={{ background:'radial-gradient(circle,rgba(168,85,247,0.35) 0%,transparent 70%)', filter:'blur(80px)' }} />
-        <motion.div animate={{ x:[0,40,0], y:[0,-30,0] }} transition={{ duration:12, repeat:Infinity, ease:'easeInOut' }}
-          className="absolute top-1/2 left-1/3 w-96 h-96 rounded-full opacity-15"
-          style={{ background:'radial-gradient(circle,rgba(236,72,153,0.4) 0%,transparent 70%)', filter:'blur(60px)' }} />
-      </div>
-
-      {/* Particles */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        {particles.map(p => <Particle key={p.id} style={p.style} />)}
-      </div>
-
-      {/* Grid overlay */}
-      <div className="fixed inset-0 pointer-events-none -z-10"
-        style={{ backgroundImage:'linear-gradient(rgba(99,102,241,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.03) 1px,transparent 1px)', backgroundSize:'60px 60px' }} />
-
+    <div className="min-h-screen w-full flex bg-[#0f111a] text-white overflow-hidden font-sans">
+      
       {/* ─── LEFT PANEL ─── */}
-      <div className="hidden lg:flex lg:w-[46%] xl:w-[50%] flex-col justify-between p-12 xl:p-16 relative">
-        {/* Neon border right */}
-        <div className="absolute right-0 top-[10%] bottom-[10%] w-px"
-          style={{ background:'linear-gradient(180deg,transparent,rgba(99,102,241,0.5) 30%,rgba(168,85,247,0.5) 70%,transparent)' }} />
-
-        {/* Logo */}
-        <motion.div initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} transition={{duration:0.6}}
-          className="flex items-center gap-3">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-xl blur-md bg-brand-500/50" />
-            <div className="relative bg-gradient-to-br from-brand-500 to-accent-600 p-2.5 rounded-xl">
-              <Gavel className="w-6 h-6 text-white" />
-            </div>
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 border-r border-white/5 relative" 
+           style={{ background: 'linear-gradient(160deg, #181226 0%, #0d0e15 100%)' }}>
+        
+        {/* Top Header */}
+        <div className="flex justify-between items-center z-10">
+          <div className="flex items-center gap-2">
+            <Gavel className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
+            <span className="text-2xl font-bold tracking-tight">BidZo</span>
           </div>
-          <span className="text-2xl font-extrabold text-white tracking-tight">
-            Bid<span className="gradient-text">Zo</span>
-          </span>
-        </motion.div>
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+            <div className="flex -space-x-2">
+              <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+            </div>
+            <span className="text-xs text-gray-300 pr-1">12,000+ Active Bidders</span>
+          </div>
+        </div>
 
-        {/* Hero */}
-        <motion.div initial={{opacity:0,x:-30}} animate={{opacity:1,x:0}} transition={{duration:0.7,delay:0.2}}
-          className="space-y-7">
-          {/* Tag */}
-          <motion.div initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}} transition={{delay:0.4}}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold text-brand-300"
-            style={{ background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.3)' }}>
-            <Sparkles className="w-3.5 h-3.5" /> Free to join — no credit card required
-          </motion.div>
+        {/* Main Content */}
+        <div className="z-10 mt-12 space-y-6 max-w-lg">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-gray-300 bg-white/5 border border-white/10">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#a855f7]"/> Trusted by thousands of bidders worldwide
+          </div>
 
-          <h1 className="text-4xl xl:text-5xl font-extrabold text-white leading-tight">
-            Start bidding<br />
-            in <span className="relative inline-block">
-              <span className="gradient-text">60 seconds</span>
-              <motion.span animate={{scaleX:[0,1]}} transition={{delay:0.8,duration:0.6}}
-                className="absolute -bottom-1 left-0 right-0 h-0.5 origin-left"
-                style={{ background:'linear-gradient(90deg,#6366f1,#a855f7)' }} />
-            </span>
+          <h1 className="text-[3.5rem] font-bold leading-[1.1] tracking-tight">
+            The smarter way <br/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#c084fc]">bid & win</span>
           </h1>
 
-          <p className="text-gray-400 text-base leading-relaxed max-w-sm">
-            Join 12,000+ bidders on the platform built for serious buyers and savvy sellers.
+          <p className="text-gray-400 text-lg leading-relaxed max-w-md">
+            Real-time auctions, instant notifications, and secure payments — all in one place.
           </p>
 
-          {/* Perks */}
-          <ul className="space-y-3 pt-1">
-            {PERKS.map((perk, i) => (
-              <motion.li key={perk} initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} transition={{delay:0.5+i*0.1}}
-                className="flex items-center gap-3 text-sm text-gray-300">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background:'rgba(99,102,241,0.15)', border:'1px solid rgba(99,102,241,0.4)' }}>
-                  <CheckCircle2 className="w-3 h-3 text-brand-400" />
-                </div>
-                {perk}
-              </motion.li>
-            ))}
-          </ul>
-
-          {/* Stats */}
-          <div className="flex gap-6 pt-3">
-            {[['12K+','Bidders'],['38K+','Auctions Won'],['1.2K+','Listed Today']].map(([val,label]) => (
-              <div key={label} className="flex flex-col">
-                <span className="text-2xl font-extrabold gradient-text">{val}</span>
-                <span className="text-xs text-gray-600 mt-0.5">{label}</span>
+          <div className="flex items-center gap-10 pt-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#9333ea]/20 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               </div>
-            ))}
+              <div>
+                <div className="text-2xl font-bold text-[#c084fc]">12K+</div>
+                <div className="text-sm text-gray-400">Active Bidders</div>
+              </div>
+            </div>
+            <div className="w-px h-12 bg-white/10"></div>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#9333ea]/20 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#c084fc]">38K+</div>
+                <div className="text-sm text-gray-400">Auctions Won</div>
+              </div>
+            </div>
           </div>
-        </motion.div>
 
-        {/* Trust */}
-        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}
-          className="flex items-center gap-2 text-xs text-gray-700">
-          <ShieldCheck className="w-4 h-4 text-brand-600" />
-          <span>256-bit SSL · SOC 2 Compliant · Cancel anytime</span>
-        </motion.div>
+          {/* Mini Auction Card */}
+          <div className="mt-8 bg-[#141521] border border-white/5 rounded-2xl p-4 flex gap-5 items-center relative overflow-hidden shadow-2xl">
+            <div className="w-36 h-36 rounded-xl overflow-hidden relative shrink-0">
+              <div className="absolute top-2 left-2 z-10 bg-[#7c3aed]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">Live Auction</div>
+              <img src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=600&auto=format&fit=crop" alt="Premium Watch" className="w-full h-full object-cover"/>
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between items-start mb-1">
+                <div>
+                  <h3 className="font-semibold text-sm">Premium Watch</h3>
+                  <p className="text-xs text-gray-400">Luxury Edition</p>
+                </div>
+                <div className="text-center bg-black/20 rounded-md px-2 py-1">
+                  <div className="text-[#f43f5e] font-mono text-sm font-bold flex gap-1">
+                    <span>00</span><span className="opacity-50">:</span><span>02</span><span className="opacity-50">:</span><span>45</span>
+                  </div>
+                  <div className="text-[8px] text-gray-500 font-bold uppercase tracking-widest flex justify-between px-0.5">
+                    <span>HRS</span><span>MIN</span><span>SEC</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-between items-end mt-4">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide">Current Bid</p>
+                  <p className="text-[#c084fc] font-bold text-lg">₹ 48,750</p>
+                </div>
+                <button className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1 transition-colors">
+                  Place Bid <span className="text-lg leading-none mt-[-2px]">→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Features */}
+        <div className="z-10 mt-16 grid grid-cols-3 gap-6">
+          <div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
+              <Zap className="w-4 h-4 text-[#c084fc]"/>
+            </div>
+            <h4 className="text-sm font-semibold mb-1">Real-time Bidding</h4>
+            <p className="text-xs text-gray-500">Instant bid updates</p>
+          </div>
+          <div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
+              <ShieldCheck className="w-4 h-4 text-[#c084fc]"/>
+            </div>
+            <h4 className="text-sm font-semibold mb-1">Anti-Sniping</h4>
+            <p className="text-xs text-gray-500">Fair play for everyone</p>
+          </div>
+          <div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
+              <Lock className="w-4 h-4 text-[#c084fc]"/>
+            </div>
+            <h4 className="text-sm font-semibold mb-1">Secure Payments</h4>
+            <p className="text-xs text-gray-500">Safe & encrypted</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="z-10 mt-12 flex justify-between items-center text-xs text-gray-500">
+          <p>© 2025 BidZo. All rights reserved.</p>
+          <div className="flex gap-4">
+            <a href="#" className="hover:text-gray-300 transition-colors">About</a>
+            <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
+            <a href="#" className="hover:text-gray-300 transition-colors">Contact</a>
+          </div>
+        </div>
       </div>
 
       {/* ─── RIGHT PANEL (FORM) ─── */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 overflow-y-auto">
-        <motion.div initial={{opacity:0,y:28,scale:0.96}} animate={{opacity:1,y:0,scale:1}}
-          transition={{duration:0.6,type:'spring',bounce:0.3}} className="w-full max-w-[420px] py-6">
-
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="bg-gradient-to-br from-brand-500 to-accent-600 p-2 rounded-xl">
-              <Gavel className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-extrabold text-white">Bid<span className="gradient-text">Zo</span></span>
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative overflow-y-auto">
+        <div className="w-full max-w-[440px] bg-[#161722] border border-white/5 rounded-3xl p-8 sm:p-10 shadow-2xl my-8">
+          
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-2">Create account ✨</h2>
+            <p className="text-gray-400 text-sm">Join BidZo — it's free and takes under a minute</p>
           </div>
 
-          {/* Heading */}
-          <div className="mb-7">
-            <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:0.15}}>
-              <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1.5">
-                Create account <span className="text-2xl">✨</span>
-              </h2>
-              <p className="text-sm text-gray-500">Join BidZo — it's free and takes under a minute</p>
-            </motion.div>
-            {!isConfigured && (
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-brand-300"
-                style={{ background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.25)' }}>
-                🔌 Offline mode
-              </div>
-            )}
+          {errorMsg && (
+            <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+              {errorMsg}
+            </div>
+          )}
+
+          <button onClick={onGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-[#1e202e] hover:bg-[#252838] border border-white/5 py-3 rounded-xl transition-colors text-sm font-semibold mb-6">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Sign up with Google
+          </button>
+
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-white/5"></div>
+            <span className="text-xs text-gray-500 font-medium">or with email</span>
+            <div className="flex-1 h-px bg-white/5"></div>
           </div>
 
-          {/* Error */}
-          <AnimatePresence>
-            {errorMsg && (
-              <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}}
-                className="mb-5 overflow-hidden">
-                <div className="flex gap-2.5 px-4 py-3 rounded-xl text-sm text-red-300"
-                  style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)' }}>
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
-                  {errorMsg}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form card */}
-          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:0.25}}
-            className="w-full rounded-2xl p-6 space-y-5"
-            style={{ background:'linear-gradient(145deg,rgba(20,15,60,0.7) 0%,rgba(12,8,35,0.8) 100%)', border:'1px solid rgba(99,102,241,0.15)', backdropFilter:'blur(24px)', boxShadow:'0 25px 80px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05)' }}>
-
-            {/* Google */}
-            <motion.button whileHover={{scale:1.01,boxShadow:'0 0 25px rgba(99,102,241,0.25)'}} whileTap={{scale:0.98}}
-              onClick={onGoogle} disabled={loading || !isConfigured}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50"
-              style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)' }}>
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Sign up with Google
-            </motion.button>
-
-            {/* Divider */}
-            <div className="relative flex items-center gap-3">
-              <div className="flex-1 h-px bg-white/8" />
-              <span className="text-xs text-gray-400 font-medium shrink-0">or with email</span>
-              <div className="flex-1 h-px bg-white/8" />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
+                <input type="text" {...register('name')} placeholder="Jane Doe" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+              </div>
+              {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Full Name</label>
-                <div className="relative group">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors" />
-                  <input id="reg-name" type="text" autoComplete="name" {...register('name')} placeholder="Jane Doe" className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.name ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`} />
-                </div>
-                {errors.name && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.name.message}</p>}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
+                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
               </div>
+              {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
+            </div>
 
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Email</label>
-                <div className="relative group">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors" />
-                  <input id="reg-email" type="email" autoComplete="email" {...register('email')} placeholder="you@example.com" className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.email ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`} />
-                </div>
-                {errors.email && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.email.message}</p>}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
+                <input type={showPw?'text':'password'} {...register('password')} placeholder="Min. 6 characters" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+                <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                  {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                </button>
               </div>
+              
+              <AnimatePresence>
+                {(pw?.length ?? 0) > 0 && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-2 space-y-1 overflow-hidden">
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(i => (
+                        <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300" style={{ background: i <= str.score ? str.color : 'rgba(255,255,255,0.05)' }} />
+                      ))}
+                    </div>
+                    {str.label && <p className="text-xs font-semibold" style={{color:str.color}}>{str.label}</p>}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
+            </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Password</label>
-                <div className="relative group">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors" />
-                  <input id="reg-pw" type={showPw?'text':'password'} autoComplete="new-password" {...register('password')} placeholder="Min. 6 characters" className={`w-full pl-10 pr-11 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.password ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`} />
-                  <button type="button" onClick={()=>setShowPw(v=>!v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-brand-400 transition-colors">
-                    {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+            <div>
+              <label className="block text-sm font-medium mb-2 mt-2">Account Type</label>
+              <div className="grid grid-cols-2 gap-3">
+                {(['buyer','seller'] as const).map(r => (
+                  <button key={r} type="button" onClick={()=>setValue('role',r,{shouldValidate:true})}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border text-sm font-semibold transition-all"
+                    style={role===r
+                      ? { border:'1px solid rgba(168,85,247,0.5)', background:'rgba(168,85,247,0.1)', color:'#c084fc' }
+                      : { border:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.2)', color:'#6b7280' }
+                    }>
+                    {r==='buyer' ? <User className="w-5 h-5"/> : <Briefcase className="w-5 h-5"/>}
+                    <span className="capitalize">{r}</span>
                   </button>
-                </div>
-                {/* Strength bar */}
-                <AnimatePresence>
-                  {(pw?.length ?? 0) > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="mt-2 space-y-1 overflow-hidden"
-                    >
-                      <div className="flex gap-1">
-                        {[1,2,3,4,5].map(i => (
-                          <div key={i} className="flex-1 h-1 rounded-full transition-all duration-400"
-                            style={{ background: i <= str.score ? str.color : 'rgba(255,255,255,0.07)' }} />
-                        ))}
-                      </div>
-                      {str.label && <p className="text-xs font-semibold" style={{color:str.color}}>{str.label}</p>}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                {errors.password && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.password.message}</p>}
+                ))}
               </div>
+            </div>
 
-              {/* Role */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Account Type</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['buyer','seller'] as const).map(r => (
-                    <button key={r} type="button" onClick={()=>setValue('role',r,{shouldValidate:true})}
-                      className="flex flex-col items-center gap-2 py-4 rounded-xl border text-sm font-semibold transition-all"
-                      style={role===r
-                        ? { border:'1px solid rgba(99,102,241,0.6)', background:'rgba(99,102,241,0.15)', color:'#a5b4fc', boxShadow:'0 0 20px rgba(99,102,241,0.25)' }
-                        : { border:'1px solid rgba(255,255,255,0.06)', background:'rgba(255,255,255,0.03)', color:'#6b7280' }
-                      }>
-                      {r==='buyer' ? <User className="w-5 h-5"/> : <Briefcase className="w-5 h-5"/>}
-                      <span className="capitalize">{r}</span>
-                      <span className="text-xs font-normal opacity-60">{r==='buyer'?'Browse & bid':'List & sell'}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#c084fc] text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 mt-4">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Gavel className="w-5 h-5"/>}
+              Create free account
+            </button>
+            
+            <p className="text-xs text-center text-gray-500 mt-2">
+              By signing up you agree to our <a href="#" className="text-[#a855f7] hover:text-[#c084fc]">Terms</a> & <a href="#" className="text-[#a855f7] hover:text-[#c084fc]">Privacy</a>
+            </p>
+          </form>
 
-              {/* Submit */}
-              <motion.button type="submit" id="reg-submit" disabled={loading}
-                whileHover={{scale:loading?1:1.02, boxShadow:'0 0 35px rgba(99,102,241,0.6)'}}
-                whileTap={{scale:loading?1:0.97}}
-                className="w-full py-3.5 rounded-xl text-sm font-bold text-white tracking-wide transition-all disabled:opacity-60 relative overflow-hidden"
-                style={{ background:'linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#a21caf 100%)', boxShadow:'0 0 25px rgba(99,102,241,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' }}>
-                {/* Shimmer */}
-                <motion.div animate={{x:['-100%','200%']}} transition={{duration:2.5,repeat:Infinity,repeatDelay:1}}
-                  className="absolute inset-0" style={{background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)'}} />
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin"/>Creating…</> : <><Zap className="w-4 h-4"/>Create free account</>}
-                </span>
-              </motion.button>
-
-              <p className="text-xs text-center text-gray-700">
-                By signing up you agree to our{' '}
-                <a href="#" className="text-brand-500 hover:text-brand-400">Terms</a> &amp;{' '}
-                <a href="#" className="text-brand-500 hover:text-brand-400">Privacy</a>
-              </p>
-            </form>
-          </motion.div>
-
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Have an account?{' '}
-            <Link to="/login" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">Sign in →</Link>
+          <p className="mt-6 text-center text-sm text-gray-400">
+            Have an account? <Link to="/login" className="text-[#a855f7] font-medium hover:text-[#c084fc] transition-colors">Sign in →</Link>
           </p>
-          <div className="mt-4 flex justify-center items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-gray-700"/>
-            <span className="text-xs text-gray-700">256-bit SSL encrypted</span>
+
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-600">
+            <Shield className="w-3.5 h-3.5"/> 256-bit SSL encrypted
           </div>
-        </motion.div>
+        </div>
+
+        <button className="absolute bottom-6 right-6 bg-[#161722] border border-white/5 px-4 py-2 rounded-full flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors shadow-lg hidden sm:flex">
+          <Moon className="w-3.5 h-3.5"/> Dark Mode
+        </button>
       </div>
     </div>
   );

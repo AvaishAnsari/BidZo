@@ -17,7 +17,7 @@ export interface Bid {
 
 const AUCTIONS_KEY = 'bidzo_auctions';
 const BIDS_KEY     = 'bidzo_bids';
-const STORE_VER    = 'bidzo_store_v6'; // bump to force a data reset
+const STORE_VER    = 'bidzo_store_v8'; // bump to force a data reset
 
 const now  = Date.now();
 const DAY  = 1000 * 60 * 60 * 24;
@@ -272,7 +272,102 @@ export const DUMMY_AUCTIONS: Auction[] = [
     category: 'Antiques',
     created_at: new Date().toISOString(),
   },
+  // ── ENDED (SOLD) auctions ────────────────────────────────────────────────
+  {
+    id: 'dummy-16',
+    title: 'Vintage Sony Walkman TPS-L2',
+    description:
+      'The original 1979 Sony Walkman TPS-L2 in fantastic cosmetic and working condition. Comes with original headphones and a leather case. The belts have been recently replaced. A true piece of 80s nostalgia and audio history.',
+    image_url: 'https://images.unsplash.com/photo-1548161580-c11df5fb00e0?auto=format&fit=crop&q=80',
+    start_price:  15000,
+    current_price: 24500,
+    min_increment: 500,
+    start_time: new Date(now - 10 * DAY).toISOString(),
+    end_time:   new Date(now - 2 * DAY).toISOString(),
+    seller_id: 'seller-16',
+    status: 'ended',
+    category: 'Electronics',
+    created_at: new Date(now - 10 * DAY).toISOString(),
+    extension_count: 0,
+  },
+  {
+    id: 'dummy-17',
+    title: 'First Edition "The Great Gatsby" Book',
+    description:
+      'A rare first edition, first printing of F. Scott Fitzgerald\'s "The Great Gatsby" (1925). Original dust jacket is absent, but the green cloth boards are well preserved. Features the typographical errors typical of the very first run. A holy grail for book collectors.',
+    image_url: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80',
+    start_price:  300000,
+    current_price: 420000,
+    min_increment: 10000,
+    start_time: new Date(now - 15 * DAY).toISOString(),
+    end_time:   new Date(now - 5 * DAY).toISOString(),
+    seller_id: 'seller-17',
+    status: 'ended',
+    category: 'Books',
+    created_at: new Date(now - 15 * DAY).toISOString(),
+    extension_count: 0,
+  },
+  {
+    id: 'dummy-18',
+    title: 'Signed Pele Brazil 1970 Jersey',
+    description:
+      'An authentic retro 1970 Brazil national team jersey hand-signed by football legend Pelé. The signature is clear and comes with a certificate of authenticity from PSA/DNA. The jersey itself is in immaculate, unworn condition.',
+    image_url: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?auto=format&fit=crop&q=80',
+    start_price:  80000,
+    current_price: 135000,
+    min_increment: 5000,
+    start_time: new Date(now - 8 * DAY).toISOString(),
+    end_time:   new Date(now - 1 * DAY).toISOString(),
+    seller_id: 'seller-18',
+    status: 'ended',
+    category: 'Sports',
+    created_at: new Date(now - 8 * DAY).toISOString(),
+    extension_count: 0,
+  },
 ];
+
+export const DUMMY_BIDS: Bid[] = [];
+const dummyUsers = [
+  { id: 'user-101', email: 'collector_john@example.com' },
+  { id: 'user-102', email: 'sarah_bids@example.com' },
+  { id: 'user-103', email: 'vintage.hunter@example.com' },
+  { id: 'user-104', email: 'mike_deals@example.com' },
+  { id: 'user-105', email: 'art_lover_99@example.com' },
+  { id: 'user-106', email: 'tech_geek_22@example.com' },
+  { id: 'user-107', email: 'luxury_finds@example.com' },
+];
+
+DUMMY_AUCTIONS.forEach(auction => {
+  if (auction.status === 'upcoming') return;
+  if (auction.current_price === auction.start_price) return; // No bids yet
+
+  let currentAmount = auction.start_price;
+  const targetPrice = auction.current_price;
+  let bidIndex = 0;
+  
+  // Generate bids until we reach the current_price
+  while (currentAmount <= targetPrice) {
+    const user = dummyUsers[Math.floor(Math.random() * dummyUsers.length)];
+    
+    DUMMY_BIDS.push({
+      id: `bid-${auction.id}-${bidIndex}`,
+      auctionId: auction.id,
+      bidderId: user.id,
+      bidderEmail: user.email,
+      amount: currentAmount,
+      placedAt: new Date(now - (targetPrice - currentAmount) * 1000 - Math.random() * 10000).toISOString()
+    });
+    
+    if (currentAmount === targetPrice) break;
+    
+    // Increment for next bid
+    currentAmount += auction.min_increment * (Math.floor(Math.random() * 3) + 1);
+    if (currentAmount > targetPrice) {
+      currentAmount = targetPrice;
+    }
+    bidIndex++;
+  }
+});
 
 export function initLocalStore() {
   // Force a reset whenever we bump STORE_VER
@@ -284,6 +379,11 @@ export function initLocalStore() {
   const existing = localStorage.getItem(AUCTIONS_KEY);
   if (!existing || JSON.parse(existing).length === 0) {
     saveAuctions(DUMMY_AUCTIONS);
+  }
+  
+  const existingBids = localStorage.getItem(BIDS_KEY);
+  if (!existingBids || JSON.parse(existingBids).length === 0) {
+    saveBids(DUMMY_BIDS);
   }
 }
 

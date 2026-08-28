@@ -90,8 +90,24 @@ export function useAuction(id: string | undefined): UseAuctionResult {
       setAuction(auctionData);
       setBids(bidsData);
     } catch (err: any) {
-      console.error('[useAuction] fetch error:', err);
-      setError(err.message ?? 'Failed to load auction');
+      console.error('[useAuction] fetch error (falling back to offline data):', err);
+      initLocalStore();
+      const localAuction = getAuction(id);
+      if (localAuction) {
+        setAuction(localAuction);
+        const localBids = getBidsForAuction(localAuction.id);
+        setBids(
+          localBids.map(b => ({
+            id: b.id,
+            amount: b.amount,
+            created_at: b.placedAt,
+            user_email: b.bidderEmail,
+          }))
+        );
+        setError(null);
+      } else {
+        setError(err.message ?? 'Failed to load auction');
+      }
     } finally {
       setIsLoading(false);
     }

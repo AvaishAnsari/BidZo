@@ -45,11 +45,11 @@ export function useAuctions(): UseAuctionsResult {
       // If Supabase returned an empty table, seed with local dummy data
       setAuctions(data.length > 0 ? data : loadAuctions());
     } catch (err: any) {
-      console.error('[useAuctions] fetch error:', err);
-      setError(err.message ?? 'Failed to load auctions');
+      console.error('[useAuctions] fetch error (falling back to offline data):', err);
       // Fallback to local store so the UI never breaks
       initLocalStore();
       setAuctions(loadAuctions());
+      setError(null);
     } finally {
       setIsLoading(false);
     }

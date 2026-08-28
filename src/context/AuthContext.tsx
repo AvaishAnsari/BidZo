@@ -308,7 +308,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // ── signInWithGoogle ───────────────────────────────────────────────────────
   const signInWithGoogle = useCallback(async (): Promise<{ error: string | null }> => {
     if (!isSupabaseConfigured()) {
-      return { error: 'Google Auth is not available in offline mode.' };
+      // Offline mock for Google Sign-In
+      const account = {
+        id: `mock-google-${Date.now()}`,
+        email: 'google.user@example.com',
+        name: 'Google User',
+        role: 'buyer' as UserRole,
+        password: '',
+      };
+      setUser({ id: account.id, email: account.email } as User);
+      setUserRole(account.role);
+      setUserName(account.name);
+      localStorage.setItem(MOCK_USER_KEY, JSON.stringify(account));
+      return { error: null };
     }
     
     const { error } = await supabase.auth.signInWithOAuth({

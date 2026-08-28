@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Lock, Gavel, AlertCircle, Eye, EyeOff, ShieldCheck, TrendingUp, Users, Sparkles, Zap, Star } from 'lucide-react';
+import { Loader2, Mail, Lock, Gavel, Eye, EyeOff, ShieldCheck, Zap, Shield, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
@@ -14,29 +14,6 @@ const schema = z.object({
 });
 type FormVals = z.infer<typeof schema>;
 
-const Particle = ({ style }: { style: React.CSSProperties }) => (
-  <motion.div className="absolute rounded-full pointer-events-none" style={style}
-    animate={{ y:[0,-110,0], opacity:[0,1,0], scale:[0.4,1.3,0.4] }}
-    transition={{ duration: Math.random()*6+5, repeat:Infinity, delay:Math.random()*4, ease:'easeInOut' }}
-  />
-);
-
-const PARTICLES = Array.from({length:18},(_,i)=>({
-  id:i,
-  style:{
-    width:`${Math.random()*6+2}px`, height:`${Math.random()*6+2}px`,
-    left:`${Math.random()*100}%`, bottom:`${Math.random()*30}%`,
-    background: i%3===0 ? 'rgba(99,102,241,0.9)' : i%3===1 ? 'rgba(168,85,247,0.9)' : 'rgba(236,72,153,0.9)',
-    filter:'blur(1px)',
-  } as React.CSSProperties
-}));
-
-const REVIEWS = [
-  { name:'Alex M.', text:'Won my first auction in 10 mins!', stars:5 },
-  { name:'Sarah K.', text:'Best bidding platform, period.', stars:5 },
-  { name:'Raj P.', text:'Selling is super easy here.', stars:5 },
-];
-
 export const Login = () => {
   const { signIn, signInWithGoogle, isConfigured } = useAuth();
   const navigate  = useNavigate();
@@ -45,15 +22,6 @@ export const Login = () => {
   const [loading, setLoading]   = useState(false);
   const [errorMsg, setErrorMsg] = useState<string|null>(null);
   const [showPw, setShowPw]     = useState(false);
-  const [reviewIdx, setReviewIdx] = useState(0);
-
-  // Auto-slide reviews carousel
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setReviewIdx((prev) => (prev + 1) % REVIEWS.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
 
   const { register, handleSubmit, formState:{errors} } = useForm<FormVals>({
     resolver: zodResolver(schema),
@@ -75,261 +43,221 @@ export const Login = () => {
     setLoading(true);
     const { error } = await signInWithGoogle();
     if (error) { toast.error(error); setLoading(false); }
+    else if (!isConfigured) {
+      toast.success('Welcome back! 👋');
+      navigate(from, { replace:true });
+    }
   };
 
-  const inp = (err:boolean) => `
-    w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300
-    border ${err ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}
-  `;
-
   return (
-    <div className="min-h-screen w-full flex relative overflow-hidden"
-      style={{ background:'linear-gradient(135deg,#04021a 0%,#070420 40%,#0a0320 70%,#060215 100%)' }}>
-
-      {/* Ambient orbs */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <motion.div animate={{scale:[1,1.2,1],opacity:[0.3,0.5,0.3]}} transition={{duration:8,repeat:Infinity}}
-          className="absolute -top-64 -right-64 w-[700px] h-[700px] rounded-full"
-          style={{background:'radial-gradient(circle,rgba(99,102,241,0.35) 0%,transparent 70%)',filter:'blur(80px)'}}/>
-        <motion.div animate={{scale:[1,1.15,1],opacity:[0.2,0.4,0.2]}} transition={{duration:11,repeat:Infinity,delay:2}}
-          className="absolute -bottom-48 -left-48 w-[600px] h-[600px] rounded-full"
-          style={{background:'radial-gradient(circle,rgba(168,85,247,0.35) 0%,transparent 70%)',filter:'blur(80px)'}}/>
-        <motion.div animate={{x:[0,-40,0],y:[0,30,0]}} transition={{duration:13,repeat:Infinity,ease:'easeInOut'}}
-          className="absolute top-1/3 right-1/3 w-80 h-80 rounded-full opacity-12"
-          style={{background:'radial-gradient(circle,rgba(236,72,153,0.35) 0%,transparent 70%)',filter:'blur(60px)'}}/>
-      </div>
-
-      {/* Particles */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        {PARTICLES.map(p=><Particle key={p.id} style={p.style}/>)}
-      </div>
-
-      {/* Grid */}
-      <div className="fixed inset-0 pointer-events-none -z-10"
-        style={{backgroundImage:'linear-gradient(rgba(99,102,241,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.03) 1px,transparent 1px)',backgroundSize:'60px 60px'}}/>
-
+    <div className="min-h-screen w-full flex bg-[#0f111a] text-white overflow-hidden font-sans">
+      
       {/* ─── LEFT PANEL ─── */}
-      <div className="hidden lg:flex lg:w-[46%] xl:w-[50%] flex-col justify-between p-12 xl:p-16 relative overflow-hidden rounded-r-[3rem] shadow-2xl border-r border-white/5">
-        <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" alt="Premium Abstract Art" className="w-full h-full object-cover opacity-50 transition-transform duration-10000 hover:scale-110" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(4,2,26,0.2) 0%, rgba(4,2,26,0.9) 100%)' }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(4,2,26,0.1) 0%, #060215 100%)' }} />
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 border-r border-white/5 relative" 
+           style={{ background: 'linear-gradient(160deg, #181226 0%, #0d0e15 100%)' }}>
+        
+        {/* Top Header */}
+        <div className="flex justify-between items-center z-10">
+          <div className="flex items-center gap-2">
+            <Gavel className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
+            <span className="text-2xl font-bold tracking-tight">BidZo</span>
+          </div>
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+            <div className="flex -space-x-2">
+              <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+            </div>
+            <span className="text-xs text-gray-300 pr-1">12,000+ Active Bidders</span>
+          </div>
         </div>
 
-        <div className="absolute right-0 top-[10%] bottom-[10%] w-px z-10"
-          style={{background:'linear-gradient(180deg,transparent,rgba(99,102,241,0.5) 30%,rgba(168,85,247,0.5) 70%,transparent)'}}/>
-
-        {/* Logo */}
-        <div className="relative z-10 flex flex-col justify-between h-full">
-        <motion.div initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} transition={{duration:0.6}}
-          className="flex items-center gap-3">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-xl blur-md bg-brand-500/50"/>
-            <div className="relative bg-gradient-to-br from-brand-500 to-accent-600 p-2.5 rounded-xl">
-              <Gavel className="w-6 h-6 text-white"/>
-            </div>
+        {/* Main Content */}
+        <div className="z-10 mt-12 space-y-6 max-w-lg">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-gray-300 bg-white/5 border border-white/10">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#a855f7]"/> Trusted by thousands of bidders worldwide
           </div>
-          <span className="text-2xl font-extrabold text-white tracking-tight">
-            Bid<span className="gradient-text">Zo</span>
-          </span>
-        </motion.div>
 
-        {/* Hero */}
-        <motion.div initial={{opacity:0,x:-30}} animate={{opacity:1,x:0}} transition={{duration:0.7,delay:0.2}}
-          className="space-y-8">
-          <motion.div initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}} transition={{delay:0.4}}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold text-brand-300"
-            style={{background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.3)'}}>
-            <Sparkles className="w-3.5 h-3.5"/> Trusted by 12,000+ bidders worldwide
-          </motion.div>
-
-          <h1 className="text-4xl xl:text-5xl font-extrabold text-white leading-tight">
-            The smarter way<br/>to <span className="relative inline-block">
-              <span className="gradient-text">bid & win</span>
-              <motion.span animate={{scaleX:[0,1]}} transition={{delay:0.9,duration:0.6}}
-                className="absolute -bottom-1 left-0 right-0 h-0.5 origin-left"
-                style={{background:'linear-gradient(90deg,#6366f1,#a855f7)'}}/>
-            </span>
+          <h1 className="text-[3.5rem] font-bold leading-[1.1] tracking-tight">
+            The smarter way <br/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#c084fc]">bid & win</span>
           </h1>
 
-          <p className="text-gray-400 text-base leading-relaxed max-w-sm">
+          <p className="text-gray-400 text-lg leading-relaxed max-w-md">
             Real-time auctions, instant notifications, and secure payments — all in one place.
           </p>
 
-          {/* Stats */}
-          <div className="flex gap-8">
-            {([['12K+','Active Bidders',Users],['38K+','Auctions Won',TrendingUp]] as [string,string,React.ElementType][]).map(([val,label,Icon])=>{
-              return (
-                <div key={label} className="flex flex-col gap-1">
-                  <span className="text-2xl font-extrabold gradient-text">{val}</span>
-                  <span className="text-xs text-gray-600 flex items-center gap-1">
-                    <Icon className="w-3 h-3"/>{label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Animated review card */}
-          <div className="relative">
-            <AnimatePresence mode="wait">
-              <motion.div key={reviewIdx}
-                initial={{opacity:0,y:12,scale:0.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-12,scale:0.97}}
-                transition={{duration:0.4}}
-                className="rounded-2xl p-5 max-w-xs"
-                style={{background:'linear-gradient(145deg,rgba(20,15,60,0.7),rgba(10,8,30,0.8))',border:'1px solid rgba(99,102,241,0.18)',boxShadow:'0 10px 40px rgba(0,0,0,0.4)'}}>
-                <div className="flex gap-0.5 mb-2">
-                  {Array.from({length:REVIEWS[reviewIdx].stars}).map((_,i)=>(
-                    <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400"/>
-                  ))}
-                </div>
-                <p className="text-sm text-gray-300 italic mb-3">"{REVIEWS[reviewIdx].text}"</p>
-                <p className="text-xs font-bold text-gray-500">— {REVIEWS[reviewIdx].name}</p>
-              </motion.div>
-            </AnimatePresence>
-            <div className="flex gap-1.5 mt-3">
-              {REVIEWS.map((_,i)=>(
-                <button key={i} onClick={()=>setReviewIdx(i)}
-                  className="h-1 rounded-full transition-all"
-                  style={{width: i===reviewIdx?'24px':'8px', background: i===reviewIdx?'rgba(99,102,241,0.8)':'rgba(255,255,255,0.15)'}}/>
-              ))}
+          <div className="flex items-center gap-10 pt-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#9333ea]/20 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#c084fc]">12K+</div>
+                <div className="text-sm text-gray-400">Active Bidders</div>
+              </div>
+            </div>
+            <div className="w-px h-12 bg-white/10"></div>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#9333ea]/20 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#c084fc]">38K+</div>
+                <div className="text-sm text-gray-400">Auctions Won</div>
+              </div>
             </div>
           </div>
-        </motion.div>
 
-        {/* Trust */}
-        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}
-          className="flex items-center gap-2 text-xs text-gray-700">
-          <ShieldCheck className="w-4 h-4 text-brand-600"/>
-          <span>Bank-grade encryption · 2FA supported · Zero fees</span>
-        </motion.div>
+          {/* Mini Auction Card */}
+          <div className="mt-8 bg-[#141521] border border-white/5 rounded-2xl p-4 flex gap-5 items-center relative overflow-hidden shadow-2xl">
+            <div className="w-36 h-36 rounded-xl overflow-hidden relative shrink-0">
+              <div className="absolute top-2 left-2 z-10 bg-[#7c3aed]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">Live Auction</div>
+              <img src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=600&auto=format&fit=crop" alt="Premium Watch" className="w-full h-full object-cover"/>
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between items-start mb-1">
+                <div>
+                  <h3 className="font-semibold text-sm">Premium Watch</h3>
+                  <p className="text-xs text-gray-400">Luxury Edition</p>
+                </div>
+                <div className="text-center bg-black/20 rounded-md px-2 py-1">
+                  <div className="text-[#f43f5e] font-mono text-sm font-bold flex gap-1">
+                    <span>00</span><span className="opacity-50">:</span><span>02</span><span className="opacity-50">:</span><span>45</span>
+                  </div>
+                  <div className="text-[8px] text-gray-500 font-bold uppercase tracking-widest flex justify-between px-0.5">
+                    <span>HRS</span><span>MIN</span><span>SEC</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-between items-end mt-4">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide">Current Bid</p>
+                  <p className="text-[#c084fc] font-bold text-lg">₹ 48,750</p>
+                </div>
+                <button className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1 transition-colors">
+                  Place Bid <span className="text-lg leading-none mt-[-2px]">→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Features */}
+        <div className="z-10 mt-16 grid grid-cols-3 gap-6">
+          <div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
+              <Zap className="w-4 h-4 text-[#c084fc]"/>
+            </div>
+            <h4 className="text-sm font-semibold mb-1">Real-time Bidding</h4>
+            <p className="text-xs text-gray-500">Instant bid updates</p>
+          </div>
+          <div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
+              <ShieldCheck className="w-4 h-4 text-[#c084fc]"/>
+            </div>
+            <h4 className="text-sm font-semibold mb-1">Anti-Sniping</h4>
+            <p className="text-xs text-gray-500">Fair play for everyone</p>
+          </div>
+          <div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
+              <Lock className="w-4 h-4 text-[#c084fc]"/>
+            </div>
+            <h4 className="text-sm font-semibold mb-1">Secure Payments</h4>
+            <p className="text-xs text-gray-500">Safe & encrypted</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="z-10 mt-12 flex justify-between items-center text-xs text-gray-500">
+          <p>© 2025 BidZo. All rights reserved.</p>
+          <div className="flex gap-4">
+            <a href="#" className="hover:text-gray-300 transition-colors">About</a>
+            <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
+            <a href="#" className="hover:text-gray-300 transition-colors">Contact</a>
+          </div>
         </div>
       </div>
 
       {/* ─── RIGHT PANEL ─── */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
-        <motion.div initial={{opacity:0,y:28,scale:0.96}} animate={{opacity:1,y:0,scale:1}}
-          transition={{duration:0.6,type:'spring',bounce:0.3}} className="w-full max-w-[400px]">
-
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="bg-gradient-to-br from-brand-500 to-accent-600 p-2 rounded-xl">
-              <Gavel className="w-5 h-5 text-white"/>
-            </div>
-            <span className="text-xl font-extrabold text-white">Bid<span className="gradient-text">Zo</span></span>
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-[440px] bg-[#161722] border border-white/5 rounded-3xl p-8 sm:p-10 shadow-2xl">
+          
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-2">Welcome back 👋</h2>
+            <p className="text-gray-400 text-sm">Sign in to continue your bidding journey</p>
           </div>
 
-          {/* Heading */}
-          <div className="mb-7">
-            <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1.5">
-              Welcome back 👋
-            </h2>
-            <p className="text-sm text-gray-500">Sign in to continue your bidding journey</p>
-            {!isConfigured && (
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-brand-300"
-                style={{background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)'}}>
-                🔌 Offline mode
-              </div>
-            )}
+          {errorMsg && (
+            <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+              {errorMsg}
+            </div>
+          )}
+
+          <button onClick={onGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-[#1e202e] hover:bg-[#252838] border border-white/5 py-3 rounded-xl transition-colors text-sm font-semibold mb-6">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-white/5"></div>
+            <span className="text-xs text-gray-500 font-medium">or sign in with email</span>
+            <div className="flex-1 h-px bg-white/5"></div>
           </div>
 
-          {/* Error */}
-          <AnimatePresence>
-            {errorMsg && (
-              <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}}
-                className="mb-5 overflow-hidden">
-                <div className="flex gap-2.5 px-4 py-3 rounded-xl text-sm text-red-300"
-                  style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)'}}>
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400"/>
-                  {errorMsg}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form card */}
-          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:0.25}}
-            className="w-full rounded-2xl p-6 space-y-5"
-            style={{background:'linear-gradient(145deg,rgba(20,15,60,0.7) 0%,rgba(12,8,35,0.8) 100%)',border:'1px solid rgba(99,102,241,0.15)',backdropFilter:'blur(24px)',boxShadow:'0 25px 80px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05)'}}>
-
-            {/* Google */}
-            <motion.button whileHover={{scale:1.01,boxShadow:'0 0 25px rgba(99,102,241,0.25)'}} whileTap={{scale:0.98}}
-              onClick={onGoogle} disabled={loading || !isConfigured}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50"
-              style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)'}}>
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continue with Google
-            </motion.button>
-
-            {/* Divider */}
-            <div className="relative flex items-center gap-3">
-              <div className="flex-1 h-px bg-white/8"/>
-              <span className="text-xs text-gray-400 font-medium shrink-0">or with email</span>
-              <div className="flex-1 h-px bg-white/8"/>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
+                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+              </div>
+              {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Email</label>
-                <div className="relative group">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors"/>
-                  <input id="login-email" type="email" autoComplete="email" {...register('email')} placeholder="you@example.com" className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.email ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`}/>
-                </div>
-                {errors.email && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.email.message}</p>}
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-sm font-medium">Password</label>
+                <a href="#" className="text-xs text-[#a855f7] hover:text-[#c084fc] transition-colors">Forgot password?</a>
               </div>
-
-              {/* Password */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Password</label>
-                  <a href="#" className="text-xs text-brand-500 hover:text-brand-400 transition-colors font-medium">Forgot?</a>
-                </div>
-                <div className="relative group">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600 group-focus-within:text-brand-400 transition-colors"/>
-                  <input id="login-pw" type={showPw?'text':'password'} autoComplete="current-password" {...register('password')} placeholder="••••••••" className={`w-full pl-10 pr-11 py-3 rounded-xl text-sm text-white placeholder-gray-400 outline-none transition-all duration-300 border ${errors.password ? 'border-red-500/50 bg-red-900/10 focus:border-red-500' : 'border-white/10 bg-white/5 hover:bg-white/8 focus:border-brand-500/80 focus:bg-white/8 focus:ring-4 focus:ring-brand-500/20'}`}/>
-                  <button type="button" onClick={()=>setShowPw(v=>!v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-brand-400 transition-colors">
-                    {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
-                  </button>
-                </div>
-                {errors.password && <p className="mt-1 text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/>{errors.password.message}</p>}
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
+                <input type={showPw?'text':'password'} {...register('password')} placeholder="••••••••" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+                <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                  {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                </button>
               </div>
+              {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
+            </div>
 
-              {/* Remember */}
-              <div className="flex items-center gap-2">
-                <input id="remember" type="checkbox" className="h-4 w-4 rounded accent-brand-500 cursor-pointer"/>
-                <label htmlFor="remember" className="text-sm text-gray-500 cursor-pointer select-none">Keep me signed in</label>
-              </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="remember" className="w-4 h-4 rounded border-white/20 bg-[#0d0e15] checked:bg-[#9333ea] checked:border-transparent accent-[#9333ea]"/>
+              <label htmlFor="remember" className="text-sm text-gray-400">Keep me signed in</label>
+            </div>
 
-              {/* Submit */}
-              <motion.button type="submit" id="login-submit" disabled={loading}
-                whileHover={{scale:loading?1:1.02, boxShadow:'0 0 35px rgba(99,102,241,0.6)'}}
-                whileTap={{scale:loading?1:0.97}}
-                className="w-full py-3.5 rounded-xl text-sm font-bold text-white tracking-wide transition-all disabled:opacity-60 relative overflow-hidden"
-                style={{background:'linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#a21caf 100%)',boxShadow:'0 0 25px rgba(99,102,241,0.4),inset 0 1px 0 rgba(255,255,255,0.15)'}}>
-                <motion.div animate={{x:['-100%','200%']}} transition={{duration:2.5,repeat:Infinity,repeatDelay:1.5}}
-                  className="absolute inset-0" style={{background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)'}}/>
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin"/>Signing in…</> : <><Zap className="w-4 h-4"/>Sign in to BidZo</>}
-                </span>
-              </motion.button>
-            </form>
-          </motion.div>
+            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#c084fc] text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 mt-2">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Gavel className="w-5 h-5"/>}
+              Sign in to BidZo
+            </button>
+          </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            New to BidZo?{' '}
-            <Link to="/register" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">Create free account →</Link>
+          <p className="mt-6 text-center text-sm text-gray-400">
+            New to BidZo? <Link to="/register" className="text-[#a855f7] font-medium hover:text-[#c084fc] transition-colors">Create free account</Link>
           </p>
-          <div className="mt-4 flex justify-center items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-gray-700"/>
-            <span className="text-xs text-gray-700">256-bit SSL encrypted</span>
+
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-600">
+            <Shield className="w-3.5 h-3.5"/> 256-bit SSL encrypted
           </div>
-        </motion.div>
+        </div>
+
+        <button className="absolute bottom-6 right-6 bg-[#161722] border border-white/5 px-4 py-2 rounded-full flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors shadow-lg">
+          <Moon className="w-3.5 h-3.5"/> Dark Mode
+        </button>
       </div>
     </div>
   );
