@@ -218,7 +218,14 @@ export const Login = () => {
             </motion.div>
           )}
 
-          <motion.button variants={itemVariants} onClick={onGoogle} disabled={loading} className="relative z-10 w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 py-3.5 rounded-xl transition-all text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 mb-8">
+          <motion.button 
+            variants={itemVariants} 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onGoogle} 
+            disabled={loading} 
+            className="relative z-10 w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 py-3.5 rounded-xl transition-all text-sm font-bold shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,255,255,0.1)] hover:border-white/20 mb-8"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -234,42 +241,66 @@ export const Login = () => {
             <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
           </motion.div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 relative z-10">
-            <motion.div variants={itemVariants}>
-              <label className="block text-sm font-bold text-gray-300 mb-2">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#a855f7] transition-colors"/>
-                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium focus:outline-none focus:border-[#a855f7] transition-all placeholder-gray-600 input-glow shadow-inner"/>
-              </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 relative z-10">
+            <motion.div variants={itemVariants} className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+              <input 
+                type="email" 
+                id="email"
+                {...register('email')} 
+                className="peer w-full bg-black/40 border border-white/10 rounded-xl pt-6 pb-2 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                placeholder="Email Address"
+              />
+              <label htmlFor="email" className="absolute left-11 top-2 text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-2 peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                Email Address
+              </label>
               {errors.email && <p className="mt-1.5 text-xs font-semibold text-red-400 pl-1">{errors.email.message}</p>}
             </motion.div>
 
             <motion.div variants={itemVariants}>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-bold text-gray-300">Password</label>
-                <Link to="#" className="text-xs font-semibold text-[#a855f7] hover:text-[#c084fc] transition-colors">Forgot password?</Link>
-              </div>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#a855f7] transition-colors"/>
-                <input type={showPw?'text':'password'} {...register('password')} placeholder="••••••••" className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-11 pr-11 text-sm font-medium focus:outline-none focus:border-[#a855f7] transition-all placeholder-gray-600 input-glow shadow-inner"/>
-                <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+                <input 
+                  type={showPw ? 'text' : 'password'} 
+                  id="password"
+                  {...register('password')} 
+                  className="peer w-full bg-black/40 border border-white/10 rounded-xl pt-6 pb-2 pl-11 pr-11 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                  placeholder="Password"
+                />
+                <label htmlFor="password" className="absolute left-11 top-2 text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-2 peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                  Password
+                </label>
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#c084fc] transition-colors z-10">
                   {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                 </button>
               </div>
-              {errors.password && <p className="mt-1.5 text-xs font-semibold text-red-400 pl-1">{errors.password.message}</p>}
+              <div className="flex justify-end mt-1.5 pr-1">
+                <Link to="#" className="text-xs font-semibold text-[#a855f7] hover:text-[#c084fc] transition-colors">Forgot password?</Link>
+              </div>
+              {errors.password && <p className="mt-1 text-xs font-semibold text-red-400 pl-1">{errors.password.message}</p>}
             </motion.div>
 
-            <motion.div variants={itemVariants} className="flex items-center gap-3 pt-2">
+            <motion.div variants={itemVariants} className="flex items-center gap-3 pt-1">
               <div className="relative flex items-center justify-center">
-                <input type="checkbox" id="remember" className="peer w-5 h-5 rounded-md border border-white/20 bg-black/40 checked:bg-[#9333ea] checked:border-transparent appearance-none transition-all cursor-pointer"/>
+                <input type="checkbox" id="remember" className="peer w-5 h-5 rounded-md border border-white/20 bg-black/40 checked:bg-[#9333ea] checked:border-transparent focus:ring-2 focus:ring-[#9333ea]/50 appearance-none transition-all cursor-pointer"/>
                 <svg className="absolute w-3 h-3 pointer-events-none opacity-0 peer-checked:opacity-100 text-white" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <label htmlFor="remember" className="text-sm font-medium text-gray-400 cursor-pointer hover:text-gray-300 transition-colors">Keep me signed in</label>
             </motion.div>
 
-            <motion.button variants={itemVariants} type="submit" disabled={loading} className="w-full btn-gradient flex items-center justify-center gap-2 mt-6 py-4 text-[15px] shadow-xl hover:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Flame className="w-5 h-5"/>}
-              Sign in securely
+            <motion.button 
+              variants={itemVariants} 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit" 
+              disabled={loading} 
+              className="w-full relative group overflow-hidden rounded-xl p-[1px] mt-6 shadow-2xl"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-70 group-hover:opacity-100 transition-opacity blur-sm"></div>
+              <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] py-4 rounded-xl text-[15px] font-bold text-white shadow-inner border border-white/10">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Flame className="w-5 h-5"/>}
+                Sign in securely
+              </div>
             </motion.button>
           </form>
 

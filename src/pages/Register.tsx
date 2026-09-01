@@ -227,7 +227,13 @@ export const Register = () => {
             </div>
           )}
 
-          <button onClick={onGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 py-3 rounded-xl transition-all text-sm font-semibold mb-6">
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onGoogle} 
+            disabled={loading} 
+            className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 py-3.5 rounded-xl transition-all text-sm font-bold shadow-[0_0_15px_rgba(255,255,255,0.05)] hover:shadow-[0_0_25px_rgba(255,255,255,0.1)] hover:border-white/20 mb-6"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -235,7 +241,7 @@ export const Register = () => {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
             Sign up with Google
-          </button>
+          </motion.button>
 
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1 h-px bg-white/5"></div>
@@ -244,57 +250,75 @@ export const Register = () => {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type="text" {...register('name')} placeholder="Jane Doe" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600 input-glow"/>
-              </div>
-              {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
+            <div className="relative group">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+              <input 
+                type="text" 
+                id="name"
+                {...register('name')} 
+                className="peer w-full bg-black/40 border border-white/10 rounded-xl pt-6 pb-2 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                placeholder="Full Name"
+              />
+              <label htmlFor="name" className="absolute left-11 top-2 text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-2 peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                Full Name
+              </label>
+              {errors.name && <p className="mt-1 text-xs text-red-400 pl-1">{errors.name.message}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600 input-glow"/>
-              </div>
-              {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+              <input 
+                type="email" 
+                id="email"
+                {...register('email')} 
+                className="peer w-full bg-black/40 border border-white/10 rounded-xl pt-6 pb-2 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                placeholder="Email Address"
+              />
+              <label htmlFor="email" className="absolute left-11 top-2 text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-2 peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                Email Address
+              </label>
+              {errors.email && <p className="mt-1 text-xs text-red-400 pl-1">{errors.email.message}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type={showPw?'text':'password'} {...register('password')} placeholder="Min. 6 characters" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600 input-glow"/>
-                <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                  {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
-                </button>
-              </div>
+            <div className="relative group">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+              <input 
+                type={showPw ? 'text' : 'password'} 
+                id="password"
+                {...register('password')} 
+                className="peer w-full bg-black/40 border border-white/10 rounded-xl pt-6 pb-2 pl-11 pr-11 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                placeholder="Password"
+              />
+              <label htmlFor="password" className="absolute left-11 top-2 text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3.5 peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-2 peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                Password
+              </label>
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#c084fc] transition-colors z-10">
+                {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+              </button>
               
               <AnimatePresence>
                 {(pw?.length ?? 0) > 0 && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-2 space-y-1 overflow-hidden">
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-2 space-y-1 overflow-hidden px-1">
                     <div className="flex gap-1">
                       {[1,2,3,4,5].map(i => (
                         <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300" style={{ background: i <= str.score ? str.color : 'rgba(255,255,255,0.05)' }} />
                       ))}
                     </div>
-                    {str.label && <p className="text-xs font-semibold" style={{color:str.color}}>{str.label}</p>}
+                    {str.label && <p className="text-[10px] font-bold uppercase tracking-wider" style={{color:str.color}}>{str.label}</p>}
                   </motion.div>
                 )}
               </AnimatePresence>
-              {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
+              {errors.password && <p className="mt-1 text-xs text-red-400 pl-1">{errors.password.message}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2 mt-2">Account Type</label>
+            <div className="pt-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 pl-1">Account Type</label>
               <div className="grid grid-cols-2 gap-3">
                 {(['buyer','seller'] as const).map(r => (
                   <button key={r} type="button" onClick={()=>setValue('role',r,{shouldValidate:true})}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border text-sm font-semibold transition-all"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                     style={role===r
-                      ? { border:'1px solid rgba(168,85,247,0.5)', background:'rgba(168,85,247,0.1)', color:'#c084fc' }
+                      ? { border:'1px solid rgba(168,85,247,0.5)', background:'rgba(168,85,247,0.1)', color:'#c084fc', boxShadow: '0 4px 12px rgba(168,85,247,0.15)' }
                       : { border:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.2)', color:'#6b7280' }
                     }>
                     {r==='buyer' ? <User className="w-5 h-5"/> : <Briefcase className="w-5 h-5"/>}
@@ -304,10 +328,20 @@ export const Register = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="w-full btn-gradient flex items-center justify-center gap-2 mt-4 py-3.5">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Flame className="w-5 h-5"/>}
-              Create free account
-            </button>
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit" 
+              disabled={loading} 
+              className="w-full relative group overflow-hidden rounded-xl p-[1px] mt-6 shadow-2xl"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-70 group-hover:opacity-100 transition-opacity blur-sm"></div>
+              <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] py-4 rounded-xl text-[15px] font-bold text-white shadow-inner border border-white/10">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Flame className="w-5 h-5"/>}
+                Create free account
+              </div>
+            </motion.button>
+
             
             <p className="text-xs text-center text-gray-500 mt-2">
               By signing up you agree to our <a href="#" className="text-[#a855f7] hover:text-[#c084fc]">Terms</a> & <a href="#" className="text-[#a855f7] hover:text-[#c084fc]">Privacy</a>
