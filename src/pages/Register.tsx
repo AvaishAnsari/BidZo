@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Lock, User, Briefcase, Gavel, Eye, EyeOff, ShieldCheck, Shield, Zap, Moon } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Briefcase, Flame, Eye, EyeOff, ShieldCheck, Shield, Zap, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import type { UserRole } from '../types';
@@ -66,16 +66,16 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-[#0f111a] text-white overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex bg-transparent text-white overflow-hidden font-sans">
       
       {/* ─── LEFT PANEL ─── */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 border-r border-white/5 relative" 
-           style={{ background: 'linear-gradient(160deg, #181226 0%, #0d0e15 100%)' }}>
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 border-r border-white/5 relative bg-black/20 backdrop-blur-xl">
+        <div className="hero-glow opacity-60 pointer-events-none"></div>
         
         {/* Top Header */}
         <div className="flex justify-between items-center z-10">
           <div className="flex items-center gap-2">
-            <Gavel className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
+            <Flame className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
             <span className="text-2xl font-bold tracking-tight">BidZo</span>
           </div>
           <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
@@ -125,7 +125,11 @@ export const Register = () => {
           </div>
 
           {/* Mini Auction Card */}
-          <div className="mt-8 bg-[#141521] border border-white/5 rounded-2xl p-4 flex gap-5 items-center relative overflow-hidden shadow-2xl">
+          <motion.div 
+            animate={{ y: [-8, 8, -8] }} 
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="mt-8 glass-card rounded-2xl p-4 flex gap-5 items-center relative overflow-hidden shadow-2xl"
+          >
             <div className="w-36 h-36 rounded-xl overflow-hidden relative shrink-0">
               <div className="absolute top-2 left-2 z-10 bg-[#7c3aed]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">Live Auction</div>
               <img src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=600&auto=format&fit=crop" alt="Premium Watch" className="w-full h-full object-cover"/>
@@ -155,7 +159,7 @@ export const Register = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Bottom Features */}
@@ -197,10 +201,10 @@ export const Register = () => {
 
       {/* ─── RIGHT PANEL (FORM) ─── */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative overflow-y-auto">
-        <div className="w-full max-w-[440px] bg-[#161722] border border-white/5 rounded-3xl p-8 sm:p-10 shadow-2xl my-8">
+        <div className="w-full max-w-[440px] glass-card rounded-3xl p-8 sm:p-10 shadow-2xl my-8 relative z-10">
           
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2">Create account ✨</h2>
+            <h2 className="text-3xl font-bold mb-2 gradient-text">Create account ✨</h2>
             <p className="text-gray-400 text-sm">Join BidZo — it's free and takes under a minute</p>
           </div>
 
@@ -210,7 +214,7 @@ export const Register = () => {
             </div>
           )}
 
-          <button onClick={onGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-[#1e202e] hover:bg-[#252838] border border-white/5 py-3 rounded-xl transition-colors text-sm font-semibold mb-6">
+          <button onClick={onGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 py-3 rounded-xl transition-all text-sm font-semibold mb-6">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -231,7 +235,7 @@ export const Register = () => {
               <label className="block text-sm font-medium mb-1.5">Full Name</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type="text" {...register('name')} placeholder="Jane Doe" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+                <input type="text" {...register('name')} placeholder="Jane Doe" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600 input-glow"/>
               </div>
               {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
             </div>
@@ -240,7 +244,7 @@ export const Register = () => {
               <label className="block text-sm font-medium mb-1.5">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600 input-glow"/>
               </div>
               {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
             </div>
@@ -249,7 +253,7 @@ export const Register = () => {
               <label className="block text-sm font-medium mb-1.5">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type={showPw?'text':'password'} {...register('password')} placeholder="Min. 6 characters" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+                <input type={showPw?'text':'password'} {...register('password')} placeholder="Min. 6 characters" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600 input-glow"/>
                 <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
                   {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                 </button>
@@ -287,8 +291,8 @@ export const Register = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#c084fc] text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 mt-4">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Gavel className="w-5 h-5"/>}
+            <button type="submit" disabled={loading} className="w-full btn-gradient flex items-center justify-center gap-2 mt-4 py-3.5">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Flame className="w-5 h-5"/>}
               Create free account
             </button>
             

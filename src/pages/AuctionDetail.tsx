@@ -15,7 +15,7 @@ import { initializeRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
 import { predictFinalBid, detectFraud } from '../utils/ai';
 import {
-  Loader2, Clock, TrendingUp, ArrowLeft, Gavel,
+  Loader2, Clock, TrendingUp, ArrowLeft, Flame,
   AlertCircle, Trophy, RefreshCw, Zap, Bell, Copy, ShieldCheck, CreditCard
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -645,7 +645,7 @@ export const AuctionDetail = () => {
             {!isEnded && !isUpcoming && !isOwnAuction && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                  <Gavel style={{ width: '1.125rem', height: '1.125rem', color: '#818cf8' }} />
+                  <Flame style={{ width: '1.125rem', height: '1.125rem', color: '#818cf8' }} />
                   <h3 style={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>Place Your Bid</h3>
                 </div>
 
@@ -763,7 +763,7 @@ export const AuctionDetail = () => {
                         ? <><Trophy style={{ width: '1rem', height: '1rem' }} /> You won this auction</>
                         : <><Trophy style={{ width: '1rem', height: '1rem' }} /> Top Bidder</>
                     ) : (
-                      <><Gavel style={{ width: '1rem', height: '1rem' }} /> {t('placeBid')}</>
+                      <><Flame style={{ width: '1rem', height: '1rem' }} /> {t('placeBid')}</>
                     )}
                   </motion.button>
                 </form>
@@ -869,7 +869,7 @@ export const AuctionDetail = () => {
               {/* Empty state */}
               {bids.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                  <Gavel style={{ width: '2rem', height: '2rem', color: '#374151', margin: '0 auto 0.5rem' }} />
+                  <Flame style={{ width: '2rem', height: '2rem', color: '#374151', margin: '0 auto 0.5rem' }} />
                   <p style={{ color: '#6b7280', fontSize: '0.82rem' }}>No bids yet — be the first!</p>
                 </div>
               ) : (

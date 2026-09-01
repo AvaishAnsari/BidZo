@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Lock, Gavel, Eye, EyeOff, ShieldCheck, Zap, Shield, Moon } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, Mail, Lock, Flame, Eye, EyeOff, ShieldCheck, Shield } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,152 +49,162 @@ export const Login = () => {
     }
   };
 
+  const containerVariants: any = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.15 }
+    }
+  };
+
+  const itemVariants: any = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <div className="min-h-screen w-full flex bg-[#0f111a] text-white overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex bg-[#020617] text-white overflow-hidden font-sans">
       
       {/* ─── LEFT PANEL ─── */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 border-r border-white/5 relative" 
-           style={{ background: 'linear-gradient(160deg, #181226 0%, #0d0e15 100%)' }}>
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden border-r border-white/5">
         
+        {/* Premium Immersive Background */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" 
+            alt="Abstract Background" 
+            className="w-full h-full object-cover opacity-30 mix-blend-luminosity" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a]/95 via-[#0f111a]/80 to-[#4f46e5]/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent"></div>
+          <div className="absolute inset-0 hero-glow opacity-80 mix-blend-screen pointer-events-none"></div>
+        </div>
+
         {/* Top Header */}
-        <div className="flex justify-between items-center z-10">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="flex justify-between items-center z-10">
           <div className="flex items-center gap-2">
-            <Gavel className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
-            <span className="text-2xl font-bold tracking-tight">BidZo</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#c084fc] flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+              <Flame className="w-6 h-6 text-white" strokeWidth={2.5}/>
+            </div>
+            <span className="text-3xl font-extrabold tracking-tight">BidZo</span>
           </div>
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 shadow-xl">
             <div className="flex -space-x-2">
               <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
               <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
               <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
             </div>
-            <span className="text-xs text-gray-300 pr-1">12,000+ Active Bidders</span>
+            <span className="text-xs font-medium text-gray-300 pr-1">12K+ Active Bidders</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Main Content */}
         <div className="z-10 mt-12 space-y-6 max-w-lg">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium text-gray-300 bg-white/5 border border-white/10">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#a855f7]"/> Trusted by thousands of bidders worldwide
-          </div>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-gray-200 bg-white/5 border border-white/10 backdrop-blur-md">
+            <ShieldCheck className="w-4 h-4 text-[#c084fc]"/> Trusted worldwide
+          </motion.div>
 
-          <h1 className="text-[3.5rem] font-bold leading-[1.1] tracking-tight">
-            The smarter way <br/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#c084fc]">bid & win</span>
-          </h1>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="text-[4rem] font-extrabold leading-[1.05] tracking-tight">
+            The smarter way <br/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#c084fc] drop-shadow-lg">bid & win</span>
+          </motion.h1>
 
-          <p className="text-gray-400 text-lg leading-relaxed max-w-md">
-            Real-time auctions, instant notifications, and secure payments — all in one place.
-          </p>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-gray-400 text-lg leading-relaxed max-w-md font-medium">
+            Real-time auctions, instant notifications, and secure payments — experience the future of bidding.
+          </motion.p>
 
-          <div className="flex items-center gap-10 pt-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }} className="flex items-center gap-10 pt-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#9333ea]/20 flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                <UsersIcon className="w-6 h-6 text-[#c084fc]"/>
               </div>
               <div>
-                <div className="text-2xl font-bold text-[#c084fc]">12K+</div>
-                <div className="text-sm text-gray-400">Active Bidders</div>
+                <div className="text-3xl font-extrabold text-white tracking-tight">12K+</div>
+                <div className="text-sm font-medium text-gray-400">Active Bidders</div>
               </div>
             </div>
-            <div className="w-px h-12 bg-white/10"></div>
+            <div className="w-px h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#9333ea]/20 flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                <TrophyIcon className="w-6 h-6 text-[#c084fc]"/>
               </div>
               <div>
-                <div className="text-2xl font-bold text-[#c084fc]">38K+</div>
-                <div className="text-sm text-gray-400">Auctions Won</div>
+                <div className="text-3xl font-extrabold text-white tracking-tight">38K+</div>
+                <div className="text-sm font-medium text-gray-400">Auctions Won</div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Mini Auction Card */}
-          <div className="mt-8 bg-[#141521] border border-white/5 rounded-2xl p-4 flex gap-5 items-center relative overflow-hidden shadow-2xl">
-            <div className="w-36 h-36 rounded-xl overflow-hidden relative shrink-0">
-              <div className="absolute top-2 left-2 z-10 bg-[#7c3aed]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">Live Auction</div>
+          {/* Mini Auction Card with Floating Animation */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1, y: [-8, 8, -8] }} 
+            transition={{ opacity: { duration: 0.6, delay: 0.8 }, scale: { duration: 0.6, delay: 0.8 }, y: { duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1.4 } }}
+            className="mt-10 glass-card rounded-2xl p-4 flex gap-5 items-center relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-50 pointer-events-none"></div>
+            <div className="w-36 h-36 rounded-xl overflow-hidden relative shrink-0 shadow-inner">
+              <div className="absolute top-2 left-2 z-10 badge-live shadow-lg">Live Auction</div>
               <img src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=600&auto=format&fit=crop" alt="Premium Watch" className="w-full h-full object-cover"/>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 relative z-10">
               <div className="flex justify-between items-start mb-1">
                 <div>
-                  <h3 className="font-semibold text-sm">Premium Watch</h3>
-                  <p className="text-xs text-gray-400">Luxury Edition</p>
+                  <h3 className="font-bold text-base text-white">Premium Watch</h3>
+                  <p className="text-xs text-gray-400 font-medium">Luxury Edition</p>
                 </div>
-                <div className="text-center bg-black/20 rounded-md px-2 py-1">
-                  <div className="text-[#f43f5e] font-mono text-sm font-bold flex gap-1">
+                <div className="text-center bg-black/40 rounded-lg px-2 py-1 border border-white/5">
+                  <div className="text-[#f43f5e] font-mono text-sm font-bold flex gap-1 tracking-wider">
                     <span>00</span><span className="opacity-50">:</span><span>02</span><span className="opacity-50">:</span><span>45</span>
                   </div>
-                  <div className="text-[8px] text-gray-500 font-bold uppercase tracking-widest flex justify-between px-0.5">
-                    <span>HRS</span><span>MIN</span><span>SEC</span>
-                  </div>
                 </div>
               </div>
-              <div className="flex justify-between items-end mt-4">
+              <div className="flex justify-between items-end mt-6">
                 <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide">Current Bid</p>
-                  <p className="text-[#c084fc] font-bold text-lg">₹ 48,750</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Current Bid</p>
+                  <p className="gradient-text font-extrabold text-xl">₹ 48,750</p>
                 </div>
-                <button className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1 transition-colors">
+                <div className="btn-gradient text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1 shadow-lg pointer-events-none">
                   Place Bid <span className="text-lg leading-none mt-[-2px]">→</span>
-                </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Bottom Features */}
-        <div className="z-10 mt-16 grid grid-cols-3 gap-6">
-          <div>
-            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
-              <Zap className="w-4 h-4 text-[#c084fc]"/>
-            </div>
-            <h4 className="text-sm font-semibold mb-1">Real-time Bidding</h4>
-            <p className="text-xs text-gray-500">Instant bid updates</p>
-          </div>
-          <div>
-            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
-              <ShieldCheck className="w-4 h-4 text-[#c084fc]"/>
-            </div>
-            <h4 className="text-sm font-semibold mb-1">Anti-Sniping</h4>
-            <p className="text-xs text-gray-500">Fair play for everyone</p>
-          </div>
-          <div>
-            <div className="w-8 h-8 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center mb-3">
-              <Lock className="w-4 h-4 text-[#c084fc]"/>
-            </div>
-            <h4 className="text-sm font-semibold mb-1">Secure Payments</h4>
-            <p className="text-xs text-gray-500">Safe & encrypted</p>
-          </div>
+          </motion.div>
         </div>
 
         {/* Footer */}
-        <div className="z-10 mt-12 flex justify-between items-center text-xs text-gray-500">
-          <p>© 2025 BidZo. All rights reserved.</p>
-          <div className="flex gap-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }} className="z-10 mt-12 flex justify-between items-center text-xs font-medium text-gray-500">
+          <p>© {new Date().getFullYear()} BidZo. All rights reserved.</p>
+          <div className="flex gap-6">
             <a href="#" className="hover:text-gray-300 transition-colors">About</a>
             <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
             <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Contact</a>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* ─── RIGHT PANEL ─── */}
+      {/* ─── RIGHT PANEL (FORM) ─── */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative">
-        <div className="w-full max-w-[440px] bg-[#161722] border border-white/5 rounded-3xl p-8 sm:p-10 shadow-2xl">
-          
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2">Welcome back 👋</h2>
-            <p className="text-gray-400 text-sm">Sign in to continue your bidding journey</p>
-          </div>
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="w-full max-w-[440px] glass-card rounded-3xl p-8 sm:p-12 shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-10 border border-white/10"
+        >
+          {/* Subtle inner radial glow */}
+          <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent rounded-3xl pointer-events-none"></div>
+
+          <motion.div variants={itemVariants} className="text-center mb-10 relative z-10">
+            <h2 className="text-4xl font-extrabold mb-3 gradient-text drop-shadow-sm">Welcome back 👋</h2>
+            <p className="text-gray-400 font-medium">Sign in to continue your bidding journey</p>
+          </motion.div>
 
           {errorMsg && (
-            <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium text-center shadow-lg">
               {errorMsg}
-            </div>
+            </motion.div>
           )}
 
-          <button onClick={onGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-[#1e202e] hover:bg-[#252838] border border-white/5 py-3 rounded-xl transition-colors text-sm font-semibold mb-6">
+          <motion.button variants={itemVariants} onClick={onGoogle} disabled={loading} className="relative z-10 w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 py-3.5 rounded-xl transition-all text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 mb-8">
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -202,63 +212,73 @@ export const Login = () => {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
             Continue with Google
-          </button>
+          </motion.button>
 
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-white/5"></div>
-            <span className="text-xs text-gray-500 font-medium">or sign in with email</span>
-            <div className="flex-1 h-px bg-white/5"></div>
-          </div>
+          <motion.div variants={itemVariants} className="flex items-center gap-4 mb-8 relative z-10">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10"></div>
+            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">or sign in with email</span>
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
+          </motion.div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 relative z-10">
+            <motion.div variants={itemVariants}>
+              <label className="block text-sm font-bold text-gray-300 mb-2">Email Address</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#a855f7] transition-colors"/>
+                <input type="email" {...register('email')} placeholder="you@example.com" className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium focus:outline-none focus:border-[#a855f7] transition-all placeholder-gray-600 input-glow shadow-inner"/>
               </div>
-              {errors.email && <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>}
-            </div>
+              {errors.email && <p className="mt-1.5 text-xs font-semibold text-red-400 pl-1">{errors.email.message}</p>}
+            </motion.div>
 
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="text-sm font-medium">Password</label>
-                <a href="#" className="text-xs text-[#a855f7] hover:text-[#c084fc] transition-colors">Forgot password?</a>
+            <motion.div variants={itemVariants}>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-bold text-gray-300">Password</label>
+                <Link to="#" className="text-xs font-semibold text-[#a855f7] hover:text-[#c084fc] transition-colors">Forgot password?</Link>
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"/>
-                <input type={showPw?'text':'password'} {...register('password')} placeholder="••••••••" className="w-full bg-[#0d0e15] border border-white/10 rounded-xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:border-[#9333ea] transition-colors placeholder-gray-600"/>
-                <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#a855f7] transition-colors"/>
+                <input type={showPw?'text':'password'} {...register('password')} placeholder="••••••••" className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-11 pr-11 text-sm font-medium focus:outline-none focus:border-[#a855f7] transition-all placeholder-gray-600 input-glow shadow-inner"/>
+                <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
                   {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
-            </div>
+              {errors.password && <p className="mt-1.5 text-xs font-semibold text-red-400 pl-1">{errors.password.message}</p>}
+            </motion.div>
 
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="remember" className="w-4 h-4 rounded border-white/20 bg-[#0d0e15] checked:bg-[#9333ea] checked:border-transparent accent-[#9333ea]"/>
-              <label htmlFor="remember" className="text-sm text-gray-400">Keep me signed in</label>
-            </div>
+            <motion.div variants={itemVariants} className="flex items-center gap-3 pt-2">
+              <div className="relative flex items-center justify-center">
+                <input type="checkbox" id="remember" className="peer w-5 h-5 rounded-md border border-white/20 bg-black/40 checked:bg-[#9333ea] checked:border-transparent appearance-none transition-all cursor-pointer"/>
+                <svg className="absolute w-3 h-3 pointer-events-none opacity-0 peer-checked:opacity-100 text-white" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <label htmlFor="remember" className="text-sm font-medium text-gray-400 cursor-pointer hover:text-gray-300 transition-colors">Keep me signed in</label>
+            </motion.div>
 
-            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#c084fc] text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:opacity-90 mt-2">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Gavel className="w-5 h-5"/>}
-              Sign in to BidZo
-            </button>
+            <motion.button variants={itemVariants} type="submit" disabled={loading} className="w-full btn-gradient flex items-center justify-center gap-2 mt-6 py-4 text-[15px] shadow-xl hover:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Flame className="w-5 h-5"/>}
+              Sign in securely
+            </motion.button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-400">
-            New to BidZo? <Link to="/register" className="text-[#a855f7] font-medium hover:text-[#c084fc] transition-colors">Create free account</Link>
-          </p>
+          <motion.p variants={itemVariants} className="mt-8 text-center text-sm font-medium text-gray-400 relative z-10">
+            New to BidZo? <Link to="/register" className="text-[#c084fc] font-bold hover:text-white transition-colors">Create free account</Link>
+          </motion.p>
+        </motion.div>
 
-          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-gray-600">
-            <Shield className="w-3.5 h-3.5"/> 256-bit SSL encrypted
+        {/* Global Floating Actions */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="absolute bottom-6 right-6 flex gap-3">
+          <div className="flex items-center justify-center gap-2 text-xs font-medium text-gray-500 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/5">
+            <Shield className="w-3.5 h-3.5 text-green-400"/> 256-bit SSL secured
           </div>
-        </div>
-
-        <button className="absolute bottom-6 right-6 bg-[#161722] border border-white/5 px-4 py-2 rounded-full flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors shadow-lg">
-          <Moon className="w-3.5 h-3.5"/> Dark Mode
-        </button>
+        </motion.div>
       </div>
     </div>
   );
 };
+
+// SVG icons used inline in the left panel for layout aesthetics
+function UsersIcon(props: any) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+}
+function TrophyIcon(props: any) {
+  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>;
+}

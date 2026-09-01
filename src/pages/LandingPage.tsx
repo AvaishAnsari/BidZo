@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView, AnimatePresence, animate } from 'framer-motion';
 import {
-  Gavel, Zap, Shield, Clock, TrendingUp, Users,
+  Flame, Zap, Shield, Clock, TrendingUp, Users,
   ArrowRight, Star, ChevronRight, IndianRupee, Bell,
 } from 'lucide-react';
 import { useAuctions } from '../hooks/useAuctions';
@@ -186,7 +186,7 @@ export const LandingPage = () => {
                   display: 'flex',
                 }}
               >
-                <Gavel style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+                <Flame style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
               </motion.div>
               <span style={{
                 fontSize: '1.5rem', fontWeight: 800,
@@ -692,7 +692,7 @@ export const LandingPage = () => {
               }} />
 
               <div className="section-label" style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
-                <Gavel style={{ width: '0.85rem', height: '0.85rem' }} />
+                <Flame style={{ width: '0.85rem', height: '0.85rem' }} />
                 {t('readyToBid')}
               </div>
 
@@ -757,7 +757,7 @@ export const LandingPage = () => {
         }}>
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Gavel style={{ width: '1.1rem', height: '1.1rem', color: '#6366f1' }} />
+            <Flame style={{ width: '1.1rem', height: '1.1rem', color: '#6366f1' }} />
             <span style={{ color: '#6366f1', fontWeight: 700, fontSize: '1rem' }}>BidZo</span>
             <span style={{ color: '#4b5563', fontSize: '0.85rem' }}>
               © {new Date().getFullYear()} All rights reserved.

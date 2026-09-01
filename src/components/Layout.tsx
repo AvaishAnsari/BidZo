@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Gavel, LogOut, User as UserIcon, Sun, Moon, Bell } from 'lucide-react';
+import { Flame, LogOut, User as UserIcon, Sun, Moon, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
@@ -59,7 +59,7 @@ export const Layout = () => {
                   display: 'flex',
                 }}
               >
-                <Gavel style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+                <Flame style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
               </motion.div>
               <span style={{
                 fontSize: '1.5rem',
