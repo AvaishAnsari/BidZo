@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Lock, User, Briefcase, Flame, Eye, EyeOff, ShieldCheck, Shield, Zap, Moon } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Briefcase, Flame, Eye, EyeOff, ShieldCheck, Shield, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import type { UserRole } from '../types';
@@ -58,11 +58,24 @@ export const Register = () => {
   const onGoogle = async () => {
     setLoading(true);
     const { error } = await signInWithGoogle();
-    if (error) { toast.error(error); setLoading(false); }
-    else if (!isConfigured) {
-      toast.success('Welcome to BidZo! 🎉'); 
-      navigate('/');
+
+    if (error) {
+      toast.error(error);
+      setLoading(false);
+      return;
     }
+
+    if (!isConfigured) {
+      // Offline/demo mode — login happened instantly, navigate now
+      toast('🔧 Demo mode: signed in with a mock Google account.', {
+        icon: '⚠️',
+        style: { background: '#1e1b4b', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.3)' },
+        duration: 4000,
+      });
+      navigate('/');
+      setLoading(false);
+    }
+    // In Supabase mode: browser redirects to Google — spinner stays during redirect.
   };
 
   return (
@@ -310,9 +323,9 @@ export const Register = () => {
           </div>
         </div>
 
-        <button className="absolute bottom-6 right-6 bg-[#161722] border border-white/5 px-4 py-2 rounded-full flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors shadow-lg hidden sm:flex">
-          <Moon className="w-3.5 h-3.5"/> Dark Mode
-        </button>
+        <div className="absolute bottom-6 right-6 bg-[#161722] border border-white/5 px-4 py-2 rounded-full flex items-center gap-2 text-xs text-gray-400 shadow-lg hidden sm:flex">
+          <Shield className="w-3.5 h-3.5 text-green-400"/> 256-bit SSL secured
+        </div>
       </div>
     </div>
   );

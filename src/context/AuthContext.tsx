@@ -308,31 +308,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // ── signInWithGoogle ───────────────────────────────────────────────────────
   const signInWithGoogle = useCallback(async (): Promise<{ error: string | null }> => {
     if (!isSupabaseConfigured()) {
-      // Offline mock for Google Sign-In
-      const account = {
-        id: `mock-google-${Date.now()}`,
-        email: 'google.user@example.com',
-        name: 'Google User',
-        role: 'buyer' as UserRole,
-        password: '',
-      };
+      // Offline/demo mode — reuse the same persistent mock Google account
+      // so repeated clicks don't create duplicate users
+      console.warn('[AuthContext] Supabase not configured — using demo Google account.');
+      const MOCK_GOOGLE_EMAIL = 'demo.google@bidzo.app';
+      const accounts = getMockAccounts();
+      let account = accounts[MOCK_GOOGLE_EMAIL];
+
+      if (!account) {
+        // First time: create the fixed mock Google account
+        account = {
+          id: 'mock-google-demo',
+          email: MOCK_GOOGLE_EMAIL,
+          name: 'Demo Google User',
+          role: 'buyer' as UserRole,
+          password: '',
+          trust_score: 50,
+          rating: 0,
+          total_reviews: 0,
+        };
+        saveMockAccount(account);
+      }
+
       setUser({ id: account.id, email: account.email } as User);
       setUserRole(account.role);
       setUserName(account.name);
       localStorage.setItem(MOCK_USER_KEY, JSON.stringify(account));
       return { error: null };
     }
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
-    
-    if (error) return { error: error.message };
-    return { error: null };
+
+    // Real Supabase Google OAuth — redirects the browser to Google
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) return { error: error.message };
+      // Browser will redirect; nothing else to do here
+      return { error: null };
+    } catch (err: any) {
+      return { error: err?.message ?? 'Google sign-in failed. Please try again.' };
+    }
   }, []);
+
 
   // ── signOut ───────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {

@@ -42,11 +42,25 @@ export const Login = () => {
   const onGoogle = async () => {
     setLoading(true);
     const { error } = await signInWithGoogle();
-    if (error) { toast.error(error); setLoading(false); }
-    else if (!isConfigured) {
-      toast.success('Welcome back! 👋');
-      navigate(from, { replace:true });
+
+    if (error) {
+      toast.error(error);
+      setLoading(false);
+      return;
     }
+
+    if (!isConfigured) {
+      // Offline/demo mode — login happened instantly, navigate now
+      toast('🔧 Demo mode: signed in with a mock Google account.', {
+        icon: '⚠️',
+        style: { background: '#1e1b4b', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.3)' },
+        duration: 4000,
+      });
+      navigate(from, { replace: true });
+      setLoading(false);
+    }
+    // In Supabase mode: browser redirects to Google — no further action needed here.
+    // Don't reset loading so spinner shows during redirect.
   };
 
   const containerVariants: any = {
