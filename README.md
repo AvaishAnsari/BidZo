@@ -218,3 +218,32 @@ This project is licensed under the MIT License - see LICENSE file for details.
 ##  Support
 
 For issues and questions, please open a GitHub issue or contact the development team.
+
+
+graph TD
+    subgraph Frontend [Client Layer - React/Vite]
+        UI[React UI Components & Framer Motion]
+        State[React Context & Custom Hooks]
+        Validation[Zod & React Hook Form]
+    end
+
+    subgraph Backend [Supabase Backend-as-a-Service]
+        Auth[Supabase Auth API]
+        RPC[PostgreSQL RPC Functions]
+        DB[(PostgreSQL Database)]
+        Realtime[WebSockets / Real-Time Engine]
+    end
+
+    %% Data Flow
+    UI -->|1. User Interaction| Validation
+    Validation -->|2. Validated Payload| State
+    State -->|3. API Request| Auth
+    State -->|3. Execute Function| RPC
+    RPC -->|4. Secure Transaction| DB
+    DB -->|5. Data Mutated Event| Realtime
+    Realtime -->|6. Broadcast via WebSockets| State
+    State -->|7. State Update| UI
+    
+    %% Optimistic Flow
+    State -.->|Instant Optimistic Update| UI
+
