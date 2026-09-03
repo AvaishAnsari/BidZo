@@ -19,7 +19,7 @@ export const Home = () => {
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [timeRemaining, setTimeRemaining] = useState<'all' | '24_hours' | '7_days'>('all');
-  const [sortBy, setSortBy] = useState<'ending_soon' | 'newly_listed' | 'price_asc' | 'price_desc'>('ending_soon');
+  const [sortBy, setSortBy] = useState<'ending_soon' | 'newly_listed' | 'price_asc' | 'price_desc'>('newly_listed');
   const [showFilters, setShowFilters] = useState(false);
 
   const activeFiltersCount =
@@ -35,7 +35,7 @@ export const Home = () => {
     setMinPrice('');
     setMaxPrice('');
     setTimeRemaining('all');
-    setSortBy('ending_soon');
+    setSortBy('newly_listed');
   };
 
   // Category counts

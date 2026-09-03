@@ -58,7 +58,7 @@ const SNIPE_MAX        = 3;       // max extensions
 export const AuctionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { isDark } = useTheme();
   const { t } = useTranslation();
@@ -642,7 +642,23 @@ export const AuctionDetail = () => {
             )}
 
             {/* Bid Form — for users who do not own the auction */}
-            {!isEnded && !isUpcoming && !isOwnAuction && (
+            {!isEnded && !isUpcoming && !isOwnAuction && userRole === 'seller' && (
+              <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+                <div style={{
+                    background: 'rgba(239,68,68,0.08)',
+                    border: '1px solid rgba(239,68,68,0.2)',
+                    borderRadius: '0.75rem', padding: '1rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem'
+                  }}>
+                    <AlertCircle style={{ width: '1.1rem', height: '1.1rem', color: '#f87171', flexShrink: 0 }} />
+                    <p style={{ color: '#fca5a5', fontSize: '0.85rem', margin: 0, fontWeight: 500 }}>
+                      Sellers cannot participate in bidding. Please use a Buyer account.
+                    </p>
+                  </div>
+              </div>
+            )}
+
+            {!isEnded && !isUpcoming && !isOwnAuction && userRole !== 'seller' && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
                   <Flame style={{ width: '1.125rem', height: '1.125rem', color: '#818cf8' }} />

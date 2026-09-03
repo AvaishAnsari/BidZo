@@ -37,6 +37,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Logged in but no role chosen yet (e.g. fresh Google sign-in) → pick a role first
+  if (!userRole) {
+    return <Navigate to="/select-role" replace />;
+  }
+
   // Logged in but wrong role → back to auctions grid
   if (requiredRole && userRole && userRole !== requiredRole) {
     return <Navigate to="/auctions" replace />;

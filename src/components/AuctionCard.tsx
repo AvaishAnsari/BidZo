@@ -15,9 +15,68 @@ interface AuctionCardProps {
   auction: Auction;
 }
 
-export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
-  // Live countdown — ticks every second
-  const { timeLeft, isEnded: countdownEnded, isUrgent } = useCountdown(auction.end_time);
+const AuctionCardStatus: React.FC<{ endTime: string; status: string; startTime: string }> = ({ endTime, status, startTime }) => {
+  const { timeLeft, isEnded: countdownEnded, isUrgent } = useCountdown(endTime);
+  const { t } = useTranslation();
+  const isEnded = countdownEnded || status === 'ended';
+  const isUpcoming = !isEnded && (new Date(startTime) > new Date() || status === 'upcoming');
+
+  return (
+    <div
+      className={isEnded ? 'badge-ended' : isUpcoming ? 'badge-upcoming' : (isUrgent ? 'badge-urgent' : 'badge-live')}
+      style={{
+        position: 'absolute',
+        top: '0.875rem',
+        right: '0.875rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+      }}
+    >
+      <Clock style={{ width: '0.75rem', height: '0.75rem' }} />
+      {isEnded ? t('ended') : isUpcoming ? t('upcoming') : timeLeft}
+    </div>
+  );
+};
+
+const AuctionCardAction: React.FC<{ auction: Auction; isOwnAuction: boolean }> = ({ auction, isOwnAuction }) => {
+  const { isEnded: countdownEnded } = useCountdown(auction.end_time);
+  const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const { userRole } = useAuth();
+  const isEnded = countdownEnded || auction.status === 'ended';
+  const isSeller = userRole === 'seller';
+
+  return (
+    <Link
+      to={`/auction/${auction.id}`}
+      className={isEnded ? '' : isOwnAuction ? '' : 'btn-gradient'}
+      style={{
+        display: 'inline-block',
+        padding: '0.55rem 1.1rem',
+        borderRadius: '0.75rem',
+        fontSize: '0.82rem',
+        fontWeight: 700,
+        textDecoration: 'none',
+        transition: 'all 0.2s',
+        ...(isEnded ? {
+          background: isDark ? 'rgba(31,41,55,0.6)' : '#e5e7eb',
+          color: isDark ? '#6b7280' : '#374151',
+          border: isDark ? '1px solid rgba(55,65,81,0.5)' : '1px solid #d1d5db',
+        } : isOwnAuction ? {
+          background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+          color: '#ffffff',
+          border: '1px solid rgba(59,130,246,0.5)',
+          boxShadow: '0 0 15px rgba(59,130,246,0.2)',
+        } : {}),
+      }}
+    >
+      {isEnded ? t('viewResults') : isOwnAuction ? t('manageAuction') : isSeller ? 'View Auction' : `${t('placeBid')} →`}
+    </Link>
+  );
+};
+
+export const AuctionCard: React.FC<AuctionCardProps> = React.memo(({ auction }) => {
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -25,10 +84,6 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
 
   const isWatchedItem = isWatched(auction.id);
   const isOwnAuction = user?.id === auction.seller_id;
-  const isEnded = countdownEnded || auction.status === 'ended';
-  const isUpcoming =
-    !isEnded &&
-    (new Date(auction.start_time) > new Date() || auction.status === 'upcoming');
   const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
@@ -122,20 +177,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
         </button>
 
         {/* Status badge */}
-        <div
-          className={isEnded ? 'badge-ended' : isUpcoming ? 'badge-upcoming' : (isUrgent ? 'badge-urgent' : 'badge-live')}
-          style={{
-            position: 'absolute',
-            top: '0.875rem',
-            right: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-          }}
-        >
-          <Clock style={{ width: '0.75rem', height: '0.75rem' }} />
-          {isEnded ? t('ended') : isUpcoming ? t('upcoming') : timeLeft}
-        </div>
+        <AuctionCardStatus endTime={auction.end_time} status={auction.status} startTime={auction.start_time} />
       </div>
 
       {/* Content */}
@@ -222,33 +264,9 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
             </div>
           </div>
 
-          <Link
-            to={`/auction/${auction.id}`}
-            className={isEnded ? '' : isOwnAuction ? '' : 'btn-gradient'}
-            style={{
-              display: 'inline-block',
-              padding: '0.55rem 1.1rem',
-              borderRadius: '0.75rem',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-              ...(isEnded ? {
-                background: isDark ? 'rgba(31,41,55,0.6)' : '#e5e7eb',
-                color: isDark ? '#6b7280' : '#374151',
-                border: isDark ? '1px solid rgba(55,65,81,0.5)' : '1px solid #d1d5db',
-              } : isOwnAuction ? {
-                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                color: '#ffffff',
-                border: '1px solid rgba(59,130,246,0.5)',
-                boxShadow: '0 0 15px rgba(59,130,246,0.2)',
-              } : {}),
-            }}
-          >
-            {isEnded ? t('viewResults') : isOwnAuction ? t('manageAuction') : `${t('placeBid')} →`}
-          </Link>
+          <AuctionCardAction auction={auction} isOwnAuction={isOwnAuction} />
         </div>
       </div>
     </motion.div>
   );
-};
+});

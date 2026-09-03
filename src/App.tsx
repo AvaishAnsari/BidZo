@@ -6,6 +6,7 @@ import { LandingPage } from './pages/LandingPage';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { RoleSelection } from './pages/RoleSelection';
 import { CreateAuction } from './pages/CreateAuction';
 import { AuctionDetail } from './pages/AuctionDetail';
 import { WatchlistPage } from './pages/WatchlistPage';
@@ -53,8 +54,9 @@ function App() {
           <Route index element={<LandingPage />} />
 
           {/* ── Auth pages (full-screen, no Layout wrapper) ── */}
-          <Route path="login"    element={<Login />} />
-          <Route path="register" element={<Register />} />
+          <Route path="login"       element={<Login />} />
+          <Route path="register"    element={<Register />} />
+          <Route path="select-role" element={<RoleSelection />} />
 
           {/* ── App shell (Layout = navbar + footer) ── */}
           <Route element={<Layout />}>

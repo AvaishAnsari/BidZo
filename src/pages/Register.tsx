@@ -52,7 +52,13 @@ export const Register = () => {
     const { error } = await signUp(data.email.trim(), data.password, data.name.trim(), data.role as UserRole);
     setLoading(false);
     if (error) { setErrorMsg(error); return; }
-    toast.success('Welcome to BidZo! 🎉'); navigate('/');
+    if (data.role === 'seller') {
+      toast.success('Seller account created! 🏷️ List your first auction.');
+      navigate('/create-auction');
+    } else {
+      toast.success('Welcome to BidZo! Start bidding 🎉');
+      navigate('/auctions');
+    }
   };
 
   const onGoogle = async () => {
@@ -316,16 +322,24 @@ export const Register = () => {
               <div className="grid grid-cols-2 gap-3">
                 {(['buyer','seller'] as const).map(r => (
                   <button key={r} type="button" onClick={()=>setValue('role',r,{shouldValidate:true})}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] relative"
                     style={role===r
-                      ? { border:'1px solid rgba(168,85,247,0.5)', background:'rgba(168,85,247,0.1)', color:'#c084fc', boxShadow: '0 4px 12px rgba(168,85,247,0.15)' }
+                      ? { border: r === 'seller' ? '2px solid rgba(245,158,11,0.7)' : '2px solid rgba(168,85,247,0.7)',
+                          background: r === 'seller' ? 'rgba(245,158,11,0.12)' : 'rgba(168,85,247,0.12)',
+                          color: r === 'seller' ? '#fbbf24' : '#c084fc',
+                          boxShadow: r === 'seller' ? '0 4px 16px rgba(245,158,11,0.2)' : '0 4px 16px rgba(168,85,247,0.2)' }
                       : { border:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.2)', color:'#6b7280' }
                     }>
+                    {role === r && (
+                      <span className="absolute top-1.5 right-1.5 text-[10px]">✓</span>
+                    )}
                     {r==='buyer' ? <User className="w-5 h-5"/> : <Briefcase className="w-5 h-5"/>}
-                    <span className="capitalize">{r}</span>
+                    <span className="capitalize font-bold">{r}</span>
+                    <span className="text-[10px] font-medium opacity-70">{r === 'buyer' ? 'Bid & Win' : 'Sell & Earn'}</span>
                   </button>
                 ))}
               </div>
+              {errors.role && <p className="mt-1 text-xs text-red-400 pl-1">{errors.role.message}</p>}
             </div>
 
             <motion.button 

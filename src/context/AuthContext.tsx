@@ -51,6 +51,8 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   /** Sign in with Google OAuth */
   signInWithGoogle: () => Promise<{ error: string | null }>;
+  /** Update role directly — used by RoleSelection page after user picks Buyer/Seller */
+  updateRole: (role: UserRole) => void;
   /** Whether Supabase credentials are configured */
   isConfigured: boolean;
 }
@@ -60,12 +62,23 @@ export interface AuthContextType {
 const MOCK_USER_KEY      = 'bidzo_mock_user';
 const MOCK_ACCOUNTS_KEY  = 'bidzo_mock_accounts'; // { [email]: { password, name, role } }
 
+// ── Eager migration: clears stale auth data when store version changes ─────────
+// This runs synchronously at module load time — before AuthContext even mounts.
+// Ensures old accounts without role_explicitly_set are wiped immediately.
+const CURRENT_AUTH_VER = 'bidzo_auth_v2';
+if (!localStorage.getItem(CURRENT_AUTH_VER)) {
+  localStorage.removeItem(MOCK_USER_KEY);
+  localStorage.removeItem(MOCK_ACCOUNTS_KEY);
+  localStorage.setItem(CURRENT_AUTH_VER, '1');
+}
+
 interface MockAccount {
   id: string;
   email: string;
   password: string;
   name: string;
-  role: UserRole;
+  role: UserRole | null;
+  role_explicitly_set?: boolean; // true only when user actively picked Buyer/Seller
   trust_score?: number;
   rating?: number;
   total_reviews?: number;
@@ -95,6 +108,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole,  setUserRole]  = useState<UserRole | null>(null);
   const [userName,  setUserName]  = useState<string | null>(null);
+
+  // Expose a way for RoleSelection page to instantly update role in memory
+  const updateRole = useCallback((role: UserRole) => {
+    setUserRole(role);
+  }, []);
 
   // ── Helper: fetch role from Supabase users table ────────────────────────────
   const fetchUserRole = useCallback(async (userId: string) => {
@@ -127,7 +145,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const mockUser = JSON.parse(raw) as MockAccount;
           setUser({ id: mockUser.id, email: mockUser.email } as User);
-          setUserRole(mockUser.role);
+          // Only restore role if the user explicitly chose it — otherwise send to /select-role
+          setUserRole(mockUser.role_explicitly_set ? mockUser.role : null);
           setUserName(mockUser.name);
         } catch {
           localStorage.removeItem(MOCK_USER_KEY);
@@ -211,7 +230,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         setUser({ id: account.id, email: account.email } as User);
-        setUserRole(account.role);
+        // Only restore role if it was explicitly selected before
+        setUserRole(account.role_explicitly_set ? account.role : null);
         setUserName(account.name);
         localStorage.setItem(MOCK_USER_KEY, JSON.stringify(account));
         return { error: null };
@@ -257,6 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           password,
           name,
           role,
+          role_explicitly_set: true, // user picked this role on the Register form
           trust_score: 50,
           rating: 0.0,
           total_reviews: 0,
@@ -316,12 +337,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       let account = accounts[MOCK_GOOGLE_EMAIL];
 
       if (!account) {
-        // First time: create the fixed mock Google account
+        // First time: create the fixed mock Google account WITHOUT a role
+        // so the user is directed to /select-role on first login
         account = {
           id: 'mock-google-demo',
           email: MOCK_GOOGLE_EMAIL,
           name: 'Demo Google User',
-          role: 'buyer' as UserRole,
+          role: null as any, // no role yet — RoleSelection page will set it
           password: '',
           trust_score: 50,
           rating: 0,
@@ -331,7 +353,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setUser({ id: account.id, email: account.email } as User);
-      setUserRole(account.role);
+      // Don't set role — the user must go through /select-role to explicitly choose
+      setUserRole(account.role_explicitly_set ? account.role : null);
       setUserName(account.name);
       localStorage.setItem(MOCK_USER_KEY, JSON.stringify(account));
       return { error: null };
@@ -384,6 +407,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signInWithGoogle,
         signOut,
+        updateRole,
         isConfigured: isSupabaseConfigured(),
       }}
     >

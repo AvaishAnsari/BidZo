@@ -17,7 +17,7 @@ export interface Bid {
 
 const AUCTIONS_KEY = 'bidzo_auctions';
 const BIDS_KEY     = 'bidzo_bids';
-const STORE_VER    = 'bidzo_store_v8'; // bump to force a data reset
+const STORE_VER    = 'bidzo_store_v9'; // bumped: clears stale Google mock accounts without role_explicitly_set
 
 const now  = Date.now();
 const DAY  = 1000 * 60 * 60 * 24;
@@ -337,43 +337,50 @@ const dummyUsers = [
   { id: 'user-107', email: 'luxury_finds@example.com' },
 ];
 
-DUMMY_AUCTIONS.forEach(auction => {
-  if (auction.status === 'upcoming') return;
-  if (auction.current_price === auction.start_price) return; // No bids yet
+function generateDummyBids() {
+  if (DUMMY_BIDS.length > 0) return; // Only generate once
 
-  let currentAmount = auction.start_price;
-  const targetPrice = auction.current_price;
-  let bidIndex = 0;
-  
-  // Generate bids until we reach the current_price
-  while (currentAmount <= targetPrice) {
-    const user = dummyUsers[Math.floor(Math.random() * dummyUsers.length)];
+  DUMMY_AUCTIONS.forEach(auction => {
+    if (auction.status === 'upcoming') return;
+    if (auction.current_price === auction.start_price) return; // No bids yet
+
+    let currentAmount = auction.start_price;
+    const targetPrice = auction.current_price;
+    let bidIndex = 0;
     
-    DUMMY_BIDS.push({
-      id: `bid-${auction.id}-${bidIndex}`,
-      auctionId: auction.id,
-      bidderId: user.id,
-      bidderEmail: user.email,
-      amount: currentAmount,
-      placedAt: new Date(now - (targetPrice - currentAmount) * 1000 - Math.random() * 10000).toISOString()
-    });
-    
-    if (currentAmount === targetPrice) break;
-    
-    // Increment for next bid
-    currentAmount += auction.min_increment * (Math.floor(Math.random() * 3) + 1);
-    if (currentAmount > targetPrice) {
-      currentAmount = targetPrice;
+    // Generate bids until we reach the current_price
+    while (currentAmount <= targetPrice) {
+      const user = dummyUsers[Math.floor(Math.random() * dummyUsers.length)];
+      
+      DUMMY_BIDS.push({
+        id: `bid-${auction.id}-${bidIndex}`,
+        auctionId: auction.id,
+        bidderId: user.id,
+        bidderEmail: user.email,
+        amount: currentAmount,
+        placedAt: new Date(now - (targetPrice - currentAmount) * 1000 - Math.random() * 10000).toISOString()
+      });
+      
+      if (currentAmount === targetPrice) break;
+      
+      // Increment for next bid
+      currentAmount += auction.min_increment * (Math.floor(Math.random() * 3) + 1);
+      if (currentAmount > targetPrice) {
+        currentAmount = targetPrice;
+      }
+      bidIndex++;
     }
-    bidIndex++;
-  }
-});
+  });
+}
 
 export function initLocalStore() {
   // Force a reset whenever we bump STORE_VER
   if (!localStorage.getItem(STORE_VER)) {
     localStorage.removeItem(AUCTIONS_KEY);
     localStorage.removeItem(BIDS_KEY);
+    // Also clear stale mock auth so old accounts without role_explicitly_set are wiped
+    localStorage.removeItem('bidzo_mock_user');
+    localStorage.removeItem('bidzo_mock_accounts');
     localStorage.setItem(STORE_VER, '1');
   }
   const existing = localStorage.getItem(AUCTIONS_KEY);
@@ -383,6 +390,7 @@ export function initLocalStore() {
   
   const existingBids = localStorage.getItem(BIDS_KEY);
   if (!existingBids || JSON.parse(existingBids).length === 0) {
+    generateDummyBids();
     saveBids(DUMMY_BIDS);
   }
 }

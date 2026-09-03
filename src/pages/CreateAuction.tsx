@@ -102,7 +102,7 @@ export const CreateAuction = () => {
           category:     data.category,
         });
         toast.success('Auction created! 🎉');
-        navigate('/');
+        navigate('/auctions');
         return;
       }
 
@@ -124,7 +124,7 @@ export const CreateAuction = () => {
       if (dbError) throw dbError;
 
       toast.success('Auction created successfully! 🎉');
-      navigate('/');
+      navigate('/auctions');
     } catch (err: any) {
       toast.error(err.message || 'Failed to create auction');
     } finally {
