@@ -219,7 +219,7 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 For issues and questions, please open a GitHub issue or contact the development team.
 
-
+```mermaid
 graph TD
     subgraph Frontend [Client Layer - React/Vite]
         UI[React UI Components & Framer Motion]
@@ -246,4 +246,4 @@ graph TD
     
     %% Optimistic Flow
     State -.->|Instant Optimistic Update| UI
-
+```

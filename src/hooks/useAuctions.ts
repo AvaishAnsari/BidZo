@@ -42,8 +42,8 @@ export function useAuctions(): UseAuctionsResult {
     // ── Supabase mode ─────────────────────────────────────────────
     try {
       const data = await fetchAuctions();
-      // If Supabase returned an empty table, seed with local dummy data
-      setAuctions(data.length > 0 ? data : loadAuctions());
+      // If Supabase returned an empty table, show empty state (don't use local dummy data with non-UUID IDs)
+      setAuctions(data);
     } catch (err: any) {
       console.error('[useAuctions] fetch error (falling back to offline data):', err);
       // Fallback to local store so the UI never breaks

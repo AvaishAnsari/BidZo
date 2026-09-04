@@ -50,7 +50,6 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid')),
   razorpay_order_id VARCHAR(255),
   razorpay_payment_id VARCHAR(255),
-  razorpay_payment_id VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
