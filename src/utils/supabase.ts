@@ -37,10 +37,10 @@ const UNCONFIGURED = new Set([
  * Called every time a network request would be made, so hot-reloads work too.
  */
 export const isSupabaseConfigured = (): boolean => {
+  // FORCE OFFLINE MODE FOR PRESENTATION DEMO
+  return false;
+  
   const validUrl =
-    !UNCONFIGURED.has(supabaseUrl) &&
-    typeof supabaseUrl === 'string' &&
-    supabaseUrl.startsWith('https://') &&
     supabaseUrl.includes('.supabase.co');
 
   const validKey =
