@@ -22,6 +22,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BidHistoryModal } from '../components/BidHistoryModal';
 import { useTranslation } from 'react-i18next';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 // ── Sub-component: single countdown tile ─────────────────────────
 const TimeBlock = ({ value, label, urgent, isDark }: { value: number; label: string; urgent?: boolean; isDark: boolean }) => (
@@ -62,6 +63,7 @@ export const AuctionDetail = () => {
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { isDark } = useTheme();
   const { t } = useTranslation();
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const {
     auction,
@@ -219,9 +221,19 @@ export const AuctionDetail = () => {
       toast.error('This auction has not started yet');
       return;
     }
+    
+    // Captcha validation
+    if (!executeRecaptcha && isConfigured) {
+      toast.error('ReCAPTCHA is still loading. Please wait a moment.');
+      return;
+    }
 
     setIsPlacingBid(true);
     try {
+      if (isConfigured && executeRecaptcha) {
+        const token = await executeRecaptcha('place_bid');
+        if (!token) throw new Error('Failed to verify reCAPTCHA.');
+      }
       // ── Offline / local mode ─────────────────────────────────────
       if (!isSupabaseConfigured()) {
         localPlaceBid({

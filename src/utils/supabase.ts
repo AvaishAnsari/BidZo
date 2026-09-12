@@ -37,9 +37,6 @@ const UNCONFIGURED = new Set([
  * Called every time a network request would be made, so hot-reloads work too.
  */
 export const isSupabaseConfigured = (): boolean => {
-  // FORCE OFFLINE MODE FOR PRESENTATION DEMO
-  return false;
-  
   const validUrl =
     supabaseUrl.includes('.supabase.co');
 

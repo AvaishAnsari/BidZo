@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
   trust_score INTEGER DEFAULT 50 CHECK (trust_score BETWEEN 0 AND 100),
   rating DECIMAL(3, 2) DEFAULT 0.0,
   total_reviews INTEGER DEFAULT 0,
+  is_verified BOOLEAN DEFAULT false,
+  kyc_document_url VARCHAR(500),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -26,7 +28,7 @@ CREATE TABLE IF NOT EXISTS auctions (
   start_time TIMESTAMP WITH TIME ZONE NOT NULL,
   end_time TIMESTAMP WITH TIME ZONE NOT NULL,
   seller_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(20) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'live', 'ended')),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending_approval' CHECK (status IN ('pending_approval', 'upcoming', 'live', 'ended')),
   category VARCHAR(50) DEFAULT 'Other',
   winner_id UUID REFERENCES users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

@@ -19,6 +19,7 @@ import { useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { useTranslation } from 'react-i18next';
+import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
 function App() {
   const { i18n } = useTranslation();
@@ -34,9 +35,10 @@ function App() {
 
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <NotificationProvider>
-        <Router>
+      <GoogleReCaptchaProvider reCaptchaKey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI">
+        <AuthProvider>
+          <NotificationProvider>
+          <Router>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -83,6 +85,7 @@ function App() {
       </Router>
       </NotificationProvider>
       </AuthProvider>
+      </GoogleReCaptchaProvider>
     </ThemeProvider>
   );
 }

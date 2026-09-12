@@ -101,7 +101,7 @@ export const CreateAuction = () => {
           sellerId:     user.id,
           category:     data.category,
         });
-        toast.success('Auction created! 🎉');
+        toast.success('Auction submitted for approval! 🎉');
         navigate('/auctions');
         return;
       }
@@ -118,12 +118,12 @@ export const CreateAuction = () => {
         end_time:      new Date(data.endTime).toISOString(),
         seller_id:     user.id,
         category:      data.category,
-        status:        'live',
+        status:        'pending_approval',
       });
 
       if (dbError) throw dbError;
 
-      toast.success('Auction created successfully! 🎉');
+      toast.success('Auction submitted for approval! It will go live once verified. 🎉');
       navigate('/auctions');
     } catch (err: any) {
       toast.error(err.message || 'Failed to create auction');
@@ -164,9 +164,14 @@ export const CreateAuction = () => {
             }}>
               🏷️ Seller — Create listing
             </div>
-          </div>
+            </div>
 
-          <form onSubmit={handleSubmit(onAuctionSubmit)} className="space-y-8">
+            <div style={{ padding: '1rem', borderRadius: '0.75rem', background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)', marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <AlertCircle style={{ color: '#eab308', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
+              <p style={{ margin: 0, color: '#eab308', fontSize: '0.9rem', fontWeight: 600 }}>Your product will be reviewed by an admin before going live.</p>
+            </div>
+
+            <form onSubmit={handleSubmit(onAuctionSubmit)} className="space-y-8">
             {/* Image URL */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">

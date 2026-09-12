@@ -1,0 +1,2 @@
+-- Create a mock seller if one doesn't exist (assuming auth.users has an admin user or we can just use a dummy UUID if referential integrity allows, wait, seller_id MUST be a valid user in auth.users)
+-- Actually, the best way is for the user to log in and create an auction through the UI.

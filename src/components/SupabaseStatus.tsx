@@ -63,7 +63,7 @@ export const SupabaseStatus = () => {
       style={{
         position: 'fixed',
         bottom: '1.25rem',
-        right: '1.25rem',
+        left: '1.25rem',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',

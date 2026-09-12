@@ -40,6 +40,16 @@ export interface AuthContextType {
   userName: string | null;
   /** Sign in with email + password */
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** Sign in with OTP (Email) */
+  signInWithOtp: (email: string) => Promise<{ error: string | null }>;
+  /** Verify OTP (Email) */
+  verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
+  /** Register a new account using OTP */
+  signUpOtp: (
+    email: string,
+    name: string,
+    role: UserRole,
+  ) => Promise<{ error: string | null }>;
   /** Register a new account */
   signUp: (
     email: string,
@@ -252,6 +262,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [fetchUserRole],
   );
 
+  // ── signUpOtp ─────────────────────────────────────────────────────────────
+  const signUpOtp = useCallback(
+    async (
+      email: string,
+      name: string,
+      role: UserRole,
+    ): Promise<{ error: string | null }> => {
+      // Offline mock
+      if (!isSupabaseConfigured()) {
+        const accounts = getMockAccounts();
+
+        if (accounts[email.toLowerCase()]) {
+          return { error: 'An account with this email already exists.' };
+        }
+
+        // We save the pending account with a dummy password since it's mock mode
+        const newAccount: MockAccount = {
+          id:       `mock-${Date.now()}`,
+          email:    email.toLowerCase(),
+          password: 'mock-otp-password', // Placeholder
+          name,
+          role,
+          role_explicitly_set: true,
+          trust_score: 50,
+          rating: 0.0,
+          total_reviews: 0,
+        };
+
+        saveMockAccount(newAccount);
+        return { error: null }; // Success, UI should now show OTP entry
+      }
+
+      // Supabase
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { data: { name, role } },
+      });
+
+      if (error) return { error: error.message };
+      return { error: null };
+    },
+    [],
+  );
+
   // ── signUp ────────────────────────────────────────────────────────────────
   const signUp = useCallback(
     async (
@@ -380,6 +434,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // ── signInWithOtp ────────────────────────────────────────────────────────
+  const signInWithOtp = useCallback(
+    async (email: string): Promise<{ error: string | null }> => {
+      if (!isSupabaseConfigured()) {
+        const accounts = getMockAccounts();
+        if (!accounts[email.toLowerCase()]) {
+          return { error: 'No account found with this email. Please register first.' };
+        }
+        return { error: null }; // Mock success
+      }
+      
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      if (error) return { error: error.message };
+      return { error: null };
+    },
+    [],
+  );
+
+  // ── verifyOtp ────────────────────────────────────────────────────────────
+  const verifyOtp = useCallback(
+    async (email: string, token: string): Promise<{ error: string | null }> => {
+      if (!isSupabaseConfigured()) {
+        const accounts = getMockAccounts();
+        const account = accounts[email.toLowerCase()];
+        if (!account) return { error: 'No account found.' };
+        if (token !== '123456') return { error: 'Invalid OTP (use 123456 for demo).' };
+        
+        setUser({ id: account.id, email: account.email } as User);
+        setUserRole(account.role_explicitly_set ? account.role : null);
+        setUserName(account.name);
+        localStorage.setItem(MOCK_USER_KEY, JSON.stringify(account));
+        return { error: null };
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+      if (error) return { error: error.message };
+      
+      setUser(data.user);
+      setSession(data.session);
+      if (data.user) {
+        setUserName(data.user.user_metadata?.name ?? null);
+        await fetchUserRole(data.user.id);
+      }
+      return { error: null };
+    },
+    [fetchUserRole],
+  );
 
   // ── signOut ───────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
@@ -405,6 +506,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         userName,
         signIn,
         signUp,
+        signUpOtp,
+        signInWithOtp,
+        verifyOtp,
         signInWithGoogle,
         signOut,
         updateRole,
