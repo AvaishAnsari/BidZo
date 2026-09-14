@@ -45,7 +45,7 @@ const ROLE_OPTIONS: {
 ];
 
 export const RoleSelection = () => {
-  const { signUp, user, userName, updateRole } = useAuth();
+  const { user, userName, updateRole } = useAuth();
   const navigate = useNavigate();
   const [selected, setSelected] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(false);

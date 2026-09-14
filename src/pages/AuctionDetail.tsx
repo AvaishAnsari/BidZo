@@ -59,7 +59,7 @@ const SNIPE_MAX        = 3;       // max extensions
 export const AuctionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user, userRole, isConfigured } = useAuth();
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { isDark } = useTheme();
   const { t } = useTranslation();

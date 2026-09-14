@@ -37,13 +37,12 @@ const UNCONFIGURED = new Set([
  * Called every time a network request would be made, so hot-reloads work too.
  */
 export const isSupabaseConfigured = (): boolean => {
-  const validUrl =
-    supabaseUrl.includes('.supabase.co');
+  if (!supabaseUrl || !supabaseKey || UNCONFIGURED.has(supabaseKey) || UNCONFIGURED.has(supabaseUrl)) {
+    return false;
+  }
 
-  const validKey =
-    !UNCONFIGURED.has(supabaseKey) &&
-    typeof supabaseKey === 'string' &&
-    supabaseKey.length > 20;
+  const validUrl = supabaseUrl.includes('.supabase.co');
+  const validKey = typeof supabaseKey === 'string' && supabaseKey.length > 20;
 
   return validUrl && validKey;
 };
