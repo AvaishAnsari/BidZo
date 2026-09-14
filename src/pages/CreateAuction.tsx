@@ -11,10 +11,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-const inputClass = `block w-full rounded-xl border border-gray-700 bg-gray-900/50 py-3 px-4
-  text-white placeholder-gray-500 focus:outline-none focus:ring-2
-  focus:ring-brand-500 focus:border-brand-500 transition-all sm:text-sm shadow-inner`;
-
 const auctionSchema = z.object({
   imageUrl: z.string().url("Please drop a valid public image URL."),
   title: z.string().min(5, "Title must be at least 5 characters long.").max(100, "Title is too long"),
@@ -101,7 +97,7 @@ export const CreateAuction = () => {
           sellerId:     user.id,
           category:     data.category,
         });
-        toast.success('Auction submitted for approval! 🎉');
+        toast.success('Auction created! 🎉');
         navigate('/auctions');
         return;
       }
@@ -118,12 +114,12 @@ export const CreateAuction = () => {
         end_time:      new Date(data.endTime).toISOString(),
         seller_id:     user.id,
         category:      data.category,
-        status:        'pending_approval',
+        status:        'live',
       });
 
       if (dbError) throw dbError;
 
-      toast.success('Auction submitted for approval! It will go live once verified. 🎉');
+      toast.success('Auction created successfully! 🎉');
       navigate('/auctions');
     } catch (err: any) {
       toast.error(err.message || 'Failed to create auction');
@@ -164,35 +160,31 @@ export const CreateAuction = () => {
             }}>
               🏷️ Seller — Create listing
             </div>
-            </div>
+          </div>
 
-            <div style={{ padding: '1rem', borderRadius: '0.75rem', background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)', marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <AlertCircle style={{ color: '#eab308', width: '1.25rem', height: '1.25rem', flexShrink: 0 }} />
-              <p style={{ margin: 0, color: '#eab308', fontSize: '0.9rem', fontWeight: 600 }}>Your product will be reviewed by an admin before going live.</p>
-            </div>
-
-            <form onSubmit={handleSubmit(onAuctionSubmit)} className="space-y-8">
+          <form onSubmit={handleSubmit(onAuctionSubmit)} className="space-y-8">
             {/* Image URL */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Image URL
+            <div className="relative group">
+              <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-brand-400 transition-colors z-10" />
+              <input
+                type="url"
+                id="imageUrl"
+                {...register("imageUrl")}
+                className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] pl-11 pr-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder-transparent shadow-inner ${errors.imageUrl ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                placeholder="Image URL"
+              />
+              <label 
+                htmlFor="imageUrl" 
+                className="absolute left-11 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-focus:top-[14px] peer-focus:text-[10px] peer-focus:text-brand-400 font-medium uppercase tracking-wider origin-left"
+                style={{ top: '14px', fontSize: '10px' }} // Fallback state when has value
+              >
+                Image URL (Public link)
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <LinkIcon className="h-4 w-4 text-brand-400" />
-                </div>
-                <input
-                  type="url"
-                  {...register("imageUrl")}
-                  className={`${inputClass} pl-10 ${errors.imageUrl ? 'border-red-500' : ''}`}
-                  placeholder="https://images.unsplash.com/photo-..."
-                />
-              </div>
-              {errors.imageUrl && <p className="mt-1 text-sm text-red-500">{errors.imageUrl.message}</p>}
+              {errors.imageUrl && <p className="mt-1.5 text-sm text-red-500">{errors.imageUrl.message}</p>}
               
               {/* Live preview */}
               {watchImageUrl && !errors.imageUrl && (
-                <div style={{ marginTop: '0.75rem', borderRadius: '0.75rem', overflow: 'hidden', maxHeight: '200px' }}>
+                <div style={{ marginTop: '1rem', borderRadius: '0.75rem', overflow: 'hidden', maxHeight: '200px', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <img
                     src={watchImageUrl}
                     alt="Preview"
@@ -201,114 +193,130 @@ export const CreateAuction = () => {
                   />
                 </div>
               )}
-              <p className="mt-1.5 text-xs text-gray-500">
-                Paste any public image URL — Unsplash, Pexels, or your own hosted image.
-              </p>
             </div>
 
-            {/* Title & Description */}
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-2">
-                  Title
-                </label>
+            {/* Title */}
+            <div className="relative group">
+              <input
+                type="text"
+                id="title"
+                {...register("title")}
+                className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] px-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder-transparent shadow-inner ${errors.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                placeholder="Title"
+              />
+              <label 
+                htmlFor="title" 
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-focus:top-[14px] peer-focus:text-[10px] peer-focus:text-brand-400 font-medium uppercase tracking-wider"
+              >
+                Auction Title
+              </label>
+              {errors.title && <p className="mt-1.5 text-sm text-red-500">{errors.title.message}</p>}
+            </div>
+
+            {/* Description */}
+            <div className="relative group">
+              <textarea
+                id="description"
+                rows={4}
+                {...register("description")}
+                className={`peer w-full bg-black/40 border border-white/10 rounded-xl px-4 pt-7 pb-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder-transparent shadow-inner resize-none ${errors.description ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                placeholder="Description"
+              />
+              <label 
+                htmlFor="description" 
+                className="absolute left-4 top-6 -translate-y-1/2 text-gray-500 pointer-events-none transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-6 peer-placeholder-shown:-translate-y-1/2 peer-focus:top-[18px] peer-focus:text-[10px] peer-focus:text-brand-400 font-medium uppercase tracking-wider"
+              >
+                Detailed Description
+              </label>
+              {errors.description && <p className="mt-1.5 text-sm text-red-500">{errors.description.message}</p>}
+            </div>
+
+            {/* Category */}
+            <div className="relative group">
+              <select
+                id="category"
+                {...register("category")}
+                className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] px-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all shadow-inner appearance-none ${errors.category ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              >
+                <option value="" disabled className="bg-gray-900 text-gray-500">Select...</option>
+                {AUCTION_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat} className="bg-gray-900">{cat}</option>
+                ))}
+              </select>
+              <label 
+                htmlFor="category" 
+                className="absolute left-4 top-[14px] -translate-y-1/2 text-[10px] text-brand-400 pointer-events-none transition-all font-medium uppercase tracking-wider"
+              >
+                Category
+              </label>
+              <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-400">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+              </div>
+              {errors.category && <p className="mt-1.5 text-sm text-red-500">{errors.category.message}</p>}
+            </div>
+
+            {/* Pricing Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="relative group">
+                <IndianRupee className="absolute left-4 top-[28px] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-brand-400 transition-colors z-10" />
                 <input
-                  type="text"
-                  {...register("title")}
-                  className={`${inputClass} ${errors.title ? 'border-red-500' : ''}`}
-                  placeholder="e.g. Vintage Rolex Submariner 1965"
+                  type="number"
+                  id="startPrice"
+                  min="1"
+                  step="1"
+                  {...register("startPrice")}
+                  className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] pl-11 pr-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder-transparent shadow-inner ${errors.startPrice ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="Starting Price"
                 />
-                {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  rows={4}
-                  {...register("description")}
-                  className={`${inputClass} resize-none ${errors.description ? 'border-red-500' : ''}`}
-                  placeholder="Detailed description of the item — provenance, condition, certificates..."
-                />
-                {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-2">
-                  Category
-                </label>
-                <select
-                  {...register("category")}
-                  className={`${inputClass} ${errors.category ? 'border-red-500' : ''}`}
+                <label 
+                  htmlFor="startPrice" 
+                  className="absolute left-11 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-focus:top-[14px] peer-focus:text-[10px] peer-focus:text-brand-400 font-medium uppercase tracking-wider"
                 >
-                  <option value="" disabled>Select a category...</option>
-                  {AUCTION_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category.message}</p>}
-              </div>
-            </div>
-
-            {/* Pricing */}
-            <div className="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-2">
-              <div>
-                <label htmlFor="startPrice" className="block text-sm font-medium text-gray-300 mb-2">
-                  Starting Price (₹)
+                  Starting Price
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <IndianRupee className="h-4 w-4 text-brand-400" />
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    {...register("startPrice")}
-                    className={`${inputClass} pl-10 ${errors.startPrice ? 'border-red-500' : ''}`}
-                    placeholder="5000"
-                  />
-                </div>
-                {errors.startPrice && <p className="mt-1 text-sm text-red-500">{errors.startPrice.message}</p>}
+                {errors.startPrice && <p className="mt-1.5 text-sm text-red-500">{errors.startPrice.message}</p>}
               </div>
 
-              <div>
-                <label htmlFor="minIncrement" className="block text-sm font-medium text-gray-300 mb-2">
-                  Min Bid Increment (₹)
+              <div className="relative group">
+                <IndianRupee className="absolute left-4 top-[28px] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-brand-400 transition-colors z-10" />
+                <input
+                  type="number"
+                  id="minIncrement"
+                  min="1"
+                  step="1"
+                  {...register("minIncrement")}
+                  className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] pl-11 pr-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder-transparent shadow-inner ${errors.minIncrement ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="Min Increment"
+                />
+                <label 
+                  htmlFor="minIncrement" 
+                  className="absolute left-11 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-focus:top-[14px] peer-focus:text-[10px] peer-focus:text-brand-400 font-medium uppercase tracking-wider"
+                >
+                  Min Bid Increment
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <IndianRupee className="h-4 w-4 text-brand-400" />
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    {...register("minIncrement")}
-                    className={`${inputClass} pl-10 ${errors.minIncrement ? 'border-red-500' : ''}`}
-                    placeholder="500"
-                  />
-                </div>
-                {errors.minIncrement && <p className="mt-1 text-sm text-red-500">{errors.minIncrement.message}</p>}
+                {errors.minIncrement && <p className="mt-1.5 text-sm text-red-500">{errors.minIncrement.message}</p>}
               </div>
             </div>
 
             {/* Timing */}
-            <div>
-              <label htmlFor="endTime" className="block text-sm font-medium text-gray-300 mb-2">
-                Auction End Time
-              </label>
+            <div className="relative group pt-2">
               <input
                 type="datetime-local"
+                id="endTime"
                 {...register("endTime")}
-                className={`${inputClass} [color-scheme:dark] ${errors.endTime ? 'border-red-500' : ''}`}
+                className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] px-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all shadow-inner [color-scheme:dark] ${errors.endTime ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
               />
-              {errors.endTime && <p className="mt-1 text-sm text-red-500">{errors.endTime.message}</p>}
+              <label 
+                htmlFor="endTime" 
+                className="absolute left-4 top-[22px] -translate-y-1/2 text-[10px] text-brand-400 pointer-events-none transition-all font-medium uppercase tracking-wider"
+              >
+                Auction End Time
+              </label>
+              {errors.endTime && <p className="mt-1.5 text-sm text-red-500">{errors.endTime.message}</p>}
             </div>
 
             {/* Submit */}
-            <div className="pt-4">
+            <div className="pt-6">
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
