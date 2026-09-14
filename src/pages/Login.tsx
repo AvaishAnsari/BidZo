@@ -29,11 +29,14 @@ export const Login = () => {
   const [otpValue, setOtpValue] = useState('');
 
   // Form setup
-  const { register, handleSubmit, formState:{errors, touchedFields} } = useForm<FormVals>({
+  const { register, handleSubmit, watch, formState:{errors, touchedFields} } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: { email:'', password:'' },
     mode: 'onTouched',
   });
+
+  const emailVal = watch('email');
+  const passwordVal = watch('password');
 
   const from = (location.state as any)?.from?.pathname ?? '/';
 
@@ -303,16 +306,17 @@ export const Login = () => {
               {/* Email Input */}
               <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                 <div className="relative w-full">
-                  <Mail className="absolute left-4 top-[50%] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+                  <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                   <input 
                     type="email" 
                     id="email" 
                     autoComplete="email"
                     {...register('email')} 
-                    className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                    style={{ paddingLeft: '44px' }}
+                    className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                     placeholder="Email Address"
                   />
-                  <label htmlFor="email" className="absolute left-11 top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                  <label htmlFor="email" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
                     Email Address
                   </label>
                 </div>
@@ -323,19 +327,20 @@ export const Login = () => {
               {!useOtp && (
                 <motion.div variants={itemVariants} className="flex flex-col">
                   <div className="relative group w-full">
-                    <Lock className="absolute left-4 top-[50%] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+                    <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${passwordVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                     <input 
                       type={showPw ? 'text' : 'password'} 
                       id="password" 
                       autoComplete="current-password"
                       {...register('password')} 
-                      className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pl-11 pr-11 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                      style={{ paddingLeft: '44px', paddingRight: '44px' }}
+                      className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                       placeholder="Password"
                     />
-                    <label htmlFor="password" className="absolute left-11 top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                    <label htmlFor="password" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
                       Password
                     </label>
-                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-[50%] -translate-y-1/2 text-gray-500 hover:text-[#c084fc] transition-colors z-10">
+                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#c084fc] transition-colors z-10">
                       {showPw ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                     </button>
                   </div>
@@ -347,16 +352,17 @@ export const Login = () => {
               {useOtp && otpSent && (
                 <motion.div variants={itemVariants} className="flex flex-col">
                   <div className="relative group w-full">
-                    <Lock className="absolute left-4 top-[50%] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
+                    <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${otpValue ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                     <input 
                       type="text" 
                       id="otp" 
                       value={otpValue}
                       onChange={(e) => setOtpValue(e.target.value)}
-                      className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                      style={{ paddingLeft: '44px' }}
+                      className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                       placeholder="Enter OTP"
                     />
-                    <label htmlFor="otp" className="absolute left-11 top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                    <label htmlFor="otp" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
                       Enter OTP
                     </label>
                   </div>
