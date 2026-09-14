@@ -44,6 +44,11 @@
    ───────────────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
 
+/* Hide Google reCAPTCHA v3 floating badge (attribution is rendered in the auth form) */
+.grecaptcha-badge { 
+  visibility: hidden !important; 
+}
+
 html { scroll-behavior: smooth; }
 
 /* Premium dark scrollbar */

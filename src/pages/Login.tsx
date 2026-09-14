@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Lock, Flame, Eye, EyeOff, ShieldCheck, Shield } from 'lucide-react';
+import { Loader2, Mail, Lock, Flame, Eye, EyeOff, ShieldCheck, Shield, Users, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
@@ -10,7 +10,7 @@ import * as z from 'zod';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 const schema = z.object({
-  email:    z.string().email('Invalid email address.'),
+  email:    z.string().min(1, 'Email is required.').email('Invalid email address.'),
   password: z.string().optional(),
 });
 type FormVals = z.infer<typeof schema>;
@@ -28,7 +28,7 @@ export const Login = () => {
   const [otpSent, setOtpSent]   = useState(false);
   const [otpValue, setOtpValue] = useState('');
 
-  // 4. mode: 'onTouched' so validation only runs after user interacts
+  // Form setup
   const { register, handleSubmit, formState:{errors, touchedFields} } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: { email:'', password:'' },
@@ -38,7 +38,8 @@ export const Login = () => {
   const from = (location.state as any)?.from?.pathname ?? '/';
 
   const onSubmit = async (data: FormVals) => {
-    setErrorMsg(null); setLoading(true);
+    setErrorMsg(null); 
+    setLoading(true);
     
     // Captcha validation
     if (!executeRecaptcha && isConfigured) {
@@ -58,6 +59,7 @@ export const Login = () => {
       return;
     }
 
+    // OTP Flow
     if (useOtp) {
       if (!otpSent) {
         const { error } = await signInWithOtp(data.email.trim());
@@ -70,12 +72,13 @@ export const Login = () => {
         setLoading(false);
         if (error) { setErrorMsg(error); return; }
         toast.success('Welcome back! 👋');
-        navigate(from, { replace:true });
+        navigate(from, { replace: true });
       }
       return;
     }
 
-    if (!data.password || data.password.trim() === '') {
+    // Password Flow
+    if (!data.password || data.password.trim().length === 0) {
       setErrorMsg('Password is required.');
       setLoading(false);
       return;
@@ -85,7 +88,7 @@ export const Login = () => {
     setLoading(false);
     if (error) { setErrorMsg(error); return; }
     toast.success('Welcome back! 👋');
-    navigate(from, { replace:true });
+    navigate(from, { replace: true });
   };
 
   const onGoogle = async () => {
@@ -99,7 +102,6 @@ export const Login = () => {
     }
 
     if (!isConfigured) {
-      // Offline/demo mode
       toast('🔧 Demo mode: signed in with a mock Google account.', {
         icon: '⚠️',
         style: { background: '#1e1b4b', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.3)' },
@@ -120,23 +122,17 @@ export const Login = () => {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
 
-  // 3. Responsive split screen: flex-col on small screens, flex-row on large screens.
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#020617] text-white overflow-hidden font-sans">
       
       {/* ─── LEFT PANEL (HERO) ─── */}
       <div className="w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
         
-        {/* Background Effects */}
+        {/* Background Gradient Mesh (no heavy photo) */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" 
-            alt="Abstract Background" 
-            className="w-full h-full object-cover opacity-30 mix-blend-luminosity" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a]/95 via-[#0f111a]/80 to-[#4f46e5]/30"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent"></div>
-          <div className="absolute inset-0 hero-glow opacity-80 mix-blend-screen pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a] via-[#161225] to-[#1e1633]"></div>
+          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#8b5cf6]/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#c084fc]/10 rounded-full blur-[120px]"></div>
         </div>
 
         {/* Navbar / Logo */}
@@ -157,27 +153,26 @@ export const Login = () => {
           </div>
         </motion.div>
 
-        {/* Main Hero Content (Vertically centered via flex-1) */}
+        {/* Main Hero Content */}
         <div className="relative z-20 flex-1 flex flex-col justify-center max-w-xl w-full mx-auto lg:mx-0 py-4">
           <div className="space-y-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-gray-200 bg-white/5 border border-white/10 backdrop-blur-md">
               <ShieldCheck className="w-4 h-4 text-[#c084fc]"/> Trusted worldwide
             </motion.div>
 
-            {/* 10. Glow text pop */}
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="text-4xl lg:text-[4.5rem] font-extrabold leading-[1.05] tracking-tight">
               The smarter way <br className="hidden lg:block"/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a855f7] to-[#d8b4fe] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">bid & win</span>
             </motion.h1>
 
-            {/* 9. Increased contrast for subtext */}
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-gray-300 text-base lg:text-xl leading-relaxed max-w-md font-medium">
               Real-time auctions, instant notifications, and secure payments — experience the future of bidding.
             </motion.p>
 
+            {/* Stats Row */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }} className="flex items-center gap-8 lg:gap-10 pt-4 lg:pt-6">
               <div className="flex items-center gap-3 lg:gap-4">
                 <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
-                  <UsersIcon className="w-5 h-5 lg:w-6 lg:h-6 text-[#c084fc]"/>
+                  <Users className="w-5 h-5 lg:w-6 lg:h-6 text-[#c084fc]"/>
                 </div>
                 <div>
                   <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">12K+</div>
@@ -187,7 +182,7 @@ export const Login = () => {
               <div className="w-px h-12 lg:h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
               <div className="flex items-center gap-3 lg:gap-4">
                 <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
-                  <TrophyIcon className="w-5 h-5 lg:w-6 lg:h-6 text-[#c084fc]"/>
+                  <Trophy className="w-5 h-5 lg:w-6 lg:h-6 text-[#c084fc]"/>
                 </div>
                 <div>
                   <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">38K+</div>
@@ -196,13 +191,17 @@ export const Login = () => {
               </div>
             </motion.div>
 
-            {/* 11. Redesigned Live Auction Card */}
+            {/* Live Auction Card Preview */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1, y: [-5, 5, -5] }} 
               transition={{ opacity: { duration: 0.6, delay: 0.8 }, scale: { duration: 0.6, delay: 0.8 }, y: { duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1.4 } }}
               className="mt-8 lg:mt-10 bg-[#0f111a]/80 backdrop-blur-xl rounded-2xl p-4 flex gap-4 lg:gap-5 items-center relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[#c084fc]/20 hover:border-[#c084fc]/40 transition-colors duration-300"
             >
+              {/* Clarify it's a preview */}
+              <div className="absolute top-2 right-2 z-10 bg-black/60 text-[9px] font-bold text-gray-400 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                Live Preview
+              </div>
               <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-50 pointer-events-none"></div>
               <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-xl overflow-hidden relative shrink-0 shadow-inner">
                 <div className="absolute top-2 left-2 z-10 bg-rose-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-lg flex items-center gap-1">
@@ -260,7 +259,6 @@ export const Login = () => {
           {/* Subtle inner radial glow */}
           <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent rounded-3xl pointer-events-none"></div>
 
-          {/* 2. Wrap all form elements in a single flex column container with gap: 20px */}
           <div className="flex flex-col gap-[20px] relative z-10">
             
             <motion.div variants={itemVariants} className="text-center">
@@ -274,13 +272,14 @@ export const Login = () => {
               </motion.div>
             )}
 
+            {/* Google Sign In */}
             <motion.button 
               variants={itemVariants} 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onGoogle} 
               disabled={loading} 
-              className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
+              className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg width="20" height="20" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -291,21 +290,24 @@ export const Login = () => {
               Continue with Google
             </motion.button>
 
+            {/* Divider */}
             <motion.div variants={itemVariants} className="flex items-center gap-4">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10"></div>
               <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">or sign in with email</span>
               <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
             </motion.div>
 
-            {/* Main Form handles the remaining fields without strict space-y as we manage explicit gaps */}
+            {/* Credentials / OTP Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
               
+              {/* Email Input */}
               <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                 <div className="relative w-full">
                   <Mail className="absolute left-4 top-[50%] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
                   <input 
                     type="email" 
-                    id="email"
+                    id="email" 
+                    autoComplete="email"
                     {...register('email')} 
                     className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                     placeholder="Email Address"
@@ -317,13 +319,15 @@ export const Login = () => {
                 {touchedFields.email && errors.email && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.email.message}</p>}
               </motion.div>
 
+              {/* Password Input (shown when not using OTP) */}
               {!useOtp && (
                 <motion.div variants={itemVariants} className="flex flex-col">
                   <div className="relative group w-full">
                     <Lock className="absolute left-4 top-[50%] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
                     <input 
                       type={showPw ? 'text' : 'password'} 
-                      id="password"
+                      id="password" 
+                      autoComplete="current-password"
                       {...register('password')} 
                       className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pl-11 pr-11 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                       placeholder="Password"
@@ -339,13 +343,14 @@ export const Login = () => {
                 </motion.div>
               )}
 
+              {/* OTP Code Input */}
               {useOtp && otpSent && (
                 <motion.div variants={itemVariants} className="flex flex-col">
                   <div className="relative group w-full">
                     <Lock className="absolute left-4 top-[50%] -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-colors z-10"/>
                     <input 
                       type="text" 
-                      id="otp"
+                      id="otp" 
                       value={otpValue}
                       onChange={(e) => setOtpValue(e.target.value)}
                       className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pl-11 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
@@ -358,6 +363,7 @@ export const Login = () => {
                 </motion.div>
               )}
 
+              {/* Forgot password & Switch OTP/Password */}
               <motion.div variants={itemVariants} className="flex justify-between items-center px-1 mt-[8px]">
                 {!useOtp ? (
                   <Link to="#" className="text-xs font-semibold text-gray-400 hover:text-[#c084fc] transition-colors">Forgot password?</Link>
@@ -369,6 +375,7 @@ export const Login = () => {
                 </button>
               </motion.div>
 
+              {/* Keep me signed in */}
               <motion.div variants={itemVariants} className="flex items-center gap-3 mt-[12px]">
                 <div className="relative flex items-center justify-center">
                   <input type="checkbox" id="remember" className="peer w-5 h-5 rounded-md border border-white/20 bg-black/40 checked:bg-[#9333ea] checked:border-transparent focus:ring-2 focus:ring-[#9333ea]/50 appearance-none transition-all cursor-pointer"/>
@@ -377,13 +384,14 @@ export const Login = () => {
                 <label htmlFor="remember" className="text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors">Keep me signed in</label>
               </motion.div>
 
+              {/* Submit Button */}
               <motion.button 
                 variants={itemVariants} 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit" 
                 disabled={loading} 
-                className="w-full relative group overflow-hidden rounded-[8px] p-[1px] mt-[16px] shadow-xl"
+                className="w-full relative group overflow-hidden rounded-[8px] p-[1px] mt-[16px] shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
                 <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
@@ -396,24 +404,20 @@ export const Login = () => {
             <motion.p variants={itemVariants} className="text-center text-sm font-medium text-gray-400">
               New to BidZo? <Link to="/register" className="text-[#c084fc] font-bold hover:text-[#d8b4fe] transition-colors">Create free account</Link>
             </motion.p>
-          </div>
-        </motion.div>
 
-        {/* Global Floating Actions */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="absolute bottom-[60px] lg:bottom-6 right-6 hidden sm:flex gap-3 z-30">
-          <div className="flex items-center justify-center gap-2 text-xs font-medium text-gray-400 bg-[#161722]/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 shadow-lg">
-            <Shield className="w-3.5 h-3.5 text-[#34d399]"/> 256-bit SSL secured
+            {/* Legally required reCAPTCHA attribution text */}
+            <motion.p variants={itemVariants} className="text-center text-[10px] text-gray-500 leading-relaxed px-4">
+              This site is protected by reCAPTCHA and the Google{' '}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline hover:text-gray-300">Privacy Policy</a> and{' '}
+              <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline hover:text-gray-300">Terms of Service</a> apply.
+            </motion.p>
+
+            <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
+              <Shield className="w-3.5 h-3.5 text-[#34d399]"/> 256-bit SSL encrypted connection
+            </div>
           </div>
         </motion.div>
       </div>
     </div>
   );
 };
-
-// SVG icons used inline in the left panel for layout aesthetics
-function UsersIcon(props: any) {
-  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
-}
-function TrophyIcon(props: any) {
-  return <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>;
-}
