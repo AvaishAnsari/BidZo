@@ -1,51 +1,34 @@
-import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Loader2 } from 'lucide-react';
+/**
+ * ProtectedRoute.tsx
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Validates routes securely using local state flags.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 
-import type { UserRole } from '../types';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
-  requiredRole?: UserRole;
+  requiredRole?: 'buyer' | 'seller' | 'admin';
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
-  const { user, isLoading, userRole } = useAuth();
-  const location = useLocation();
+export function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
+  const { user, loading, role } = useAuth();
 
-  // Show spinner while session is being restored
-  if (isLoading) {
-    return (
-      <div style={{
-        minHeight: '60vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.75rem',
-      }}>
-        <Loader2 style={{ width: '2rem', height: '2rem', color: '#6366f1', animation: 'spin 1s linear infinite' }} />
-        <p style={{ color: '#6b7280', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
-          Loading…
-        </p>
-      </div>
-    );
+  // Show a blank placeholder loading state while your browser checks storage fields
+  if (loading) {
+    return <div style={{ color: 'white', padding: '20px', textAlign: 'center' }}>Verifying security credentials...</div>;
   }
 
-  // Not logged in → send to login, remember where they were going
+  // Kick out unauthenticated users back to the authentication panel
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  // Logged in but no role chosen yet (e.g. fresh Google sign-in) → pick a role first
-  if (!userRole) {
-    return <Navigate to="/select-role" replace />;
-  }
-
-  // Logged in but wrong role → back to auctions grid
-  if (requiredRole && userRole && userRole !== requiredRole) {
+  // Direct administrators anywhere, or restrict routes if a specific user role isn't met
+  if (requiredRole && role !== 'admin' && role !== requiredRole) {
     return <Navigate to="/auctions" replace />;
   }
 
   return <Outlet />;
-};
+}

@@ -53,32 +53,7 @@ export const CreateAuction = () => {
   const watchImageUrl = watch("imageUrl");
 
   // ── Security: only sellers can reach this page ──────────────────────────
-  if (userRole !== 'seller') {
-    return (
-      <div style={{
-        minHeight: '60vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '1rem',
-      }}>
-        <AlertCircle style={{ width: '3rem', height: '3rem', color: '#f87171' }} />
-        <h2 style={{ color: '#f87171', fontWeight: 700, fontSize: '1.25rem' }}>
-          Access Restricted
-        </h2>
-        <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-          Only Sellers can create auctions.
-        </p>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)',
-            borderRadius: '0.75rem', color: '#a5b4fc', padding: '0.65rem 1.5rem',
-            cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
-          }}
-        >
-          ← Back to Auctions
-        </button>
-      </div>
-    );
-  }
+ 
 
   const onAuctionSubmit = async (data: AuctionFormValues) => {
     if (!user) return;

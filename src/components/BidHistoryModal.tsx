@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Trophy, Clock, Copy, X } from 'lucide-react';
+import { Loader2, Clock, X } from 'lucide-react';
 import { fetchAllBids } from '../services/auctionService';
 import type { BidRecord } from '../services/auctionService';
 import { useTheme } from '../context/ThemeContext';
-import { isSupabaseConfigured } from '../utils/supabase';
-import { getBidsForAuction } from '../utils/localStore';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
-import { generateMockTxHash, shortenTxHash, copyToClipboard } from '../utils/blockchain';
 
 interface BidHistoryModalProps {
   isOpen: boolean;
@@ -30,21 +27,9 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
       setIsLoading(true);
       setError(null);
       try {
-        if (!isSupabaseConfigured()) {
-          const localBids = getBidsForAuction(auctionId);
-          // Sort descending if local bids aren't
-          const mappedBids = localBids.map(b => ({
-            id: b.id,
-            amount: b.amount,
-            created_at: b.placedAt,
-            user_email: b.bidderEmail,
-          })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-          
-          if (isMounted) setBids(mappedBids);
-        } else {
-          const data = await fetchAllBids(auctionId);
-          if (isMounted) setBids(data);
-        }
+        // Fetches directly from your custom Django REST API
+        const data = await fetchAllBids(auctionId);
+        if (isMounted) setBids(data);
       } catch (err: any) {
         if (isMounted) setError(err.message || 'Failed to load bid history');
       } finally {
@@ -80,11 +65,11 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.3 }}
           onClick={(e) => e.stopPropagation()}
-          className="glass-card"
           style={{
             width: '100%', maxWidth: '600px',
             maxHeight: '85vh',
             borderRadius: '1.25rem',
+            background: isDark ? '#1f2937' : '#ffffff',
             border: '1px solid rgba(99,102,241,0.3)',
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden'
@@ -119,8 +104,6 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: '0.375rem', transition: 'all 0.2s'
               }}
-              onMouseOver={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'none'; }}
             >
               <X style={{ width: '1.25rem', height: '1.25rem' }} />
             </button>
@@ -135,7 +118,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
           }}>
             {isLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '3rem 0' }}>
-                <Loader2 style={{ width: '2rem', height: '2rem', color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+                <Loader2 style={{ width: '2rem', height: '2rem', color: '#818cf8', animate: 'spin 1s linear infinite' }} />
                 <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Loading bid history...</p>
               </div>
             ) : error ? (
@@ -168,80 +151,24 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                       alignItems: 'center', gap: '1rem',
                       padding: '1rem',
                       background: isHighest 
-                        ? (isMe ? (isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.15)') : (isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.1)'))
+                        ? (isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.1)')
                         : (isDark ? 'rgba(17,24,39,0.5)' : '#f9fafb'),
                       borderRadius: '0.75rem',
                       border: isHighest 
-                        ? (isMe ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(99,102,241,0.3)')
+                        ? '1px solid rgba(99,102,241,0.3)'
                         : (isDark ? '1px solid rgba(55,65,81,0.4)' : '1px solid rgba(209,213,219,0.8)'),
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
-                      <div style={{
-                        width: '2rem', height: '2rem', flexShrink: 0,
-                        borderRadius: '50%',
-                        background: isHighest 
-                          ? (isMe ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.2)')
-                          : (isDark ? 'rgba(55,65,81,0.5)' : 'rgba(229, 231, 235, 0.8)'),
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: isHighest 
-                          ? (isMe ? '#4ade80' : '#a5b4fc')
-                          : (isDark ? '#9ca3af' : '#6b7280'),
-                      }}>
-                        {isHighest ? <Trophy style={{ width: '1rem', height: '1rem' }} /> : `#${i + 1}`}
+                      <div style={{ color: isDark ? '#e5e7eb' : '#111827', fontWeight: 600 }}>
+                        {isMe ? 'You' : maskEmail(bid.user_email)}
                       </div>
-                      
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ 
-                          color: isHighest ? (isMe ? '#10b981' : (isDark ? '#c4b5fd' : '#7e22ce')) : (isDark ? '#d1d5db' : '#374151'),
-                          fontWeight: isHighest ? 700 : 500, fontSize: '0.95rem',
-                          display: 'flex', alignItems: 'center', gap: '0.5rem',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                        }}>
-                          {isMe ? 'You' : maskEmail(bid.user_email)}
-                          {isHighest && (
-                            <span style={{
-                              fontSize: '0.65rem', fontWeight: 800,
-                              color: isMe ? '#4ade80' : '#a5b4fc',
-                              background: isMe ? 'rgba(34,197,94,0.1)' : 'rgba(99,102,241,0.15)',
-                              border: `1px solid ${isMe ? 'rgba(34,197,94,0.3)' : 'rgba(99,102,241,0.3)'}`,
-                              borderRadius: '9999px', padding: '0.1rem 0.5rem',
-                            }}>
-                              TOP BID
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <span>{timeAgo(bid.created_at)}</span>
-                          <span style={{ color: '#374151' }}>•</span>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(generateMockTxHash(bid.id), 'Transaction Hash'); }}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-                              background: isHighest ? 'rgba(52, 211, 153, 0.08)' : (isDark ? 'rgba(55, 65, 81, 0.2)' : 'rgba(229, 231, 235, 0.5)'),
-                              border: isHighest ? '1px solid rgba(52, 211, 153, 0.2)' : (isDark ? '1px solid rgba(75, 85, 99, 0.2)' : '1px solid rgba(209, 213, 219, 0.6)'),
-                              color: isHighest ? '#10b981' : (isDark ? '#9ca3af' : '#4b5563'),
-                              padding: '0.15rem 0.4rem', borderRadius: '0.25rem',
-                              cursor: 'pointer', fontSize: '0.7rem',
-                              fontFamily: 'monospace'
-                            }}
-                            title="Copy Tx Hash"
-                          >
-                            <Copy style={{ width: '0.6rem', height: '0.6rem' }} />
-                            {shortenTxHash(generateMockTxHash(bid.id))}
-                          </button>
-                        </div>
+                      <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>
+                        {timeAgo(bid.created_at)}
                       </div>
                     </div>
-                    
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        color: isHighest ? (isMe ? '#10b981' : (isDark ? '#a5b4fc' : '#4f46e5')) : (isDark ? '#e5e7eb' : '#111827'),
-                        fontWeight: 800, fontSize: '1.25rem',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {formatCurrency(bid.amount)}
-                      </span>
+                    <div style={{ fontWeight: 700, color: '#34d399' }}>
+                      {formatCurrency(bid.amount)}
                     </div>
                   </motion.div>
                 );

@@ -1,24 +1,21 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Environment variables (CRITICAL: Keeps secrets off GitHub)
+.env
 
-node_modules
-dist
-dist-ssr
-*.local
+# Python Virtual Environment
+venv/
+env/
+ENV/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Python compiled bytecode & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django local database (if using sqlite3 during local testing)
+*.sqlite3
+
+# IDE / Editor specific settings
+.vscode/
+.idea/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?

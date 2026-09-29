@@ -13,7 +13,6 @@ import { WatchlistPage } from './pages/WatchlistPage';
 import { ProfilePage } from './pages/Profile';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { SupabaseStatus } from './components/SupabaseStatus';
 import { syncServerTime } from './utils/timeSync';
 import { useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
@@ -50,7 +49,6 @@ function App() {
             },
           }}
         />
-        <SupabaseStatus />
         <Routes>
           {/* ── Public landing (no Layout wrapper) ── */}
           <Route index element={<LandingPage />} />

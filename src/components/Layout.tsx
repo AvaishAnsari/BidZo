@@ -32,12 +32,13 @@ export const Layout = () => {
     navigate('/');
   };
 
-  const navLinks = [
+   const navLinks = [
     { name: t('auctions'), path: '/auctions' },
     ...(user ? [{ name: t('watchlist'), path: '/watchlist' }] : []),
-    ...(userRole === 'seller' ? [{ name: t('createAuction'), path: '/create-auction' }] : []),
+    { name: t('createAuction'), path: '/create-auction' },
     ...(userRole === 'admin' ? [{ name: t('adminDashboard'), path: '/admin' }] : []),
   ];
+
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
