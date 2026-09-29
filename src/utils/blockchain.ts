@@ -7,11 +7,11 @@ import toast from 'react-hot-toast';
  * @param id The raw string (likely an Auction ID or Bid ID)
  * @returns string 42-character mock transaction hash
  */
-export function generateMockTxHash(id: string): string {
+export function generateMockTxHash(id: number | string): string {
   if (!id) return '0x0000000000000000000000000000000000000000';
   
   // Strip hyphens from UUID and pad
-  let cleanId = id.replace(/-/g, '').toLowerCase();
+  let cleanId = String(id).replace(/-/g, '').toLowerCase();
   
   // We need 40 hex characters for a standard ETH hash.
   // A UUID without hyphens is 32 characters. We will pad it deterministically.

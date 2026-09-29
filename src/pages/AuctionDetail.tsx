@@ -9,8 +9,6 @@ import { SmartBidAssistant } from '../components/SmartBidAssistant';
 import { generateMockTxHash, shortenTxHash, copyToClipboard } from '../utils/blockchain';
 import { placeBidRPC } from '../services/bidService';
 import { closeAuctionRPC } from '../services/auctionService';
-import { isSupabaseConfigured } from '../utils/supabase';
-import { placeBid as localPlaceBid, emitBidEvent, extendAuctionTime } from '../utils/localStore';
 import { initializeRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
 import { predictFinalBid, detectFraud } from '../utils/ai';
@@ -59,7 +57,9 @@ const SNIPE_MAX        = 3;       // max extensions
 export const AuctionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, userRole, isConfigured } = useAuth();
+  const { user, role } = useAuth();
+  // We remove isConfigured since the backend does not support it
+  const isConfigured = true;
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { isDark } = useTheme();
   const { t } = useTranslation();
@@ -129,7 +129,7 @@ export const AuctionDetail = () => {
   // ── Step 5c: Atomic Back-end Closure Trigger ─────────────────────────────
   const closureFiredRef = useRef(false);
   useEffect(() => {
-    if (isEnded && auction && auction.status !== 'ended' && isSupabaseConfigured() && !closureFiredRef.current) {
+    if (isEnded && auction && auction.status !== 'ended' && !closureFiredRef.current) {
       closureFiredRef.current = true;
       console.log('Timer expired. Requesting atomic formal closure from PostgreSQL...');
       closeAuctionRPC(auction.id).then((res) => {
@@ -152,29 +152,16 @@ export const AuctionDetail = () => {
     }
   }, [isEnded, isWinning, auction]);
 
-  // ── Step 3: Anti-sniping helper ──────────────────────────────────
-  const applyAntiSnipe = (auctionEndTime: string, auctionId: string): boolean => {
+  const applyAntiSnipe = (auctionEndTime: string): boolean => {
     const msLeft = new Date(auctionEndTime).getTime() - Date.now();
     if (msLeft > SNIPE_WINDOW_MS) return false; // not in snipe window
 
     const count = auction?.extension_count ?? 0;
     if (count >= SNIPE_MAX) return false; // max extensions reached
 
-    if (!isSupabaseConfigured()) {
-      const updated = extendAuctionTime(auctionId);
-      if (updated) {
-        toast(`🛡️ Bid placed in final 30s! Auction extended by 30 seconds.`, {
-          icon: '⏱',
-          style: { background: '#1e1b4b', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.4)' },
-          duration: 5000,
-        });
-        return true;
-      }
-    } else {
-      // Supabase mode — update end_time via RPC or direct update
-      // (requires appropriate DB permissions — handled server-side ideally)
-      applyBidOptimistic(auction!.current_price, ''); // no-op price, just trigger re-render
-    }
+    // Supabase/Django mode — anti-sniping should ideally be handled server-side.
+    // For now, trigger optimistic re-render.
+    applyBidOptimistic(auction!.current_price, ''); // no-op price, just trigger re-render
     return false;
   };
 
@@ -234,35 +221,16 @@ export const AuctionDetail = () => {
         const token = await executeRecaptcha('place_bid');
         if (!token) throw new Error('Failed to verify reCAPTCHA.');
       }
-      // ── Offline / local mode ─────────────────────────────────────
-      if (!isSupabaseConfigured()) {
-        localPlaceBid({
-          auctionId: auction.id,
-          bidderId: user.id,
-          bidderEmail: user.email ?? 'You',
-          amount,
-        });
-        emitBidEvent(auction.id, amount);
-        applyBidOptimistic(amount, user.email ?? 'You');
-
-        // ── Step 3: Anti-snipe check ─────────────────────────────
-        applyAntiSnipe(auction.end_time, auction.id);
-
-        setBidAmount('');
-        toast.success('Bid placed! 🎉');
-        return;
-      }
-
-      // ── Supabase mode ─────────────────────────────────────────────
-      const result = await placeBidRPC({ auctionId: auction.id, userId: user.id, amount });
+      // ── Django API mode ─────────────────────────────────────────────
+      const result = await placeBidRPC(auction.id, amount);
 
       if (!result.success) {
-        toast.error(result.error || 'Failed to place bid');
+        toast.error(result.message || 'Failed to place bid');
         return;
       }
 
       applyBidOptimistic(amount, user.email ?? 'You');
-      applyAntiSnipe(auction.end_time, auction.id);
+      applyAntiSnipe(auction.end_time);
       setBidAmount('');
       toast.success('Bid placed successfully! 🎉');
     } catch (err: any) {
@@ -278,7 +246,7 @@ export const AuctionDetail = () => {
       amount: auction.current_price,
       auctionTitle: auction.title,
       userEmail: user.email ?? 'buyer@bidzo.com',
-      userName: user.email?.split('@')[0] || 'Valued Bidder',
+      userName: user.username || user.email?.split('@')[0] || 'Valued Bidder',
       onSuccess: () => setIsPaid(true),
     });
   };
@@ -654,7 +622,7 @@ export const AuctionDetail = () => {
             )}
 
             {/* Bid Form — for users who do not own the auction */}
-            {!isEnded && !isUpcoming && !isOwnAuction && userRole === 'seller' && (
+            {!isEnded && !isUpcoming && !isOwnAuction && role === 'seller' && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem', textAlign: 'center' }}>
                 <div style={{
                     background: 'rgba(239,68,68,0.08)',
@@ -670,7 +638,7 @@ export const AuctionDetail = () => {
               </div>
             )}
 
-            {!isEnded && !isUpcoming && !isOwnAuction && userRole !== 'seller' && (
+            {!isEnded && !isUpcoming && !isOwnAuction && role !== 'seller' && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
                   <Flame style={{ width: '1.125rem', height: '1.125rem', color: '#818cf8' }} />

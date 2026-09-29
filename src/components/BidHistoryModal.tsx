@@ -4,8 +4,6 @@ import { Loader2, Trophy, Clock, Copy, X } from 'lucide-react';
 import { fetchAllBids } from '../services/auctionService';
 import type { BidRecord } from '../services/auctionService';
 import { useTheme } from '../context/ThemeContext';
-import { isSupabaseConfigured } from '../utils/supabase';
-import { getBidsForAuction } from '../utils/localStore';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
 import { generateMockTxHash, shortenTxHash, copyToClipboard } from '../utils/blockchain';
 
@@ -30,21 +28,8 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
       setIsLoading(true);
       setError(null);
       try {
-        if (!isSupabaseConfigured()) {
-          const localBids = getBidsForAuction(auctionId);
-          // Sort descending if local bids aren't
-          const mappedBids = localBids.map(b => ({
-            id: b.id,
-            amount: b.amount,
-            created_at: b.placedAt,
-            user_email: b.bidderEmail,
-          })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-          
-          if (isMounted) setBids(mappedBids);
-        } else {
-          const data = await fetchAllBids(auctionId);
-          if (isMounted) setBids(data);
-        }
+        const data = await fetchAllBids(auctionId);
+        if (isMounted) setBids(data);
       } catch (err: any) {
         if (isMounted) setError(err.message || 'Failed to load bid history');
       } finally {

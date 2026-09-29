@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -45,8 +45,8 @@ const ROLE_OPTIONS: {
 ];
 
 export const RoleSelection = () => {
-  const { user, userName, updateRole } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [selected, setSelected] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,41 +54,9 @@ export const RoleSelection = () => {
     if (!selected || !user) return;
     setLoading(true);
 
-    const MOCK_ACCOUNTS_KEY = 'bidzo_mock_accounts';
-    const MOCK_USER_KEY = 'bidzo_mock_user';
-    try {
-      // Update the accounts store
-      const raw = localStorage.getItem(MOCK_ACCOUNTS_KEY);
-      if (raw && user.email) {
-        const accounts = JSON.parse(raw);
-        if (accounts[user.email]) {
-          accounts[user.email].role = selected;
-          accounts[user.email].role_explicitly_set = true; // mark as deliberately chosen
-          localStorage.setItem(MOCK_ACCOUNTS_KEY, JSON.stringify(accounts));
-        }
-      }
-      // Update the current session
-      const mockUser = localStorage.getItem(MOCK_USER_KEY);
-      if (mockUser) {
-        const parsed = JSON.parse(mockUser);
-        parsed.role = selected;
-        parsed.role_explicitly_set = true;
-        localStorage.setItem(MOCK_USER_KEY, JSON.stringify(parsed));
-      }
-    } catch (e) {
-      console.error('[RoleSelection] Failed to update role:', e);
-    }
-
+    // No backend endpoint exists for role updates
+    toast.error('Role updating is currently disabled. The backend does not support it yet.');
     setLoading(false);
-    toast.success(
-      selected === 'buyer'
-        ? '🛒 Buyer account activated! Start bidding.'
-        : '🏷️ Seller account activated! Create your first auction.',
-      { duration: 4000 }
-    );
-    // Update the AuthContext state immediately so ProtectedRoute permits navigation
-    updateRole(selected);
-    navigate(selected === 'seller' ? '/create-auction' : '/auctions');
   };
 
   return (
@@ -129,7 +97,7 @@ export const RoleSelection = () => {
           </span>
         </h1>
         <p className="text-gray-400 text-base max-w-md mx-auto">
-          {userName ? `Welcome, ${userName}! ` : ''}Choose your account type. You can always update this in your profile settings later.
+          {user?.username ? `Welcome, ${user.username}! ` : ''}Choose your account type. You can always update this in your profile settings later.
         </p>
       </motion.div>
 

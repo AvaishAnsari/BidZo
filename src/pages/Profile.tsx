@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAuctions } from '../hooks/useAuctions';
-import { supabase, isSupabaseConfigured } from '../utils/supabase';
-import { loadBids } from '../utils/localStore';
+import { getAuthHeaders } from '../services/api';
 import { AuctionCard } from '../components/AuctionCard';
 import { RatingBadge } from '../components/RatingBadge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,54 +9,40 @@ import { Loader2, PackageOpen, Gavel, FileSignature } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 export const ProfilePage: React.FC = () => {
-  const { user, userRole, userName } = useAuth();
+  const { user, role } = useAuth();
   const { auctions, isLoading: auctionsLoading } = useAuctions();
   const [activeTab, setActiveTab] = useState<'bids' | 'listings'>('bids');
-  const [participatedAuctionIds, setParticipatedAuctionIds] = useState<Set<string>>(new Set());
+  const [participatedAuctionIds, setParticipatedAuctionIds] = useState<Set<number>>(new Set());
   const [bidsLoading, setBidsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     async function fetchUserBids() {
-      if (isSupabaseConfigured()) {
-        try {
-          const { data, error } = await supabase
-            .from('bids')
-            .select('auction_id')
-            .eq('user_id', user!.id);
-          
-          if (!error && data) {
-            const uniqueIds = new Set(data.map(b => b.auction_id));
-            setParticipatedAuctionIds(uniqueIds);
-          }
-
-          // Fetch profile metadata
-          const { data: profileData } = await supabase.from('users').select('*').eq('id', user!.id).single();
-          if (profileData) setUserProfile(profileData);
-
-        } catch (err) {
-          console.error("Failed to fetch bids for profile", err);
-        }
-      } else {
-        // Local offline fallback
-        const localBids = loadBids() as any[];
-        const userBids = localBids.filter(b => b.user_id === user!.id || b.userEmail === user!.email || b.user_email === user!.email);
-        const uniqueIds = new Set(userBids.map(b => b.auction_id || b.auctionId));
-        setParticipatedAuctionIds(uniqueIds);
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/users/me/bids/`, {
+          headers: getAuthHeaders(),
+        });
         
-        // Fetch offline profile metadata
-        const accountsStr = localStorage.getItem('bidzo_mock_accounts');
-        if (accountsStr && user?.email) {
-           const accounts = JSON.parse(accountsStr);
-           const p = accounts[user.email.toLowerCase()];
-           if (p) setUserProfile(p);
+        if (res.ok) {
+          const data = await res.json();
+          const uniqueIds = new Set<number>(data.map((b: any) => Number(b.auction_item)));
+          setParticipatedAuctionIds(uniqueIds);
         }
+      } catch (err) {
+        console.error("Failed to fetch bids for profile", err);
+      } finally {
+        setBidsLoading(false);
       }
-      setBidsLoading(false);
     }
 
     if (user) {
       fetchUserBids();
+      setUserProfile({
+        username: user.username,
+        email: user.email,
+        role: role,
+        avatar_url: `https://api.dicebear.com/9.x/avataaars/svg?seed=${user.username || user.email}`
+      });
     } else {
       setBidsLoading(false);
     }
@@ -88,21 +73,21 @@ export const ProfilePage: React.FC = () => {
           fontSize: '2rem', fontWeight: 800, color: 'white',
           boxShadow: '0 0 20px rgba(99, 102, 241, 0.4)'
         }}>
-          {userName ? userName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+          {user?.username ? user.username.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
         </div>
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: '#f3f4f6' }}>
-            {userName || 'Platform User'}
+            {user?.username || 'Platform User'}
           </h1>
           <p style={{ margin: 0, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {user.email}
             <span style={{
-              background: userRole === 'seller' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(52, 211, 153, 0.15)',
-              color: userRole === 'seller' ? '#c084fc' : '#34d399',
-              border: `1px solid ${userRole === 'seller' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(52, 211, 153, 0.3)'}`,
+              background: role === 'seller' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(52, 211, 153, 0.15)',
+              color: role === 'seller' ? '#c084fc' : '#34d399',
+              border: `1px solid ${role === 'seller' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(52, 211, 153, 0.3)'}`,
               padding: '0.1rem 0.6rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em'
             }}>
-              {userRole} Account
+              {role === 'seller' ? 'Seller Account' : role === 'admin' ? 'Admin Account' : 'Buyer Account'}
             </span>
 
             {isTrusted && (
@@ -146,7 +131,7 @@ export const ProfilePage: React.FC = () => {
           <Gavel style={{ width: '1.1rem', height: '1.1rem' }} /> My Active Bids
         </button>
 
-        {userRole === 'seller' && (
+        {role === 'seller' && (
           <button
             onClick={() => setActiveTab('listings')}
             style={{

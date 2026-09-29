@@ -1,92 +1,100 @@
 /**
  * bidService.ts
- * All bid placement logic goes through here.
- *
- * Strategy:
- *  1. Try the server-side `place_bid()` RPC (validates live status,
- *     minimum increment, and seller-cannot-bid rules atomically).
- *  2. If the RPC is unavailable (e.g. not yet deployed), fall back to
- *     a direct insert + update — **still requires the user to be authenticated**.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Migrated from Supabase to Django REST API for real-time bid operations.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { supabase } from '../utils/supabase';
+import { getAuthHeaders } from './api';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export interface PlaceBidParams {
-  auctionId: string;
-  userId: string;
+  auctionId: string | number;
+  userId?: string | number;
   amount: number;
 }
 
 export interface PlaceBidResult {
   success: boolean;
   error?: string;
+  message?: string;
+}
+
+export interface PlaceBidInput {
+  auctionId: string | number;
+  amount: number;
+  userId?: string | number;
 }
 
 /**
- * Place a bid via the `place_bid` Supabase RPC.
- *
- * The RPC (defined in supabase_schema.sql) performs all validation
- * atomically:
- *   - Auction must be 'live'
- *   - Auction must not be past its end_time
- *   - Amount must be >= current_price + min_increment
- *   - Caller must not be the seller
- *
- * On success, it inserts the bid AND updates current_price in one transaction.
+ * Places a live bid on an auction item via Django REST API.
  */
-export async function placeBidRPC(params: PlaceBidParams): Promise<PlaceBidResult> {
+export async function placeBid({ auctionId, amount }: PlaceBidInput): Promise<void> {
+  const result = await placeBidRPC(auctionId, amount);
+  if (!result.success) {
+    throw new Error(result.message || result.error || 'Failed to place bid');
+  }
+}
+
+/**
+ * Primary bid placement RPC function for Django REST API.
+ * Supports both (auctionId, amount) signature and ({ auctionId, amount }) params.
+ */
+export async function placeBidRPC(
+  auctionIdOrParams: number | string | PlaceBidParams,
+  amountArg?: number
+): Promise<PlaceBidResult> {
+  let auctionId: number | string;
+  let amount: number;
+
+  if (typeof auctionIdOrParams === 'object') {
+    auctionId = auctionIdOrParams.auctionId;
+    amount = auctionIdOrParams.amount;
+  } else {
+    auctionId = auctionIdOrParams;
+    amount = amountArg ?? 0;
+  }
+
   try {
-    const { data, error } = await supabase.rpc('place_bid', {
-      p_auction_id: params.auctionId,
-      p_amount: params.amount,
+    const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ amount: amount }),
     });
 
-    if (error) {
-      // RPC function might not exist yet — fall back to direct approach
-      if (
-        error.code === 'PGRST202' ||   // function not found
-        error.code === '42883' ||       // undefined function
-        error.message?.includes('Could not find the function')
-      ) {
-        return await placeBidDirect(params);
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        const msg = 'Authentication failed. Please log in to place a bid.';
+        return { success: false, error: msg, message: msg };
       }
-      return { success: false, error: error.message };
+      let errorMsg = `Failed to place bid: ${response.status}`;
+      try {
+        const data = await response.json();
+        errorMsg = data.error || data.detail || errorMsg;
+      } catch {
+        const errorText = await response.text();
+        if (errorText) errorMsg = errorText;
+      }
+      return { success: false, error: errorMsg, message: errorMsg };
     }
 
-    // The RPC returns a JSONB with { success, error? }
-    const result = data as { success: boolean; error?: string };
-    return result;
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Unknown error' };
+    return { success: true, message: 'Bid placed successfully' };
+  } catch (error: any) {
+    console.error('[bidService] placeBidRPC error:', error.message);
+    const msg = error.message || 'Unknown network error';
+    return { success: false, error: msg, message: msg };
   }
 }
 
-/**
- * Fallback: place a bid with a direct insert + auction update.
- * This is less safe than the RPC (no atomicity) but works without
- * the function being deployed.
- */
-async function placeBidDirect(params: PlaceBidParams): Promise<PlaceBidResult> {
-  try {
-    // Insert the bid
-    const { error: bidError } = await supabase.from('bids').insert({
-      auction_id: params.auctionId,
-      user_id: params.userId,
-      amount: params.amount,
-    });
+// ── Fallback exports for backward compatibility ──────────────────────────────
 
-    if (bidError) return { success: false, error: bidError.message };
+export async function fetchBids(auctionId: string | number) {
+  console.log('Fallback fetchBids called for:', auctionId);
+  return [];
+}
 
-    // Update the auction's current price
-    const { error: updateError } = await supabase
-      .from('auctions')
-      .update({ current_price: params.amount })
-      .eq('id', params.auctionId);
-
-    if (updateError) return { success: false, error: updateError.message };
-
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message ?? 'Unknown error' };
-  }
+export async function subscribeToBids(auctionId: string | number, _callback: Function) {
+  console.log('Fallback subscribeToBids active for:', auctionId);
+  return { unsubscribe: () => {} };
 }
