@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase, isSupabaseConfigured } from '../utils/supabase';
-import { createAuction as localCreateAuction } from '../utils/localStore';
-import { Loader2, Sparkles, Link as LinkIcon, AlertCircle, IndianRupee } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { createAuctionAPI } from '../services/auctionService';
+import { Loader2, Sparkles, Link as LinkIcon, IndianRupee, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
@@ -28,7 +27,7 @@ export const AUCTION_CATEGORIES = ['Art', 'Vehicles', 'Jewelry', 'Electronics', 
 type AuctionFormValues = z.infer<typeof auctionSchema>;
 
 export const CreateAuction = () => {
-  const { user, userRole } = useAuth();
+  const { user, role } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,7 +52,7 @@ export const CreateAuction = () => {
   const watchImageUrl = watch("imageUrl");
 
   // ── Security: only sellers can reach this page ──────────────────────────
-  if (userRole !== 'seller') {
+  if (role !== 'seller') {
     return (
       <div style={{
         minHeight: '60vh', display: 'flex', flexDirection: 'column',
@@ -85,39 +84,15 @@ export const CreateAuction = () => {
 
     setIsSubmitting(true);
     try {
-      // ── Offline mode ────────────────────────────────────────────────────
-      if (!isSupabaseConfigured()) {
-        localCreateAuction({
-          title:        data.title.trim(),
-          description:  data.description.trim(),
-          imageUrl:     data.imageUrl.trim(),
-          startPrice:   parseFloat(data.startPrice),
-          minIncrement: parseFloat(data.minIncrement),
-          endTime:      new Date(data.endTime).toISOString(),
-          sellerId:     user.id,
-          category:     data.category,
-        });
-        toast.success('Auction created! 🎉');
-        navigate('/auctions');
-        return;
-      }
-
-      // ── Supabase mode ────────────────────────────────────────────────────
-      const { error: dbError } = await supabase.from('auctions').insert({
-        title:         data.title.trim(),
-        description:   data.description.trim(),
-        image_url:     data.imageUrl.trim(),
-        start_price:   parseFloat(data.startPrice),
-        current_price: parseFloat(data.startPrice),
-        min_increment: parseFloat(data.minIncrement),
-        start_time:    new Date().toISOString(),
-        end_time:      new Date(data.endTime).toISOString(),
-        seller_id:     user.id,
-        category:      data.category,
-        status:        'live',
+      // ── Django API mode ──────────────────────────────────────────────────
+      // Note: Django currently does not support image URLs, categories, or min_increments.
+      // We pass the required fields to the backend. The UI still collects the others.
+      await createAuctionAPI({
+        title: data.title.trim(),
+        description: data.description.trim(),
+        starting_price: parseFloat(data.startPrice),
+        end_time: new Date(data.endTime).toISOString(),
       });
-
-      if (dbError) throw dbError;
 
       toast.success('Auction created successfully! 🎉');
       navigate('/auctions');

@@ -8,16 +8,17 @@ import { ShieldCheck, Star } from 'lucide-react';
  * @param max Maximum return value
  * @returns A consistent integer between min and max inclusive
  */
-const getDeterministicHash = (uuid: string, min: number, max: number): number => {
-  if (!uuid) return min;
+const getDeterministicHash = (id: number | string, min: number, max: number): number => {
+  if (!id) return min;
+  const strId = String(id);
   // Strip hyphens and take first 8 hex characters
-  const hexSt = uuid.replace(/-/g, '').substring(0, 8);
+  const hexSt = strId.replace(/-/g, '').substring(0, 8);
   const intVal = parseInt(hexSt, 16) || 0;
   return min + (intVal % (max - min + 1));
 };
 
 interface VerifiedBadgeProps {
-  userId: string;
+  userId: number;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -54,7 +55,7 @@ export const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({ userId, className,
 };
 
 interface SellerRatingProps {
-  userId: string;
+  userId: number;
   showCount?: boolean;
   className?: string;
 }
