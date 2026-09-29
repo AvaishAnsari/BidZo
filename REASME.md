@@ -57,6 +57,3 @@ Django Admin Panel: http://127.0.0.1:8000/admin/
 
 ### Step-by-Step Commands to Create and Save it in VS Code:
 
-1. In VS Code terminal, create the file:
-   ```bash
-   touch README.md
