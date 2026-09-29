@@ -7,11 +7,11 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 
 export const AdminDashboard: React.FC = () => {
-  const { user, userRole } = useAuth();
+  const { user, role } = useAuth();
   const { isDark } = useTheme();
 
   // Protect route strictly
-  if (!user || userRole !== 'admin') {
+  if (!user || role !== 'admin') {
     return <Navigate to="/auctions" replace />;
   }
 

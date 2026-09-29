@@ -11,6 +11,8 @@ from django.utils import timezone
 import datetime
 from .models import AuctionItem, Bid
 from .serializers import AuctionItemSerializer, BidSerializer
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 # ── AUCTION VIEWS ───────────────────────────────────────────────────────────
 
@@ -18,6 +20,23 @@ class AuctionListCreateView(generics.ListCreateAPIView):
     queryset = AuctionItem.objects.all().order_by('-created_at')
     serializer_class = AuctionItemSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        auction = serializer.save(seller=self.request.user)
+
+        def broadcast_auction():
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                'auction_global',
+                {
+                    'type': 'auction_message',
+                    'message': {
+                        'type': 'AUCTION_CREATED',
+                        'auction': serializer.data
+                    }
+                }
+            )
+        transaction.on_commit(broadcast_auction)
 
 
 # ── BID VIEWS ───────────────────────────────────────────────────────────────
@@ -51,7 +70,7 @@ class BidListCreateView(generics.ListCreateAPIView):
             # 2. Check if the new bid is higher than the current highest bid
             if amount <= float(auction.current_highest_bid):
                 return Response({
-                    "success": False, 
+                    "success": False,
                     "error": f"Bid must be higher than the current highest bid of {auction.current_highest_bid}."
                 }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -64,6 +83,24 @@ class BidListCreateView(generics.ListCreateAPIView):
             serializer.is_valid(raise_exception=True)
             serializer.save(bidder=self.request.user, auction_item=auction)
 
+            # Broadcast to WebSocket group
+            def broadcast_bid():
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f'auction_{auction_id}',
+                    {
+                        'type': 'auction_message',
+                        'message': {
+                            'type': 'BID_PLACED',
+                            'auction_id': int(auction_id),
+                            'bid': serializer.data,
+                            'current_highest_bid': amount,
+                        }
+                    }
+                )
+
+            transaction.on_commit(broadcast_bid)
+
         return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
 
 
@@ -74,19 +111,25 @@ class BidListCreateView(generics.ListCreateAPIView):
 def api_login_view(request):
     identifier = request.data.get('username') or request.data.get('email')
     password = request.data.get('password')
-    
+
     username = identifier
-    
+
     if identifier and '@' in identifier:
         user_obj = User.objects.filter(email=identifier).first()
         if user_obj:
             username = user_obj.username
 
     user = authenticate(username=username, password=password)
-    
+
     if user is not None:
         # Generate JWT tokens so frontend can authenticate subsequent requests
         refresh = RefreshToken.for_user(user)
+
+        # Ensure profile exists before accessing to be safe
+        role = 'buyer'
+        if hasattr(user, 'profile'):
+            role = user.profile.role
+
         return Response({
             "success": True,
             "refresh": str(refresh),
@@ -94,11 +137,63 @@ def api_login_view(request):
             "user": {
                 "id": user.id,
                 "username": user.username,
-                "email": user.email
+                "email": user.email,
+                "role": role
             }
         }, status=status.HTTP_200_OK)
     else:
         return Response({
-            "success": False, 
+            "success": False,
             "error": "Authentication failed. Please verify your credentials."
         }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def api_register_view(request):
+    username = request.data.get('username')
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    if not username or not email or not password:
+        return Response({
+            "success": False,
+            "error": "Username, email, and password are required."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(username=username).exists():
+        return Response({
+            "success": False,
+            "error": "This username is already taken."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(email=email).exists():
+        return Response({
+            "success": False,
+            "error": "This email is already in use."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.create_user(username=username, email=email, password=password)
+        # Note: UserProfile with 'buyer' role is automatically created by the post_save signal in models.py
+
+        return Response({
+            "success": True,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.profile.role
+            }
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UserBidsView(generics.ListAPIView):
+    serializer_class = BidSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Bid.objects.filter(bidder=self.request.user).order_by('-timestamp')

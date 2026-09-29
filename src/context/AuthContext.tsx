@@ -11,13 +11,13 @@ interface User {
   id: number;
   username: string;
   email: string;
-  role?: string;
+  role: "buyer" | "seller" | "admin";
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  role: string | null;
+  role: "buyer" | "seller" | "admin" | null;
   signOut: () => Promise<void>;
   refreshUser: () => void;
 }
@@ -27,18 +27,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<"buyer" | "seller" | "admin" | null>(null);
 
   const refreshUser = () => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const token = localStorage.getItem('access_token');
+    if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        // Default to admin or seller based on username for easy testing, or fall back to seller
-        setRole(parsedUser.username === 'rahu' ? 'admin' : (parsedUser.role || 'seller'));
+        // Rely entirely on the backend to define user roles
+        setRole(parsedUser.role);
       } catch (e) {
         console.error("Error reading authentication session data:", e);
+        setUser(null);
+        setRole(null);
       }
     } else {
       setUser(null);
@@ -53,8 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     localStorage.removeItem('user');
-    localStorage.removeItem('supabase.auth.token');
-    localStorage.removeItem('sb-auth-token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+
     localStorage.removeItem('isAuthenticated');
     setUser(null);
     setRole(null);

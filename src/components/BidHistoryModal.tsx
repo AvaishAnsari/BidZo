@@ -118,7 +118,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
           }}>
             {isLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '3rem 0' }}>
-                <Loader2 style={{ width: '2rem', height: '2rem', color: '#818cf8', animate: 'spin 1s linear infinite' }} />
+                <Loader2 style={{ width: '2rem', height: '2rem', color: '#818cf8', animation: 'spin 1s linear infinite' }} />
                 <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Loading bid history...</p>
               </div>
             ) : error ? (

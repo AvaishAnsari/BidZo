@@ -118,7 +118,6 @@ export const Home = () => {
 
   return (
     <div style={{ width: '100%', paddingBottom: '4rem' }}>
-
       {/* ── Hero Section ── */}
       <motion.section
         initial={{ opacity: 0, y: 24 }}

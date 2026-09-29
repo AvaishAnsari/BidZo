@@ -18,7 +18,7 @@ const centerStyle: React.CSSProperties = {
 };
 
 export const Layout = () => {
-  const { user, userRole, userName, signOut } = useAuth();
+  const { user, role, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,7 +36,7 @@ export const Layout = () => {
     { name: t('auctions'), path: '/auctions' },
     ...(user ? [{ name: t('watchlist'), path: '/watchlist' }] : []),
     { name: t('createAuction'), path: '/create-auction' },
-    ...(userRole === 'admin' ? [{ name: t('adminDashboard'), path: '/admin' }] : []),
+    ...(role === 'admin' ? [{ name: t('adminDashboard'), path: '/admin' }] : []),
   ];
 
 
@@ -239,7 +239,7 @@ export const Layout = () => {
                       cursor: 'pointer',
                     }}>
                       <UserIcon style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
-                      <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName ?? user.email}</span>
+                      <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.username ?? user.email}</span>
                       <span style={{
                         background: 'rgba(99,102,241,0.2)',
                         color: '#a5b4fc',
@@ -251,7 +251,7 @@ export const Layout = () => {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                       }}>
-                        {userRole}
+                        {role}
                       </span>
                     </motion.div>
                   </Link>

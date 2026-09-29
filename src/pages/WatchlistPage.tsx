@@ -12,14 +12,14 @@ export const WatchlistPage: React.FC = () => {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const { auctions, isLoading: auctionsLoading } = useAuctions();
-  const { watchedIds, isLoaded: watchlistLoaded } = useWatchlist();
+  const { watchlist, loading: watchlistLoaded } = useWatchlist();
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  const isLoading = auctionsLoading || !watchlistLoaded;
-  const watchedAuctions = auctions.filter(a => watchedIds.includes(a.id));
+  const isLoading = auctionsLoading || watchlistLoaded;
+  const watchedAuctions = auctions.filter(a => watchlist.includes(a.id));
 
   return (
     <div style={{ padding: '2rem 0', width: '100%', minHeight: '80vh' }}>

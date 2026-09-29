@@ -9,10 +9,11 @@ import type { Auction } from '../types';
 
 // Read our newly created local environment variable
 const API_BASE_URL = 'http://localhost:8000/api';
+import { getAuthHeaders } from './api';
 
 
 export interface BidRecord {
-  id: string;
+  id: number;
   amount: number;
   created_at: string;
   user_email: string;
@@ -52,6 +53,32 @@ export async function fetchAuctions(): Promise<Auction[]> {
     })) as Auction[];
   } catch (error: any) {
     console.error('[auctionService] fetchAuctions error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Create a new auction via Django POST /api/auctions/
+ */
+export async function createAuctionAPI(payload: { title: string; description: string; starting_price: number; end_time: string; }): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auctions/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Authentication failed. Please log in to create an auction.');
+      }
+      const errorText = await response.text();
+      throw new Error(errorText || `Failed to create auction: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error('[auctionService] createAuctionAPI error:', error.message);
     throw error;
   }
 }
@@ -116,7 +143,7 @@ export async function markAuctionEnded(auctionId: string): Promise<void> {
   try {
     const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ status: 'completed' }),
     });
     await handleResponse(response);
@@ -138,9 +165,9 @@ export async function fetchLiveAuctions(): Promise<Auction[]> {
 /**
  * Triggers backend winner settlement logic.
  */
-export async function closeAuctionRPC(auctionId: string): Promise<{ success: boolean; message?: string }> {
+export async function closeAuctionRPC(auctionId: number): Promise<{ success: boolean; message?: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/close/`, { method: 'POST' });
+    const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/close/`, { method: 'POST', headers: getAuthHeaders() });
     await handleResponse(response);
     return { success: true, message: 'Auction closed securely' };
   } catch (err: any) {
@@ -151,7 +178,7 @@ export async function closeAuctionRPC(auctionId: string): Promise<{ success: boo
 /**
  * Mock implementation of placeBidRPC to satisfy the frontend imports
  */
-export async function placeBidRPC(auctionId: string, amount: number): Promise<{ success: boolean; message?: string }> {
+export async function placeBidRPC(auctionId: number, amount: number): Promise<{ success: boolean; message?: string }> {
   console.log('placeBidRPC called with:', auctionId, amount);
   return { success: true, message: 'Bid processed' };
 }

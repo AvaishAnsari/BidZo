@@ -43,9 +43,9 @@ const AuctionCardAction: React.FC<{ auction: Auction; isOwnAuction: boolean }> =
   const { isEnded: countdownEnded } = useCountdown(auction.end_time);
   const { t } = useTranslation();
   const { isDark } = useTheme();
-  const { userRole } = useAuth();
+  const { role } = useAuth();
   const isEnded = countdownEnded || auction.status === 'ended';
-  const isSeller = userRole === 'seller';
+  const isSeller = role === 'seller';
 
   return (
     <Link

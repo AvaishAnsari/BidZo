@@ -11,8 +11,8 @@ import toast from "react-hot-toast";
 
 export function useWatchlist() {
   const { user } = useAuth();
-  const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [watchlist, setWatchlist] = useState<number[]>([]);
+  const loading = false;
 
   useEffect(() => {
     if (!user) {
@@ -29,7 +29,7 @@ export function useWatchlist() {
     }
   }, [user]);
 
-  const toggleWatchlist = async (auctionId: string) => {
+  const toggleWatchlist = async (auctionId: number) => {
     if (!user) {
       toast.error("Please log in to manage your watchlist.");
       return;
@@ -53,8 +53,8 @@ export function useWatchlist() {
   };
 
   // Provide both naming styles to satisfy different layout cards across the codebase
-  const inWatchlist = (auctionId: string) => watchlist.includes(auctionId);
-  const isWatched = (auctionId: string) => watchlist.includes(auctionId);
+  const inWatchlist = (auctionId: number) => watchlist.includes(auctionId);
+  const isWatched = (auctionId: number) => watchlist.includes(auctionId);
 
   return { watchlist, loading, toggleWatchlist, inWatchlist, isWatched };
 }

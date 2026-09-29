@@ -5,7 +5,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+import { getAuthHeaders } from './api';
 
 export interface PlaceBidInput {
   auctionId: string;
@@ -20,13 +21,14 @@ export async function placeBid({ auctionId, amount }: PlaceBidInput): Promise<vo
   try {
     const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ amount: amount }),
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Authentication failed. Please log in to place a bid.');
+      }
       const errorText = await response.text();
       throw new Error(errorText || `Failed to place bid: ${response.status}`);
     }
@@ -43,16 +45,37 @@ export async function fetchBids(auctionId: string) {
   return [];
 }
 
-export async function subscribeToBids(auctionId: string, callback: Function) {
+export async function subscribeToBids(auctionId: string, _callback: Function) {
   console.log('Fallback subscribeToBids active for:', auctionId);
   return { unsubscribe: () => {} };
 }
 
 
 /**
- * Exported placeholder to satisfy the AuctionDetail view imports
+ * Exported function to satisfy the AuctionDetail view imports
  */
-export async function placeBidRPC(auctionId: string, amount: number): Promise<{ success: boolean; message?: string }> {
-  console.log('placeBidRPC triggered inside bidService with:', auctionId, amount);
-  return { success: true, message: 'Bid handled securely' };
+export async function placeBidRPC(auctionId: number, amount: number): Promise<{ success: boolean; message?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      // If we use JWT cookies or similar, credentials: 'include' might be needed
+      credentials: 'omit',
+      body: JSON.stringify({ amount: amount }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return { success: false, message: 'Authentication failed. Please log in to place a bid.' };
+      }
+      const errorText = await response.text();
+      return { success: false, message: errorText || `Failed to place bid: ${response.status}` };
+    }
+
+    // In case the response is JSON, we could parse it, but we return success
+    return { success: true, message: 'Bid processed successfully' };
+  } catch (error: any) {
+    console.error('[bidService] placeBidRPC error:', error.message);
+    return { success: false, message: error.message };
+  }
 }

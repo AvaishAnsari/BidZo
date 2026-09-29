@@ -1,7 +1,7 @@
 export type UserRole = 'buyer' | 'seller' | 'admin';
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
   name: string;
   role: UserRole;
@@ -23,7 +23,7 @@ export interface AuthContextType {
 }
 
 export interface Auction {
-  id: string;
+  id: number;
   title: string;
   description: string;
   image_url: string;
@@ -32,8 +32,8 @@ export interface Auction {
   min_increment: number;
   start_time: string;
   end_time: string;
-  seller_id: string;
-  winner_id?: string;
+  seller_id: number;
+  winner_id?: number;
   status: 'upcoming' | 'live' | 'ended';
   category?: string;
   created_at: string;
@@ -43,25 +43,25 @@ export interface Auction {
 }
 
 export interface Bid {
-  id: string;
-  auction_id: string;
-  user_id: string;
+  id: number;
+  auction_id: number;
+  user_id: number;
   amount: number;
   created_at: string;
 }
 
 export interface Order {
-  id: string;
-  auction_id: string;
-  buyer_id: string;
+  id: number;
+  auction_id: number;
+  buyer_id: number;
   amount: number;
   payment_status: 'pending' | 'paid';
   created_at: string;
 }
 
 export interface Notification {
-  id: string;
-  user_id: string;
+  id: number;
+  user_id: number;
   title: string;
   message: string;
   type: 'bid_update' | 'auction_ending' | 'outbid' | 'system';
@@ -70,26 +70,26 @@ export interface Notification {
 }
 
 export interface Category {
-  id: string;
+  id: number;
   name: string;
   slug: string;
   icon?: string;
 }
 
 export interface Rating {
-  id: string;
-  auction_id?: string;
-  reviewer_id: string;
-  reviewee_id: string;
+  id: number;
+  auction_id?: number;
+  reviewer_id: number;
+  reviewee_id: number;
   rating: number;
   comment?: string;
   created_at: string;
 }
 
 export interface Payment {
-  id: string;
-  order_id: string;
-  user_id: string;
+  id: number;
+  order_id: number;
+  user_id: number;
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
   amount: number;

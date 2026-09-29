@@ -1,38 +1,37 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, User, Briefcase, Flame, ShieldCheck, Shield, Zap, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, User, Briefcase, Lock, Flame, ShieldCheck, Shield, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
-import type { UserRole } from '../types';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+
 
 const schema = z.object({
   name:  z.string().min(2, 'At least 2 characters.'),
   email: z.string().email('Invalid email address.'),
+  password: z.string().min(6, 'At least 6 characters.'),
   role:  z.enum(['buyer', 'seller'] as const),
 });
 type FormVals = z.infer<typeof schema>;
 
 export const Register = () => {
-  const { signUpOtp, verifyOtp, signInWithGoogle, isConfigured } = useAuth();
+  // The backend currently has no registration endpoint, so we mock these
+  const isConfigured = true;
+
   const navigate = useNavigate();
-  const { executeRecaptcha } = useGoogleReCaptcha();
-  
+
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
-  // OTP State
-  const [step, setStep] = useState<'details' | 'otp'>('details');
-  const [registeredEmail, setRegisteredEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+
+
 
   const { register, handleSubmit, setValue, watch, formState: { errors, touchedFields } } = useForm<FormVals>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', email: '', role: 'buyer' },
+    defaultValues: { name: '', email: '', password: '', role: 'buyer' },
     mode: 'onTouched',
   });
 
@@ -40,76 +39,40 @@ export const Register = () => {
   const nameVal = watch('name');
   const emailVal = watch('email');
 
-  const onRequestOtp = useCallback(async (data: FormVals) => {
-    setErrorMsg(null); 
+  const onRegister = async (data: FormVals) => {
+    setErrorMsg(null);
     setLoading(true);
 
-    if (!executeRecaptcha && isConfigured) {
-      setErrorMsg('ReCAPTCHA is still loading. Please wait a moment.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      if (isConfigured && executeRecaptcha) {
-        const token = await executeRecaptcha('register_otp');
-        if (!token) throw new Error('Failed to verify reCAPTCHA.');
+      const res = await fetch('http://localhost:8000/api/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: data.name,
+          email: data.email,
+          password: data.password
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Registration failed');
       }
 
-      const { error } = await signUpOtp(data.email.trim(), data.name.trim(), data.role as UserRole);
-      
-      if (error) { 
-        setErrorMsg(error); 
-        setLoading(false);
-        return; 
-      }
-      
-      setRegisteredEmail(data.email.trim());
-      setStep('otp');
-      toast.success(`OTP sent to ${data.email.trim()}!`);
-      if (!isConfigured) {
-        toast('🔧 Demo mode: use code 123456', { icon: 'ℹ️' });
-      }
+      toast.success('Registration successful! Please sign in.');
+      navigate('/login');
     } catch (err: any) {
       setErrorMsg(err.message || 'An error occurred.');
     } finally {
       setLoading(false);
     }
-  }, [executeRecaptcha, isConfigured, signUpOtp]);
-
-  const onVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length < 6) return;
-    
-    setErrorMsg(null); 
-    setLoading(true);
-    
-    const { error } = await verifyOtp(registeredEmail, otpCode);
-    setLoading(false);
-    
-    if (error) {
-      setErrorMsg(error);
-      return;
-    }
-    
-    if (role === 'seller') {
-      toast.success('Seller account created! 🏷️ List your first auction.');
-      navigate('/create-auction');
-    } else {
-      toast.success('Welcome to BidZo! Start bidding 🎉');
-      navigate('/auctions');
-    }
   };
 
-  const onGoogle = async () => {
-    setLoading(true);
-    const { error } = await signInWithGoogle();
 
-    if (error) {
-      toast.error(error);
-      setLoading(false);
-      return;
-    }
+  const onGoogle = async () => {
+    setLoading(false);
+    toast.error('Google sign-in is not supported by the new backend yet.');
+    return;
 
     if (!isConfigured) {
       toast('🔧 Demo mode: signed in with a mock Google account.', {
@@ -134,16 +97,16 @@ export const Register = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#020617] text-white overflow-hidden font-sans">
-      
+
       {/* ─── LEFT PANEL (HERO) ─── */}
       <div className="w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
-        
+
         {/* Background Effects */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" 
-            alt="Abstract Background" 
-            className="w-full h-full object-cover opacity-30 mix-blend-luminosity" 
+          <img
+            src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"
+            alt="Abstract Background"
+            className="w-full h-full object-cover opacity-30 mix-blend-luminosity"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a]/95 via-[#0f111a]/80 to-[#4f46e5]/30"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent"></div>
@@ -246,7 +209,7 @@ export const Register = () => {
 
       {/* ─── RIGHT PANEL (FORM) ─── */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
@@ -257,9 +220,9 @@ export const Register = () => {
 
           <div className="relative z-10">
             <AnimatePresence mode="wait">
-              {step === 'details' ? (
+              (
                 <motion.div key="details" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col gap-[20px]">
-                  
+
                   <motion.div variants={itemVariants} className="text-center">
                     <h2 className="text-3xl lg:text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 drop-shadow-sm">Create account ✨</h2>
                     <p className="text-gray-400 text-sm font-medium">Join BidZo — fast, free, and secure</p>
@@ -271,12 +234,12 @@ export const Register = () => {
                     </motion.div>
                   )}
 
-                  <motion.button 
-                    variants={itemVariants} 
+                  <motion.button
+                    variants={itemVariants}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={onGoogle} 
-                    disabled={loading} 
+                    onClick={onGoogle}
+                    disabled={loading}
                     className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24">
@@ -294,16 +257,16 @@ export const Register = () => {
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
                   </motion.div>
 
-                  <form onSubmit={handleSubmit(onRequestOtp)} className="flex flex-col">
-                    
+                  <form onSubmit={handleSubmit(onRegister)} className="flex flex-col">
+
                     <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                       <div className="relative w-full">
                         <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${nameVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           id="name"
                           autoComplete="name"
-                          {...register('name')} 
+                          {...register('name')}
                           style={{ paddingLeft: '44px' }}
                           className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                           placeholder="Full Name"
@@ -318,11 +281,11 @@ export const Register = () => {
                     <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                       <div className="relative w-full">
                         <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
-                        <input 
-                          type="email" 
+                        <input
+                          type="email"
                           id="email"
                           autoComplete="email"
-                          {...register('email')} 
+                          {...register('email')}
                           style={{ paddingLeft: '44px' }}
                           className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
                           placeholder="Email Address"
@@ -332,6 +295,26 @@ export const Register = () => {
                         </label>
                       </div>
                       {touchedFields.email && errors.email && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.email.message}</p>}
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Lock className="w-4 h-4 text-gray-400 group-focus-within:text-[#c084fc] transition-colors"/>
+                        </div>
+                        <input
+                          id="password"
+                          type="password"
+                          {...register('password')}
+                          style={{ paddingLeft: '44px' }}
+                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          placeholder="Password"
+                        />
+                        <label htmlFor="password" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                          Password
+                        </label>
+                      </div>
+                      {touchedFields.password && errors.password && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.password.message}</p>}
                     </motion.div>
 
                     <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
@@ -359,18 +342,18 @@ export const Register = () => {
                       {touchedFields.role && errors.role && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.role.message}</p>}
                     </motion.div>
 
-                    <motion.button 
-                      variants={itemVariants} 
+                    <motion.button
+                      variants={itemVariants}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      type="submit" 
-                      disabled={loading} 
+                      type="submit"
+                      disabled={loading}
                       className="w-full relative group overflow-hidden rounded-[8px] p-[1px] shadow-xl"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
                       <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Zap className="w-5 h-5"/>}
-                        Send OTP Verification
+                        Create Account
                       </div>
                     </motion.button>
                   </form>
@@ -383,53 +366,7 @@ export const Register = () => {
                     Have an account? <Link to="/login" className="text-[#c084fc] font-bold hover:text-[#d8b4fe] transition-colors">Sign in →</Link>
                   </motion.p>
                 </motion.div>
-              ) : (
-                <motion.div key="otp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex flex-col gap-[20px]">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-[#9333ea]/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c084fc]/30">
-                      <CheckCircle2 className="w-8 h-8 text-[#c084fc]"/>
-                    </div>
-                    <h2 className="text-3xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 drop-shadow-sm">Check your email</h2>
-                    <p className="text-gray-400 text-sm font-medium">We've sent a 6-digit code to <br/><span className="text-white font-bold">{registeredEmail}</span></p>
-                  </div>
-
-                  {errorMsg && (
-                    <div className="p-4 rounded-[8px] bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium text-center shadow-lg">
-                      {errorMsg}
-                    </div>
-                  )}
-
-                <form onSubmit={onVerifyOtp} className="flex flex-col gap-[20px]">
-                  <div>
-                    <input 
-                      type="text" 
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.trim())}
-                      className="w-full bg-black/40 border border-white/10 rounded-[8px] h-[56px] text-center text-2xl tracking-[0.25em] sm:tracking-[0.5em] font-mono text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all shadow-inner"
-                      placeholder="Enter OTP"
-                    />
-                  </div>
-
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="submit" 
-                    disabled={loading || otpCode.length < 6} 
-                      className="w-full relative group overflow-hidden rounded-[8px] p-[1px] shadow-xl disabled:opacity-50 disabled:pointer-events-none mt-[8px]"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
-                      <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <ShieldCheck className="w-5 h-5"/>}
-                        Verify & Create Account
-                      </div>
-                    </motion.button>
-                    
-                    <button type="button" onClick={() => setStep('details')} className="text-center text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                      ← Back to edit email
-                    </button>
-                  </form>
-                </motion.div>
-              )}
+              )
             </AnimatePresence>
           </div>
         </motion.div>
