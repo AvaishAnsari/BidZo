@@ -66,6 +66,8 @@ export async function createAuctionAPI(payload: {
   description: string;
   starting_price: number;
   end_time: string;
+  category?: string;
+  image_url?: string;
 }): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/auctions/`, {

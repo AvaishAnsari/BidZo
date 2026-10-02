@@ -8,10 +8,16 @@ console.log('Main.tsx loading...');
 const rootElement = document.getElementById('root');
 console.log('Root element:', rootElement);
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 if (rootElement) {
   createRoot(rootElement).render(
     <StrictMode>
-      <App />
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <App />
+      </GoogleOAuthProvider>
     </StrictMode>,
   )
   console.log('App mounted successfully');

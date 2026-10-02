@@ -13,6 +13,9 @@ from .models import AuctionItem, Bid
 from .serializers import AuctionItemSerializer, BidSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from django.conf import settings
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 # ── AUCTION VIEWS ───────────────────────────────────────────────────────────
 
@@ -149,10 +152,66 @@ def api_login_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def api_google_login_view(request):
+    token = request.data.get('token')
+    if not token:
+        return Response({"success": False, "error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Verify the token against Google
+        idinfo = id_token.verify_oauth2_token(
+            token, 
+            google_requests.Request(), 
+            settings.GOOGLE_OAUTH2_CLIENT_ID,
+            clock_skew_in_seconds=10
+        )
+        
+        email = idinfo.get('email')
+        name = idinfo.get('name') or email.split('@')[0]
+        
+        if not email:
+            return Response({"success": False, "error": "Email not provided by Google"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user, created = User.objects.get_or_create(username=email, defaults={'email': email})
+        
+        if created:
+            # Set unusable password for Google users
+            user.set_unusable_password()
+            user.save()
+            
+        # UserProfile with 'buyer' role is automatically created by the post_save signal in models.py
+            
+        refresh = RefreshToken.for_user(user)
+        role = 'buyer'
+        if hasattr(user, 'profile'):
+            role = user.profile.role
+            
+        return Response({
+            "success": True,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": role
+            },
+            "is_new_user": created
+        }, status=status.HTTP_200_OK)
+        
+    except ValueError as e:
+        # Invalid token
+        return Response({"success": False, "error": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"success": False, "error": "Authentication error: " + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def api_register_view(request):
     username = request.data.get('username')
     email = request.data.get('email')
     password = request.data.get('password')
+    role = request.data.get('role', 'buyer')
 
     if not username or not email or not password:
         return Response({
@@ -174,7 +233,11 @@ def api_register_view(request):
 
     try:
         user = User.objects.create_user(username=username, email=email, password=password)
-        # Note: UserProfile with 'buyer' role is automatically created by the post_save signal in models.py
+        # UserProfile with 'buyer' role is automatically created by the post_save signal in models.py
+        # We update it if a specific role is provided
+        if hasattr(user, 'profile') and role in ['buyer', 'seller', 'admin']:
+            user.profile.role = role
+            user.profile.save()
 
         return Response({
             "success": True,
@@ -190,6 +253,20 @@ def api_register_view(request):
             "success": False,
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def api_update_role_view(request):
+    role = request.data.get('role')
+    if role not in ['buyer', 'seller']:
+        return Response({"success": False, "error": "Invalid role."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = request.user
+    if hasattr(user, 'profile'):
+        user.profile.role = role
+        user.profile.save()
+        return Response({"success": True, "role": role}, status=status.HTTP_200_OK)
+    return Response({"success": False, "error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class UserBidsView(generics.ListAPIView):
     serializer_class = BidSerializer

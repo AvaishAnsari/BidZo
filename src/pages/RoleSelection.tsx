@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import type { UserRole } from '../types';
 import { ShoppingBag, Briefcase, CheckCircle2, ArrowRight, Flame, ShieldCheck, Zap, Star } from 'lucide-react';
 
@@ -45,7 +46,8 @@ const ROLE_OPTIONS: {
 ];
 
 export const RoleSelection = () => {
-  const { user } = useAuth();
+  const { user, updateRole } = useAuth();
+  const navigate = useNavigate();
 
   const [selected, setSelected] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,8 +56,13 @@ export const RoleSelection = () => {
     if (!selected || !user) return;
     setLoading(true);
 
-    // No backend endpoint exists for role updates
-    toast.error('Role updating is currently disabled. The backend does not support it yet.');
+    const { error } = await updateRole(selected);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success('Profile updated successfully!');
+      navigate('/');
+    }
     setLoading(false);
   };
 

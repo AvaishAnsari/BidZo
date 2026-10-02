@@ -37,6 +37,8 @@ class AuctionItem(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField()
+    category = models.CharField(max_length=100, blank=True, null=True)
+    image_url = models.URLField(max_length=1000, blank=True, null=True)
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
     current_highest_bid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     end_time = models.DateTimeField()
