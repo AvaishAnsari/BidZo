@@ -30,7 +30,7 @@ export interface AuthContextType {
   signInWithOtp: (email: string) => Promise<{ error: string | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
   signUpOtp: (email: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
+  signInWithGoogle: (token: string) => Promise<{ error: string | null }>;
 
   updateRole: (role: UserRole) => void;
   isConfigured: boolean;
@@ -70,9 +70,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser();
   }, [refreshUser]);
 
-  const updateRole = useCallback((newRole: UserRole) => {
-    setRole(newRole);
-  }, []);
+  const updateRole = useCallback(
+    async (newRole: UserRole): Promise<{ error: string | null }> => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return { error: 'Not authenticated' };
+
+        const response = await fetch(`${API_BASE_URL}/users/role/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ role: newRole }),
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+          setRole(newRole);
+          if (user) {
+            const updatedUser = { ...user, role: newRole };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+          return { error: null };
+        } else {
+          return { error: result.error || 'Failed to update role' };
+        }
+      } catch (err) {
+        return { error: 'Failed to connect to server' };
+      }
+    },
+    [user],
+  );
 
   const signIn = useCallback(
     async (email: string, password: string): Promise<{ error: string | null }> => {
@@ -134,7 +164,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithOtp = useCallback(async () => ({ error: 'OTP login is not supported by the new backend yet.' }), []);
   const verifyOtp = useCallback(async () => ({ error: 'OTP verification is not supported yet.' }), []);
   const signUpOtp = useCallback(async () => ({ error: 'OTP registration is not supported yet.' }), []);
-  const signInWithGoogle = useCallback(async () => ({ error: 'Google sign-in is not supported by the new backend yet.' }), []);
+  
+  const signInWithGoogle = useCallback(async (token: string): Promise<{ error: string | null; isNewUser?: boolean }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        localStorage.setItem('user', JSON.stringify(result.user));
+        localStorage.setItem('access_token', result.access);
+        if (result.refresh) {
+          localStorage.setItem('refresh_token', result.refresh);
+        }
+        refreshUser();
+        return { error: null, isNewUser: result.is_new_user };
+      } else {
+        return { error: result.error || 'Google authentication failed.' };
+      }
+    } catch (err: any) {
+      return { error: 'Could not connect to the backend server.' };
+    }
+  }, [refreshUser]);
 
   return (
     <AuthContext.Provider

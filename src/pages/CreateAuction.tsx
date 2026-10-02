@@ -85,11 +85,11 @@ export const CreateAuction = () => {
     setIsSubmitting(true);
     try {
       // ── Django API mode ──────────────────────────────────────────────────
-      // Note: Django currently does not support image URLs, categories, or min_increments.
-      // We pass the required fields to the backend. The UI still collects the others.
       await createAuctionAPI({
         title: data.title.trim(),
         description: data.description.trim(),
+        category: data.category,
+        image_url: data.imageUrl,
         starting_price: parseFloat(data.startPrice),
         end_time: new Date(data.endTime).toISOString(),
       });

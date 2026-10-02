@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -87,14 +89,14 @@ CHANNEL_LAYERS = {
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bidzo_db',
-        'USER': 'postgres',
-        'PASSWORD': '@post123',  # The password we just set
-        'HOST': '127.0.0.1',      # Points to your local machine
-        'PORT': '5432',           # The default PostgreSQL port
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get(
+            'DATABASE_URL',
+            'postgres://postgres:@post123@127.0.0.1:5432/bidzo_db'
+        ),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -152,3 +154,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
+
+import os
+GOOGLE_OAUTH2_CLIENT_ID = os.environ.get('GOOGLE_OAUTH2_CLIENT_ID', '')
+
