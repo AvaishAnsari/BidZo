@@ -41,8 +41,28 @@ export const Home = () => {
   // Category counts
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
+    const CATEGORY_ALIASES: Record<string, string[]> = {
+      'Electronics': ['Smartphones', 'Laptops', 'Tablets', 'Mobile Accessories', 'Electronics'],
+      'Fashion': ['Beauty', 'Fragrances', 'Skin Care', 'Womens Dresses', 'Tops', 'Mens Shirts', 'Womens Shoes', 'Mens Shoes', 'Fashion'],
+      'Watches': ['Womens Watches', 'Mens Watches', 'Watches'],
+      'Jewelry': ['Womens Jewellery', 'Mens Jewellery', 'Jewelry'],
+      'Antiques': ['Furniture', 'Home Decoration', 'Kitchen Accessories', 'Antiques'],
+      'Vehicles': ['Vehicle', 'Motorcycle', 'Vehicles'],
+      'Sports': ['Sports Accessories', 'Sports'],
+      'Collectibles': ['Groceries', 'Collectibles'],
+    };
+
     auctions.forEach(a => {
-      if (a.category) counts[a.category] = (counts[a.category] || 0) + 1;
+      if (!a.category) return;
+      // Find the main category this item belongs to, or use its own category if it's already a main one
+      let mainCategory = a.category;
+      for (const [key, aliases] of Object.entries(CATEGORY_ALIASES)) {
+        if (aliases.includes(a.category)) {
+          mainCategory = key;
+          break;
+        }
+      }
+      counts[mainCategory] = (counts[mainCategory] || 0) + 1;
     });
     return counts;
   }, [auctions]);
@@ -70,7 +90,20 @@ export const Home = () => {
     }
 
     if (filterCategory !== 'all') {
-      result = result.filter(a => a.category === filterCategory);
+      const CATEGORY_ALIASES: Record<string, string[]> = {
+        'Electronics': ['Smartphones', 'Laptops', 'Tablets', 'Mobile Accessories', 'Electronics'],
+        'Fashion': ['Beauty', 'Fragrances', 'Skin Care', 'Womens Dresses', 'Tops', 'Mens Shirts', 'Womens Shoes', 'Mens Shoes', 'Fashion'],
+        'Watches': ['Womens Watches', 'Mens Watches', 'Watches'],
+        'Jewelry': ['Womens Jewellery', 'Mens Jewellery', 'Jewelry'],
+        'Antiques': ['Furniture', 'Home Decoration', 'Kitchen Accessories', 'Antiques'],
+        'Vehicles': ['Vehicle', 'Motorcycle', 'Vehicles'],
+        'Sports': ['Sports Accessories', 'Sports'],
+        'Collectibles': ['Groceries', 'Collectibles'],
+      };
+      
+      // Match against the exact category or any of its aliases
+      const allowed = CATEGORY_ALIASES[filterCategory] || [];
+      result = result.filter(a => a.category === filterCategory || allowed.includes(a.category));
     }
 
     if (minPrice) {
