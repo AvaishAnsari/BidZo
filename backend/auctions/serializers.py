@@ -1,35 +1,19 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
 from .models import AuctionItem, Bid
 
-class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'password']
-
-    def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
-
 class BidSerializer(serializers.ModelSerializer):
-    bidder_username = serializers.ReadOnlyField(source='bidder.username')
+    bidder_name = serializers.CharField(source='bidder.username', read_only=True)
 
     class Meta:
         model = Bid
-        fields = ['id', 'auction_item', 'bidder', 'bidder_username', 'amount', 'timestamp']
+        fields = ['id', 'amount', 'timestamp', 'bidder_name', 'bidder']
         read_only_fields = ['bidder', 'auction_item']
 
 class AuctionItemSerializer(serializers.ModelSerializer):
     bids = BidSerializer(many=True, read_only=True)
-    seller_username = serializers.ReadOnlyField(source='seller.username')
+    seller_name = serializers.CharField(source='seller.username', read_only=True)
 
     class Meta:
         model = AuctionItem
-        fields = [
-            'id', 'title', 'description', 'starting_price', 
-            'current_highest_bid', 'end_time', 'status', 
-            'seller', 'seller_username', 'bids', 'created_at'
-        ]
+        fields = ['id', 'title', 'description', 'category', 'image_url', 'starting_price', 'current_highest_bid', 'end_time', 'status', 'created_at', 'bids', 'seller_name', 'seller']
         read_only_fields = ['seller', 'current_highest_bid', 'status']
