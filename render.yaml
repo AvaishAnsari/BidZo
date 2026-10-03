@@ -1,0 +1,24 @@
+databases:
+  - name: bidzo-db
+    databaseName: bidzo
+    user: bidzo
+    plan: free
+
+services:
+  - type: web
+    name: bidzo-backend
+    env: python
+    plan: free
+    buildCommand: "cd backend && pip install -r requirements.txt && python manage.py migrate"
+    startCommand: "cd backend && daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bidzo-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
