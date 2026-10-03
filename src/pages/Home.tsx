@@ -103,7 +103,7 @@ export const Home = () => {
       
       // Match against the exact category or any of its aliases
       const allowed = CATEGORY_ALIASES[filterCategory] || [];
-      result = result.filter(a => a.category === filterCategory || allowed.includes(a.category));
+      result = result.filter(a => a.category === filterCategory || allowed.includes(a.category ?? ''));
     }
 
     if (minPrice) {

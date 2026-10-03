@@ -30,9 +30,9 @@ export interface AuthContextType {
   signInWithOtp: (email: string) => Promise<{ error: string | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
   signUpOtp: (email: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
-  signInWithGoogle: (token: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: (token: string) => Promise<{ error: string | null; isNewUser?: boolean }>;
 
-  updateRole: (role: UserRole) => void;
+  updateRole: (role: UserRole) => Promise<{ error: string | null }>;
   isConfigured: boolean;
   refreshUser: () => void;
 }
