@@ -9,8 +9,8 @@ services:
     name: bidzo-backend
     env: python
     plan: free
-    buildCommand: "pip install -r backend/requirements.txt && PYTHONPATH=. python backend/manage.py migrate"
-    startCommand: "PYTHONPATH=. daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
+    buildCommand: "pip install -r backend/requirements.txt && PYTHONPATH=\".:backend\" python backend/manage.py migrate"
+    startCommand: "PYTHONPATH=\".:backend\" daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
