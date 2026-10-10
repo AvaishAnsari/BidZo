@@ -1,6 +1,6 @@
 /**
  * Mock AI heuristics to determine predicted final bids and detect potentially fraudulent bidding behavior.
- * In a real production scalable application, this logic should be offloaded to a Supabase Edge Function or external ML Service.
+ * In production, this logic should be handled by the Django backend or an external ML service.
  */
 
 export function predictFinalBid(currentPrice: number, startPrice: number, timeRemainingMs: number, bidCount: number): number {

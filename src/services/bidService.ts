@@ -1,7 +1,7 @@
 /**
  * bidService.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Migrated from Supabase to Django REST API for real-time bid operations.
+ * Calls the Django REST API for bid operations.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -13,6 +13,7 @@ export interface PlaceBidParams {
   auctionId: string | number;
   userId?: string | number;
   amount: number;
+  recaptchaToken?: string;
 }
 
 export interface PlaceBidResult {
@@ -25,6 +26,7 @@ export interface PlaceBidInput {
   auctionId: string | number;
   amount: number;
   userId?: string | number;
+  recaptchaToken?: string;
 }
 
 /**
@@ -43,14 +45,17 @@ export async function placeBid({ auctionId, amount }: PlaceBidInput): Promise<vo
  */
 export async function placeBidRPC(
   auctionIdOrParams: number | string | PlaceBidParams,
-  amountArg?: number
+  amountArg?: number,
+  recaptchaTokenArg?: string,
 ): Promise<PlaceBidResult> {
   let auctionId: number | string;
   let amount: number;
+  let recaptchaToken = recaptchaTokenArg || '';
 
   if (typeof auctionIdOrParams === 'object') {
     auctionId = auctionIdOrParams.auctionId;
     amount = auctionIdOrParams.amount;
+    recaptchaToken = auctionIdOrParams.recaptchaToken || recaptchaToken;
   } else {
     auctionId = auctionIdOrParams;
     amount = amountArg ?? 0;
@@ -60,7 +65,7 @@ export async function placeBidRPC(
     const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ amount: amount }),
+      body: JSON.stringify({ amount, recaptcha_token: recaptchaToken }),
     });
 
     if (!response.ok) {

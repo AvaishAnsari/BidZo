@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
-import { createAuctionAPI } from '../services/auctionService';
-import { Loader2, Sparkles, Link as LinkIcon, IndianRupee, AlertCircle } from 'lucide-react';
+import { createAuctionAPI, uploadAuctionImage } from '../services/auctionService';
+import { Loader2, Camera, ImagePlus, IndianRupee, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { AUCTION_CATEGORIES } from '../constants/auctionCategories';
+import BrandMark from '../components/BrandMark';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 const auctionSchema = z.object({
-  imageUrl: z.string().url("Please drop a valid public image URL."),
   title: z.string().min(5, "Title must be at least 5 characters long.").max(100, "Title is too long"),
   description: z.string().min(10, "Description needs to be more detailed (min 10 chars)."),
   startPrice: z.string().min(1, "Starting price must be greater than 0"),
@@ -22,26 +23,32 @@ const auctionSchema = z.object({
   category: z.string().min(1, "Please select a category")
 });
 
-export const AUCTION_CATEGORIES = ['Art', 'Vehicles', 'Jewelry', 'Electronics', 'Antiques', 'Fashion', 'Sports', 'Other'];
+export { AUCTION_CATEGORIES } from '../constants/auctionCategories';
 
 type AuctionFormValues = z.infer<typeof auctionSchema>;
 
 export const CreateAuction = () => {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors }
   } = useForm<AuctionFormValues>({
     resolver: zodResolver(auctionSchema),
     defaultValues: {
       title: '',
       description: '',
-      imageUrl: '',
       startPrice: '',
       minIncrement: '',
       endTime: '',
@@ -49,48 +56,112 @@ export const CreateAuction = () => {
     }
   });
 
-  const watchImageUrl = watch("imageUrl");
+  useEffect(() => () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
-  // ── Security: only sellers can reach this page ──────────────────────────
-  if (role !== 'seller') {
-    return (
-      <div style={{
-        minHeight: '60vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '1rem',
-      }}>
-        <AlertCircle style={{ width: '3rem', height: '3rem', color: '#f87171' }} />
-        <h2 style={{ color: '#f87171', fontWeight: 700, fontSize: '1.25rem' }}>
-          Access Restricted
-        </h2>
-        <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-          Only Sellers can create auctions.
-        </p>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)',
-            borderRadius: '0.75rem', color: '#a5b4fc', padding: '0.65rem 1.5rem',
-            cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
-          }}
-        >
-          ← Back to Auctions
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && cameraStreamRef.current) {
+      videoRef.current.srcObject = cameraStreamRef.current;
+      void videoRef.current.play().catch(() => undefined);
+    }
+  }, [isCameraOpen]);
+
+  useEffect(() => () => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  const closeCamera = () => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    setIsCameraOpen(false);
+  };
+
+  const openCamera = async () => {
+    setCameraError('');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Live camera access is unavailable in this browser. You can still choose a photo from your device.');
+      cameraInputRef.current?.click();
+      return;
+    }
+    try {
+      cameraStreamRef.current = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      setIsCameraOpen(true);
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : '';
+      setCameraError(name === 'NotAllowedError'
+        ? 'Camera permission was blocked. Allow camera access in your browser settings, or choose a photo instead.'
+        : 'Could not open a camera. Check that a camera is connected, or choose a photo instead.');
+    }
+  };
+
+  const acceptImageFile = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choose an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Choose an image that is 5 MB or smaller.');
+      return;
+    }
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    setCameraError('');
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    acceptImageFile(file);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video.videoHeight) {
+      setCameraError('Camera is still starting. Please wait a moment and try again.');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      setCameraError('Could not capture the photo. Please choose an image from your device.');
+      return;
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        setCameraError('Could not capture the photo. Please try again.');
+        return;
+      }
+      acceptImageFile(new File([blob], `bidzo-photo-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+      closeCamera();
+    }, 'image/jpeg', 0.92);
+  };
 
   const onAuctionSubmit = async (data: AuctionFormValues) => {
     if (!user) return;
+    if (!selectedImage) {
+      toast.error('Choose a photo from your device or camera first.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
+      const imageUrl = await uploadAuctionImage(selectedImage);
       // ── Django API mode ──────────────────────────────────────────────────
       await createAuctionAPI({
         title: data.title.trim(),
         description: data.description.trim(),
         category: data.category,
-        image_url: data.imageUrl,
+        image_url: imageUrl,
         starting_price: parseFloat(data.startPrice),
+        min_increment: parseFloat(data.minIncrement),
         end_time: new Date(data.endTime).toISOString(),
       });
 
@@ -104,7 +175,7 @@ export const CreateAuction = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+    <div className="create-auction-page max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8 relative z-10 w-full">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-80 bg-brand-500/10 blur-[120px] rounded-full -z-10 pointer-events-none" />
 
       <motion.div
@@ -116,58 +187,58 @@ export const CreateAuction = () => {
         <div className="px-6 py-10 sm:p-12">
           {/* Header */}
           <div className="text-center mb-10">
-            <div className="bg-brand-500/10 p-3 rounded-2xl mb-4 inline-block border border-brand-500/20">
-              <Sparkles className="w-8 h-8 text-brand-400" />
+            <div className="bg-brand-500/10 p-3 rounded-2xl mb-4 inline-block border border-brand-500/20" style={{ color: '#805329' }}>
+              <BrandMark size={32} />
             </div>
             <h2 className="text-3xl font-extrabold text-white">Create New Auction</h2>
             <p className="mt-2 text-gray-400">List an exclusive item for bidding</p>
 
             {/* Seller badge */}
-            <div style={{
+            <div className="listing-kicker" style={{
               marginTop: '0.85rem',
               display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
               padding: '0.3rem 0.9rem',
               borderRadius: '9999px',
-              background: 'rgba(168,85,247,0.1)',
-              border: '1px solid rgba(168,85,247,0.25)',
-              fontSize: '0.72rem', fontWeight: 700, color: '#d8b4fe',
+              background: 'rgba(196,155,90,0.1)',
+              border: '1px solid rgba(196,155,90,0.25)',
+              fontSize: '0.72rem', fontWeight: 700, color: '#f0d9ae',
               letterSpacing: '0.06em', textTransform: 'uppercase',
             }}>
               🏷️ Seller — Create listing
             </div>
           </div>
 
-          <form onSubmit={handleSubmit(onAuctionSubmit)} className="space-y-8">
-            {/* Image URL */}
-            <div className="relative group">
-              <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-brand-400 transition-colors z-10" />
-              <input
-                type="url"
-                id="imageUrl"
-                {...register("imageUrl")}
-                className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] pl-11 pr-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder-transparent shadow-inner ${errors.imageUrl ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="Image URL"
-              />
-              <label 
-                htmlFor="imageUrl" 
-                className="absolute left-11 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-focus:top-[14px] peer-focus:text-[10px] peer-focus:text-brand-400 font-medium uppercase tracking-wider origin-left"
-                style={{ top: '14px', fontSize: '10px' }} // Fallback state when has value
-              >
-                Image URL (Public link)
-              </label>
-              {errors.imageUrl && <p className="mt-1.5 text-sm text-red-500">{errors.imageUrl.message}</p>}
-              
-              {/* Live preview */}
-              {watchImageUrl && !errors.imageUrl && (
-                <div style={{ marginTop: '1rem', borderRadius: '0.75rem', overflow: 'hidden', maxHeight: '200px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <img
-                    src={watchImageUrl}
-                    alt="Preview"
-                    style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }}
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                  />
+          <form onSubmit={handleSubmit(onAuctionSubmit)} className="create-auction-form">
+            {/* Auction image picker: device library on all screens and direct camera on mobile. */}
+            <div className="auction-image-picker">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="sr-only" aria-label="Choose auction photo from device" />
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="sr-only" aria-label="Take auction photo with camera" />
+              {imagePreview ? (
+                <div className="auction-image-preview">
+                  <img src={imagePreview} alt="Selected auction item preview" />
+                  <div className="auction-image-preview-actions">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="auction-image-change">
+                      <ImagePlus size={16} /> Choose another
+                    </button>
+                    <button type="button" onClick={() => void openCamera()} className="auction-image-change">
+                      <Camera size={16} /> Retake photo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="auction-image-empty">
+                  <ImagePlus size={24} aria-hidden="true" />
+                  <div>
+                    <strong>Add an item photo</strong>
+                    <span>JPG, PNG, WEBP, or GIF · up to 5 MB</span>
+                  </div>
+                  <div className="auction-image-actions">
+                    <button type="button" onClick={() => fileInputRef.current?.click()}><ImagePlus size={16} /> Choose photo</button>
+                    <button type="button" onClick={() => void openCamera()}><Camera size={16} /> Use camera</button>
+                  </div>
                 </div>
               )}
+              {cameraError && <p className="auction-camera-error" role="status">{cameraError}</p>}
             </div>
 
             {/* Title */}
@@ -274,19 +345,14 @@ export const CreateAuction = () => {
             </div>
 
             {/* Timing */}
-            <div className="relative group pt-2">
+            <div className="auction-end-time-field">
+              <label htmlFor="endTime" className="auction-field-label">Auction end time</label>
               <input
                 type="datetime-local"
                 id="endTime"
                 {...register("endTime")}
-                className={`peer w-full bg-black/40 border border-white/10 rounded-xl h-[56px] px-4 pt-5 pb-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all shadow-inner [color-scheme:dark] ${errors.endTime ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                className={`w-full bg-black/40 border border-white/10 rounded-xl h-[56px] px-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all shadow-inner ${errors.endTime ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
               />
-              <label 
-                htmlFor="endTime" 
-                className="absolute left-4 top-[22px] -translate-y-1/2 text-[10px] text-brand-400 pointer-events-none transition-all font-medium uppercase tracking-wider"
-              >
-                Auction End Time
-              </label>
               {errors.endTime && <p className="mt-1.5 text-sm text-red-500">{errors.endTime.message}</p>}
             </div>
 
@@ -297,18 +363,36 @@ export const CreateAuction = () => {
                 disabled={isSubmitting}
                 whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
                 whileTap={{ scale: isSubmitting ? 1 : 0.97 }}
-                className="w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-brand-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] border-t border-brand-400/30"
+                className="create-auction-submit w-full flex justify-center items-center gap-2 py-4 px-4 border border-transparent rounded-xl text-sm font-bold bg-brand-600 hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(157,108,48,0.24)]"
               >
                 {isSubmitting ? (
                   <><Loader2 className="animate-spin h-5 w-5" /> Creating Auction...</>
                 ) : (
-                  <><Sparkles className="h-5 w-5" /> Create Auction</>
+                  <><BrandMark size={20} /> Create Auction</>
                 )}
               </motion.button>
             </div>
           </form>
         </div>
       </motion.div>
+      {isCameraOpen && (
+        <div className="auction-camera-backdrop" role="presentation" onClick={(event) => {
+          if (event.target === event.currentTarget) closeCamera();
+        }}>
+          <section className="auction-camera-dialog" role="dialog" aria-modal="true" aria-labelledby="camera-dialog-title">
+            <header>
+              <h3 id="camera-dialog-title">Take an item photo</h3>
+              <button type="button" onClick={closeCamera} aria-label="Close camera"><X size={20} /></button>
+            </header>
+            <video ref={videoRef} autoPlay playsInline muted />
+            {cameraError && <p className="auction-camera-error" role="alert" style={{ margin: '0 1rem' }}>{cameraError}</p>}
+            <div className="auction-camera-controls">
+              <button type="button" onClick={closeCamera}>Cancel</button>
+              <button type="button" onClick={capturePhoto}><Camera size={17} /> Capture photo</button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

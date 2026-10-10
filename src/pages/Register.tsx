@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, User, Briefcase, Lock, Flame, ShieldCheck, Shield, Zap } from 'lucide-react';
+import { Loader2, Mail, Phone, User, Lock, ShieldCheck, Shield, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useForm } from 'react-hook-form';
@@ -9,53 +9,80 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
+import BrandMark from '../components/BrandMark';
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const hasGoogleConfig = clientId && clientId !== 'your_google_client_id_here' && clientId !== '';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const schema = z.object({
   name:  z.string().min(2, 'At least 2 characters.'),
   email: z.string().email('Invalid email address.'),
+  phoneNumber: z.string().regex(/^\+[1-9]\d{7,14}$/, 'Use country code, for example +919876543210.'),
   password: z.string().min(6, 'At least 6 characters.'),
-  role:  z.enum(['buyer', 'seller'] as const),
 });
 type FormVals = z.infer<typeof schema>;
 
 export const Register = () => {
-  // The backend currently has no registration endpoint, so we mock these
-
   const navigate = useNavigate();
   const { signInWithGoogle } = useAuth();
 
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtpValue, setPhoneOtpValue] = useState('');
+  const [phoneVerificationToken, setPhoneVerificationToken] = useState<string | null>(null);
 
 
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, touchedFields } } = useForm<FormVals>({
+  const { register, handleSubmit, watch, formState: { errors, touchedFields } } = useForm<FormVals>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', email: '', password: '', role: 'buyer' },
+    defaultValues: { name: '', email: '', phoneNumber: '', password: '' },
     mode: 'onTouched',
   });
 
-  const role = watch('role');
   const nameVal = watch('name');
   const emailVal = watch('email');
+  const phoneVal = watch('phoneNumber');
 
   const onRegister = async (data: FormVals) => {
     setErrorMsg(null);
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/register/', {
+      if (!phoneVerificationToken) {
+        const url = phoneOtpSent ? `${API_BASE_URL}/auth/otp/verify/` : `${API_BASE_URL}/auth/otp/request/`;
+        const payload = phoneOtpSent
+          ? { identifier: data.phoneNumber, channel: 'sms', purpose: 'phone_registration', code: phoneOtpValue }
+          : { identifier: data.phoneNumber, channel: 'sms', purpose: 'phone_registration' };
+        const otpResponse = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const otpResult = await otpResponse.json();
+        if (!otpResponse.ok) throw new Error(otpResult.error || 'Mobile verification failed.');
+
+        if (phoneOtpSent) {
+          setPhoneVerificationToken(otpResult.phone_verification_token);
+          toast.success('Mobile number verified. Create your account to continue.');
+        } else {
+          setPhoneOtpSent(true);
+          toast.success('Enter the code printed in the Django terminal.');
+        }
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: data.name,
           email: data.email,
           password: data.password,
-          role: data.role
+          phone_number: data.phoneNumber,
+          phone_verification_token: phoneVerificationToken,
         })
       });
 
@@ -67,7 +94,9 @@ export const Register = () => {
       toast.success('Registration successful! Please sign in.');
       navigate('/login');
     } catch (err: any) {
-      setErrorMsg(err.message || 'An error occurred.');
+      setErrorMsg(err instanceof TypeError
+        ? 'Could not reach the Django backend. Start PostgreSQL and the backend server at http://127.0.0.1:8000, then try again.'
+        : err.message || 'An error occurred.');
     } finally {
       setLoading(false);
     }
@@ -85,10 +114,10 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#020617] text-white overflow-hidden font-sans">
+    <div className="auth-shell min-h-screen w-full flex flex-col lg:flex-row bg-[#020617] text-white overflow-hidden font-sans">
 
       {/* ─── LEFT PANEL (HERO) ─── */}
-      <div className="w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
+      <div className="auth-aside w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
 
         {/* Background Effects */}
         <div className="absolute inset-0 z-0">
@@ -97,38 +126,33 @@ export const Register = () => {
             alt="Abstract Background"
             className="w-full h-full object-cover opacity-30 mix-blend-luminosity"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a]/95 via-[#0f111a]/80 to-[#4f46e5]/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a]/95 via-[#0f111a]/80 to-[#8b5e2c]/30"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent"></div>
           <div className="absolute inset-0 hero-glow opacity-80 mix-blend-screen pointer-events-none"></div>
         </div>
 
         {/* Navbar / Logo */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-20 flex justify-between items-center w-full mb-12">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#c084fc] flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)]">
-              <Flame className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
+          <Link to="/" aria-label="BidZo home" className="flex items-center gap-2 text-white no-underline">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8e5f2d] to-[#d5b269] text-[#382719] flex items-center justify-center shadow-[0_8px_24px_rgba(157,108,48,0.35)] border border-white/10">
+              <BrandMark size={26} />
             </div>
             <span className="text-3xl font-extrabold tracking-tight">BidZo</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 shadow-xl">
-            <div className="flex -space-x-2">
-              <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
-              <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
-              <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
-            </div>
-            <span className="text-xs font-medium text-gray-300 pr-1">12,000+ Active Bidders</span>
-          </div>
+          </Link>
+          <Link to="/login" className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
+            Already have an account? Sign in
+          </Link>
         </motion.div>
 
         {/* Main Hero Content */}
         <div className="relative z-20 flex-1 flex flex-col justify-center max-w-xl w-full mx-auto lg:mx-0 py-4">
           <div className="space-y-8">
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-gray-200 bg-white/5 border border-white/10 backdrop-blur-md">
-              <ShieldCheck className="w-4 h-4 text-[#c084fc]"/> Trusted by thousands of bidders worldwide
+              <ShieldCheck className="w-4 h-4 text-[#d4aa5f]"/> Trusted by thousands of bidders worldwide
             </motion.div>
 
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="text-4xl lg:text-[4.5rem] font-extrabold leading-[1.05] tracking-tight">
-              The smarter way <br className="hidden lg:block"/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#c084fc] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">bid & win</span>
+              The smarter way <br className="hidden lg:block"/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] drop-shadow-[0_0_15px_rgba(196,155,90,0.4)]">bid & win</span>
             </motion.h1>
 
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-gray-300 text-base lg:text-xl leading-relaxed max-w-md font-medium">
@@ -137,8 +161,8 @@ export const Register = () => {
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }} className="flex items-center gap-8 lg:gap-10 pt-4 lg:pt-6">
               <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#8b5e2c]/20 to-[#d4aa5f]/10 border border-[#8b5e2c]/30 flex items-center justify-center shadow-[0_0_15px_rgba(157,108,48,0.15)]">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4aa5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </div>
                 <div>
                   <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">12K+</div>
@@ -147,8 +171,8 @@ export const Register = () => {
               </div>
               <div className="w-px h-12 lg:h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
               <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#8b5e2c]/20 to-[#d4aa5f]/10 border border-[#8b5e2c]/30 flex items-center justify-center shadow-[0_0_15px_rgba(157,108,48,0.15)]">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4aa5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
                 </div>
                 <div>
                   <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">38K+</div>
@@ -161,21 +185,21 @@ export const Register = () => {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8 }} className="grid grid-cols-3 gap-6 pt-6 mt-6 border-t border-white/10">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
-                  <Zap className="w-5 h-5 text-[#c084fc]"/>
+                  <Zap className="w-5 h-5 text-[#d4aa5f]"/>
                 </div>
                 <h4 className="text-sm font-bold text-white mb-1">Real-time Bidding</h4>
                 <p className="text-xs text-gray-400 font-medium">Instant bid updates</p>
               </div>
               <div>
                 <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
-                  <ShieldCheck className="w-5 h-5 text-[#c084fc]"/>
+                  <ShieldCheck className="w-5 h-5 text-[#d4aa5f]"/>
                 </div>
                 <h4 className="text-sm font-bold text-white mb-1">Anti-Sniping</h4>
                 <p className="text-xs text-gray-400 font-medium">Fair play for everyone</p>
               </div>
               <div>
                 <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
-                  <Shield className="w-5 h-5 text-[#c084fc]"/>
+                  <Shield className="w-5 h-5 text-[#d4aa5f]"/>
                 </div>
                 <h4 className="text-sm font-bold text-white mb-1">Secure Signups</h4>
                 <p className="text-xs text-gray-400 font-medium">OTP & Bot Protection</p>
@@ -197,12 +221,12 @@ export const Register = () => {
       </div>
 
       {/* ─── RIGHT PANEL (FORM) ─── */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
+      <div className="auth-panel w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="w-full max-w-[480px] bg-[#0f111a]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-[0_0_60px_rgba(139,92,246,0.12)] relative z-10 border border-white/10"
+          className="auth-card w-full max-w-[480px] bg-[#0f111a]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-[0_0_60px_rgba(196,155,90,0.12)] relative z-10 border border-white/10"
         >
           {/* Subtle inner radial glow */}
           <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent rounded-3xl pointer-events-none"></div>
@@ -271,7 +295,7 @@ export const Register = () => {
 
                   <motion.div variants={itemVariants} className="flex items-center gap-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10"></div>
-                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">or with email verification</span>
+                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">create your BidZo account</span>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
                   </motion.div>
 
@@ -279,17 +303,17 @@ export const Register = () => {
 
                     <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                       <div className="relative w-full">
-                        <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${nameVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
+                        <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${nameVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                         <input
                           type="text"
                           id="name"
                           autoComplete="name"
                           {...register('name')}
                           style={{ paddingLeft: '44px' }}
-                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
                           placeholder="Full Name"
                         />
-                        <label htmlFor="name" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                        <label htmlFor="name" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none">
                           Full Name
                         </label>
                       </div>
@@ -298,67 +322,84 @@ export const Register = () => {
 
                     <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                       <div className="relative w-full">
-                        <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
+                        <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                         <input
                           type="email"
                           id="email"
                           autoComplete="email"
                           {...register('email')}
                           style={{ paddingLeft: '44px' }}
-                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
                           placeholder="Email Address"
                         />
-                        <label htmlFor="email" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                        <label htmlFor="email" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none">
                           Email Address
                         </label>
                       </div>
                       {touchedFields.email && errors.email && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.email.message}</p>}
                     </motion.div>
 
+                    <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
+                      <div className="relative w-full">
+                        <Phone className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${phoneVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`} />
+                        <input
+                          type="tel"
+                          id="phoneNumber"
+                          autoComplete="tel"
+                          {...register('phoneNumber', { onChange: () => {
+                            setPhoneOtpSent(false);
+                            setPhoneOtpValue('');
+                            setPhoneVerificationToken(null);
+                          } })}
+                          style={{ paddingLeft: '44px' }}
+                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
+                          placeholder="Mobile Number (+919876543210)"
+                        />
+                        <label htmlFor="phoneNumber" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none">
+                          Mobile Number (include country code)
+                        </label>
+                      </div>
+                      {touchedFields.phoneNumber && errors.phoneNumber && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.phoneNumber.message}</p>}
+                    </motion.div>
+
+                    {phoneOtpSent && !phoneVerificationToken && (
+                      <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          value={phoneOtpValue}
+                          onChange={(event) => setPhoneOtpValue(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                          className="w-full h-[48px] rounded-[8px] border border-white/10 bg-black/40 px-4 text-center text-lg tracking-[0.35em] text-white focus:border-[#d4aa5f] focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50"
+                          placeholder="6-digit mobile code"
+                          aria-label="Mobile verification code"
+                        />
+                      </motion.div>
+                    )}
+
                     <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Lock className="w-4 h-4 text-gray-400 group-focus-within:text-[#c084fc] transition-colors"/>
+                          <Lock className="w-4 h-4 text-gray-400 group-focus-within:text-[#d4aa5f] transition-colors"/>
                         </div>
                         <input
                           id="password"
                           type="password"
                           {...register('password')}
                           style={{ paddingLeft: '44px' }}
-                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
                           placeholder="Password"
                         />
-                        <label htmlFor="password" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                        <label htmlFor="password" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none">
                           Password
                         </label>
                       </div>
                       {touchedFields.password && errors.password && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.password.message}</p>}
                     </motion.div>
 
-                    <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-[8px] pl-1">Account Type</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {(['buyer','seller'] as const).map(r => (
-                          <button key={r} type="button" onClick={()=>setValue('role',r,{shouldValidate:true})}
-                            className="flex flex-col items-center gap-1.5 py-3 rounded-[8px] border text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] relative"
-                            style={role===r
-                              ? { border: r === 'seller' ? '2px solid rgba(245,158,11,0.7)' : '2px solid rgba(168,85,247,0.7)',
-                                  background: r === 'seller' ? 'rgba(245,158,11,0.12)' : 'rgba(168,85,247,0.12)',
-                                  color: r === 'seller' ? '#fbbf24' : '#c084fc',
-                                  boxShadow: r === 'seller' ? '0 4px 16px rgba(245,158,11,0.2)' : '0 4px 16px rgba(168,85,247,0.2)' }
-                              : { border:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.2)', color:'#6b7280' }
-                            }>
-                            {role === r && (
-                              <span className="absolute top-1.5 right-1.5 text-[10px]">✓</span>
-                            )}
-                            {r==='buyer' ? <User className="w-5 h-5"/> : <Briefcase className="w-5 h-5"/>}
-                            <span className="capitalize font-bold">{r}</span>
-                            <span className="text-[10px] font-medium opacity-70">{r === 'buyer' ? 'Bid & Win' : 'Sell & Earn'}</span>
-                          </button>
-                        ))}
-                      </div>
-                      {touchedFields.role && errors.role && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.role.message}</p>}
-                    </motion.div>
+                    <motion.p variants={itemVariants} className="mb-4 text-center text-xs leading-relaxed text-gray-400">
+                      One account lets you bid on items and list your own auctions.
+                    </motion.p>
 
                     <motion.button
                       variants={itemVariants}
@@ -368,20 +409,20 @@ export const Register = () => {
                       disabled={loading}
                       className="w-full relative group overflow-hidden rounded-[8px] p-[1px] shadow-xl"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
-                      <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
+                      <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Zap className="w-5 h-5"/>}
-                        Create Account
+                        {!phoneOtpSent ? 'Verify mobile number' : !phoneVerificationToken ? 'Confirm mobile code' : 'Create Account'}
                       </div>
                     </motion.button>
                   </form>
 
                   <motion.p variants={itemVariants} className="text-[10px] text-center text-gray-500">
-                    Protected by reCAPTCHA and subject to Google's <a href="https://policies.google.com/privacy" className="text-[#c084fc] hover:text-[#d8b4fe] transition-colors font-semibold">Privacy Policy</a>
+                    Protected by reCAPTCHA and subject to Google's <a href="https://policies.google.com/privacy" className="text-[#d4aa5f] hover:text-[#f0d9ae] transition-colors font-semibold">Privacy Policy</a>
                   </motion.p>
 
                   <motion.p variants={itemVariants} className="text-center text-sm font-medium text-gray-400 mt-[8px]">
-                    Have an account? <Link to="/login" className="text-[#c084fc] font-bold hover:text-[#d8b4fe] transition-colors">Sign in →</Link>
+                    Have an account? <Link to="/login" className="text-[#d4aa5f] font-bold hover:text-[#f0d9ae] transition-colors">Sign in →</Link>
                   </motion.p>
                 </motion.div>
               )

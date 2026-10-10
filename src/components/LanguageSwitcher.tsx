@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "../context/ThemeContext";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -12,6 +13,7 @@ const LANGUAGES = [
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation();
+  const { isDark } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,10 +37,11 @@ export default function LanguageSwitcher() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 p-2 rounded-full hover:bg-white/10 transition-colors"
+        style={{ color: isDark ? '#d1d5db' : '#475569' }}
         aria-label="Change Language"
       >
-        <Globe className="w-5 h-5 text-gray-300" />
-        <span className="text-sm font-medium uppercase text-gray-300 hidden md:block">
+        <Globe className="w-5 h-5" />
+        <span className="text-sm font-medium uppercase hidden md:block">
           {i18n.language}
         </span>
       </button>
@@ -50,17 +53,26 @@ export default function LanguageSwitcher() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-32 bg-gray-900 border border-gray-800 rounded-lg shadow-xl overflow-hidden z-50"
+            className="absolute right-0 mt-2 w-32 rounded-lg shadow-xl overflow-hidden z-50"
+            style={{
+              background: isDark ? '#111827' : '#ffffff',
+              border: `1px solid ${isDark ? '#374151' : '#cbd5e1'}`,
+            }}
           >
             {LANGUAGES.map((lang) => (
               <button
                 key={lang.code}
                 onClick={() => changeLanguage(lang.code)}
-                className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                  i18n.language === lang.code
-                    ? "bg-purple-600/20 text-purple-400 font-semibold"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                }`}
+                className="w-full text-left px-4 py-2 text-sm transition-colors"
+                style={{
+                  background: i18n.language === lang.code
+                    ? (isDark ? 'rgba(157,108,48,0.2)' : '#f2e2bd')
+                    : 'transparent',
+                  color: i18n.language === lang.code
+                    ? (isDark ? '#e2c17f' : '#8b5e2c')
+                    : (isDark ? '#d1d5db' : '#334155'),
+                  fontWeight: i18n.language === lang.code ? 600 : 400,
+                }}
               >
                 {lang.label}
               </button>

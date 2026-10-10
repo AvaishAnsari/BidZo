@@ -23,12 +23,12 @@ export interface AuthContextType {
   userRole: UserRole | null;
   userName: string | null;
   session: any | null; // Placeholder for legacy compatibility
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, recaptchaToken?: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 
-  signInWithOtp: (email: string) => Promise<{ error: string | null }>;
-  verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
+  signInWithOtp: (identifier: string, channel: 'email' | 'sms', recaptchaToken?: string) => Promise<{ error: string | null }>;
+  verifyOtp: (identifier: string, token: string, channel: 'email' | 'sms', recaptchaToken?: string) => Promise<{ error: string | null }>;
   signUpOtp: (email: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
   signInWithGoogle: (token: string) => Promise<{ error: string | null; isNewUser?: boolean }>;
 
@@ -70,6 +70,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser();
   }, [refreshUser]);
 
+  useEffect(() => {
+    const expireSession = () => {
+      setUser(null);
+      setRole(null);
+      setIsLoading(false);
+    };
+    window.addEventListener('bidzo:auth-expired', expireSession);
+    return () => window.removeEventListener('bidzo:auth-expired', expireSession);
+  }, []);
+
   const updateRole = useCallback(
     async (newRole: UserRole): Promise<{ error: string | null }> => {
       try {
@@ -105,12 +115,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signIn = useCallback(
-    async (email: string, password: string): Promise<{ error: string | null }> => {
+    async (email: string, password: string, recaptchaToken = ''): Promise<{ error: string | null }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/login/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: email, password }),
+          body: JSON.stringify({ username: email, password, recaptcha_token: recaptchaToken }),
         });
         const result = await response.json();
         if (response.ok && result.success) {
@@ -161,8 +171,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
   }, []);
 
-  const signInWithOtp = useCallback(async () => ({ error: 'OTP login is not supported by the new backend yet.' }), []);
-  const verifyOtp = useCallback(async () => ({ error: 'OTP verification is not supported yet.' }), []);
+  const signInWithOtp = useCallback(async (identifier: string, channel: 'email' | 'sms', recaptchaToken = '') => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/request/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, channel, recaptcha_token: recaptchaToken }),
+      });
+      const result = await response.json();
+      return response.ok ? { error: null } : { error: result.error || 'Could not send a sign-in code.' };
+    } catch {
+      return { error: 'Could not connect to the backend server.' };
+    }
+  }, []);
+
+  const verifyOtp = useCallback(async (identifier: string, code: string, channel: 'email' | 'sms', recaptchaToken = '') => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/verify/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, code, channel, recaptcha_token: recaptchaToken }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        return { error: result.error || 'The sign-in code is invalid or expired.' };
+      }
+      localStorage.setItem('user', JSON.stringify(result.user));
+      localStorage.setItem('access_token', result.access);
+      if (result.refresh) localStorage.setItem('refresh_token', result.refresh);
+      refreshUser();
+      return { error: null };
+    } catch {
+      return { error: 'Could not connect to the backend server.' };
+    }
+  }, [refreshUser]);
   const signUpOtp = useCallback(async () => ({ error: 'OTP registration is not supported yet.' }), []);
   
   const signInWithGoogle = useCallback(async (token: string): Promise<{ error: string | null; isNewUser?: boolean }> => {
@@ -207,7 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signInWithGoogle,
         signOut,
         updateRole,
-        isConfigured: true,
+        isConfigured: Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
         refreshUser
       }}
     >

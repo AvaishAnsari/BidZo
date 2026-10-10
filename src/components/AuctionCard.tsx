@@ -43,9 +43,7 @@ const AuctionCardAction: React.FC<{ auction: Auction; isOwnAuction: boolean }> =
   const { isEnded: countdownEnded } = useCountdown(auction.end_time);
   const { t } = useTranslation();
   const { isDark } = useTheme();
-  const { role } = useAuth();
   const isEnded = countdownEnded || auction.status === 'ended';
-  const isSeller = role === 'seller';
 
   return (
     <Link
@@ -71,7 +69,7 @@ const AuctionCardAction: React.FC<{ auction: Auction; isOwnAuction: boolean }> =
         } : {}),
       }}
     >
-      {isEnded ? t('viewResults') : isOwnAuction ? t('manageAuction') : isSeller ? 'View Auction' : `${t('placeBid')} →`}
+      {isEnded ? t('viewResults') : isOwnAuction ? t('manageAuction') : `${t('placeBid')} →`}
     </Link>
   );
 };
@@ -129,7 +127,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = React.memo(({ auction }) 
             <div style={{
               display: 'none', width: '100%', height: '100%',
               alignItems: 'center', justifyContent: 'center',
-              background: isDark ? 'linear-gradient(135deg, #1e1b4b 0%, #111827 100%)' : 'linear-gradient(135deg, #f3e8ff 0%, #e5e7eb 100%)',
+              background: isDark ? 'linear-gradient(135deg, #1e1b4b 0%, #111827 100%)' : 'linear-gradient(135deg, #f2e2bd 0%, #e5e7eb 100%)',
               flexDirection: 'column', gap: '0.5rem',
             }}>
               <span style={{ fontSize: '2.5rem' }}>🖼️</span>
@@ -186,8 +184,8 @@ export const AuctionCard: React.FC<AuctionCardProps> = React.memo(({ auction }) 
           {auction.category && (
             <span style={{
               fontSize: '0.64rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-              background: 'rgba(99,102,241,0.12)', color: '#818cf8',
-              border: '1px solid rgba(99,102,241,0.22)',
+              background: 'rgba(157,108,48,0.12)', color: '#e2c17f',
+              border: '1px solid rgba(157,108,48,0.22)',
               padding: '0.15rem 0.5rem', borderRadius: '9999px',
             }}>
               {auction.category}
@@ -244,7 +242,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = React.memo(({ auction }) 
               {t('currentBid')}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <TrendingUp style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
+              <TrendingUp style={{ width: '1rem', height: '1rem', color: '#e2c17f' }} />
               <motion.span
                 key={auction.current_price}
                 initial={{ filter: 'brightness(2) drop-shadow(0 0 10px rgba(52, 211, 153, 0.8))', color: '#34d399' }}
@@ -254,7 +252,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = React.memo(({ auction }) 
                 style={{
                   fontSize: '1.3rem', fontWeight: 800,
                   ...(isDark ? {
-                    background: 'linear-gradient(to right, #818cf8, #c084fc)',
+                    background: 'linear-gradient(to right, #e2c17f, #d4aa5f)',
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                   } : {})
                 }}

@@ -1,15 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, AnimatePresence, animate } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Flame, Zap, Shield, Clock, TrendingUp, Users,
   ArrowRight, Star, ChevronRight, IndianRupee, Bell,
 } from 'lucide-react';
-import { useAuctions } from '../hooks/useAuctions';
-import { AuctionCard } from '../components/AuctionCard';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import BrandMark from '../components/BrandMark';
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */
 const centerStyle: React.CSSProperties = {
@@ -30,86 +28,75 @@ const FadeUp = ({
   delay?: number;
   className?: string;
 }) => {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
   return (
     <motion.div
-      ref={ref}
       className={className}
-      initial={{ opacity: 0, y: 32 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, delay, ease: 'easeOut' }}
+      initial={{ opacity: 0, y: 26, filter: 'blur(5px)' }}
+      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      viewport={{ once: true, amount: 0.18 }}
+      transition={{ duration: 0.72, delay, ease: [0.22, 1, 0.36, 1] }}
+    >{children}</motion.div>
+  );
+};
+
+const BeadArtwork = () => {
+  const colors = ['#9f4339', '#c9974e', '#dfc483', '#526b4b', '#d7a957', '#7a302f'];
+  const beads = Array.from({ length: 24 }, (_, index) => {
+    const angle = (index / 24) * Math.PI * 2 - Math.PI / 2;
+    return { x: 200 + Math.cos(angle) * 132, y: 190 + Math.sin(angle) * 145, color: colors[index % colors.length] };
+  });
+
+  return (
+    <motion.div
+      className="hero-artwork"
+      initial={{ opacity: 0, scale: 0.88, rotate: 4 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      transition={{ duration: 1.1, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
     >
-      {children}
+      <motion.svg
+        className="hero-bead-strand"
+        viewBox="0 0 400 380"
+        role="img"
+        aria-label="A handcrafted strand of colorful beads"
+        animate={{ y: [0, -7, 0], rotate: [0, 1.5, 0, -1.5, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <defs>
+          <radialGradient id="beadHighlight" cx="30%" cy="25%">
+            <stop offset="0%" stopColor="#fff6dd" stopOpacity=".92" />
+            <stop offset="35%" stopColor="#fff6dd" stopOpacity=".1" />
+            <stop offset="100%" stopColor="#1f130d" stopOpacity=".42" />
+          </radialGradient>
+          <linearGradient id="strand" x1="0" x2="1" y1="0" y2="1">
+            <stop stopColor="#edcd8a" />
+            <stop offset="1" stopColor="#8f6031" />
+          </linearGradient>
+        </defs>
+        <ellipse cx="200" cy="190" rx="132" ry="145" fill="none" stroke="url(#strand)" strokeWidth="3" opacity=".7" />
+        {beads.map((bead, index) => (
+          <g key={index}>
+            <circle cx={bead.x} cy={bead.y} r={index % 4 === 0 ? 17 : 14} fill={bead.color} stroke="#e1bd79" strokeWidth="2" />
+            <circle cx={bead.x} cy={bead.y} r={index % 4 === 0 ? 17 : 14} fill="url(#beadHighlight)" />
+          </g>
+        ))}
+        <circle cx="200" cy="190" r="46" fill="#3b261d" stroke="#d4aa5f" strokeWidth="2" />
+        <path d="M200 154l12 19 22 5-15 16 2 22-21-10-21 10 2-22-15-16 22-5z" fill="#c08a49" stroke="#f0d9ae" strokeWidth="2" />
+        <circle cx="200" cy="190" r="6" fill="#fff0cb" />
+      </motion.svg>
+      <motion.span className="hero-floating-label top" animate={{ y: [0, -5, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>Made by hand</motion.span>
+      <motion.span className="hero-floating-label bottom" animate={{ y: [0, 5, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>Every bead tells a story</motion.span>
     </motion.div>
   );
 };
 
-/* ─── awesome animated stat component ──────────────────────────── */
-const AnimatedStat = ({ num, prefix = '', suffix = '', decimals = 0, isComma = false }: any) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (inView && ref.current) {
-      const controls = animate(0, num, {
-        duration: 2.5,
-        ease: 'easeOut',
-        onUpdate(value) {
-          if (ref.current) {
-            let displayVal = decimals ? value.toFixed(decimals) : Math.floor(value).toString();
-            if (isComma) displayVal = Number(displayVal).toLocaleString();
-            ref.current.textContent = prefix + displayVal + suffix;
-          }
-        }
-      });
-      return () => controls.stop();
-    }
-  }, [inView, num, prefix, suffix, decimals, isComma]);
-
-  return <span ref={ref}>{prefix}0{suffix}</span>;
-};
-
-/* ─── awesome cursor glow effect ───────────────────────────────── */
-const CursorGlow = () => {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  return (
-    <div
-      style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-        pointerEvents: 'none', zIndex: 9999, mixBlendMode: 'screen',
-        background: `radial-gradient(circle 400px at ${mousePos.x}px ${mousePos.y}px, rgba(139, 92, 246, 0.08), transparent 40%)`,
-        transition: 'background 0.1s ease-out'
-      }}
-    />
-  );
-};
-
-/* ─── mock live bids ticker ────────────────────────────────────── */
-const TICKER_BIDS = [
-  { item: 'HMT Janata Watch (1978)', bid: '₹9,500',    user: 'Ravi S.' },
-  { item: 'Mughal Miniature Painting', bid: '₹52,000', user: 'Priya K.' },
-  { item: 'Royal Enfield Bullet 1965', bid: '₹2,10,000', user: 'Arjun M.' },
-  { item: 'Kundan Polki Jewellery Set', bid: '₹1,45,000', user: 'Meera V.' },
-  { item: 'M.F. Husain Lithograph',   bid: '₹3,80,000', user: 'Vikram R.' },
-];
-
 /* ─── features ─────────────────────────────────────────────────── */
 const FEATURE_KEYS = [
-  { icon: Zap,         color: '#818cf8', bg: 'rgba(99,102,241,0.12)',  border: 'rgba(99,102,241,0.25)',  titleKey: 'realTimeBidding',    descKey: 'realTimeBiddingDesc' },
-  { icon: Shield,      color: '#4ade80', bg: 'rgba(74,222,128,0.10)',  border: 'rgba(74,222,128,0.22)',  titleKey: 'securePlatform',     descKey: 'securePlatformDesc' },
-  { icon: Clock,       color: '#fbbf24', bg: 'rgba(251,191,36,0.10)',  border: 'rgba(251,191,36,0.22)',  titleKey: 'antiSnipingTimer',   descKey: 'antiSnipingTimerDesc' },
-  { icon: Bell,        color: '#c084fc', bg: 'rgba(192,132,252,0.12)', border: 'rgba(192,132,252,0.25)', titleKey: 'smartNotifications', descKey: 'smartNotificationsDesc' },
-  { icon: TrendingUp,  color: '#f87171', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.22)', titleKey: 'priceTracking',      descKey: 'priceTrackingDesc' },
-  { icon: IndianRupee, color: '#34d399', bg: 'rgba(52,211,153,0.10)',  border: 'rgba(52,211,153,0.22)',  titleKey: 'indianRupeeNative',  descKey: 'indianRupeeNativeDesc' },
+  { icon: Zap,         color: '#d8af68', bg: 'rgba(190,143,70,0.12)',  border: 'rgba(190,143,70,0.25)',  titleKey: 'realTimeBidding',    descKey: 'realTimeBiddingDesc' },
+  { icon: Shield,      color: '#879b70', bg: 'rgba(135,155,112,0.10)', border: 'rgba(135,155,112,0.22)', titleKey: 'securePlatform',     descKey: 'securePlatformDesc' },
+  { icon: Clock,       color: '#c17a56', bg: 'rgba(193,122,86,0.10)',  border: 'rgba(193,122,86,0.22)',  titleKey: 'antiSnipingTimer',   descKey: 'antiSnipingTimerDesc' },
+  { icon: Bell,        color: '#d8af68', bg: 'rgba(216,175,104,0.12)', border: 'rgba(216,175,104,0.25)', titleKey: 'smartNotifications', descKey: 'smartNotificationsDesc' },
+  { icon: TrendingUp,  color: '#a34b3d', bg: 'rgba(163,75,61,0.10)',   border: 'rgba(163,75,61,0.22)',   titleKey: 'priceTracking',      descKey: 'priceTrackingDesc' },
+  { icon: IndianRupee, color: '#b58a4a', bg: 'rgba(181,138,74,0.10)', border: 'rgba(181,138,74,0.22)', titleKey: 'indianRupeeNative',  descKey: 'indianRupeeNativeDesc' },
 ];
 
 const STEP_KEYS = [
@@ -119,59 +106,27 @@ const STEP_KEYS = [
   { n: '4', titleKey: 'winSecurely',   descKey: 'winSecurelyDesc',   icon: Shield },
 ];
 
-/* ─── stats ─────────────────────────────────────────────────────── */
-const STAT_KEYS = [
-  { num: 500,   suffix: '+',    labelKey: 'premiumItems',    icon: Star },
-  { num: 10000, suffix: '+',    labelKey: 'activeBidders',   icon: Users, isComma: true },
-  { num: 50,    prefix: '₹',   suffix: ' Cr+', labelKey: 'totalBidsPlaced', icon: IndianRupee },
-  { num: 99.9,  suffix: '%',   decimals: 1, labelKey: 'uptimeGuarantee', icon: Shield },
-];
-
-/* ─── dynamic headings ─────────────────────────────────────────── */
-const HEADINGS = ['Live Auctions', 'Rare Grails', 'Vintage Art', 'Rolex Watches'];
-
 /* ═══════════════════════════════════════════════════════════════════
    LANDING PAGE
    ════════════════════════════════════════════════════════════════ */
 export const LandingPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { auctions } = useAuctions();
   const { isDark } = useTheme();
   const { t } = useTranslation();
   
-  const [tickerIdx, setTickerIdx] = useState(0);
-  const [headingIdx, setHeadingIdx] = useState(0);
-
-  const liveAuctions = auctions.filter(a => a.status === 'live').slice(0, 3);
-  const displayAuctions = liveAuctions.length >= 3 ? liveAuctions : auctions.slice(0, 3);
-
-  // Auto-advance ticker
-  useEffect(() => {
-    const timer = setInterval(() => setTickerIdx(i => (i + 1) % TICKER_BIDS.length), 3200);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Auto-advance heading
-  useEffect(() => {
-    const timer = setInterval(() => setHeadingIdx(i => (i + 1) % HEADINGS.length), 3500);
-    return () => clearInterval(timer);
-  }, []);
-
-  // If already logged in, still show landing but CTA routes to /auctions
-  const handleGetStarted = () => navigate(user ? '/auctions' : '/login');
+  // Browsing is public; an account is only needed for bidding or listing.
+  const handleGetStarted = () => navigate(user ? '/auctions' : '/register');
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
-      <CursorGlow />
-
+    <div className="landing-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
       {/* ════ NAVBAR ════════════════════════════════════════════════ */}
       <header
-        className="glass"
+        className="glass landing-header"
         style={{ position: 'sticky', top: '-1px', paddingTop: '1px', margin: 0, zIndex: 50, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         <div style={centerStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
+          <div className="landing-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
 
             {/* Logo */}
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
@@ -179,18 +134,18 @@ export const LandingPage = () => {
                 whileHover={{ rotate: 15, scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  background: 'linear-gradient(135deg, #8e5f2d, #d5b269)',
                   padding: '0.6rem', borderRadius: '0.75rem',
-                  boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+                  boxShadow: '0 8px 24px rgba(157,108,48,0.35)',
                   border: '1px solid rgba(255,255,255,0.2)',
                   display: 'flex',
                 }}
               >
-                <Flame style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+                <BrandMark size={26} />
               </motion.div>
               <span style={{
                 fontSize: '1.5rem', fontWeight: 800,
-                background: isDark ? 'linear-gradient(to right, #ffffff, #a5b4fc)' : 'linear-gradient(to right, #4f46e5, #7e22ce)',
+                background: isDark ? 'linear-gradient(to right, #fffaf0, #d9b770)' : 'linear-gradient(to right, #805329, #a34b3d)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text', letterSpacing: '-0.02em',
               }}>
@@ -199,7 +154,7 @@ export const LandingPage = () => {
             </Link>
 
             {/* Nav actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="landing-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               {user ? (
                 <>
                   <Link
@@ -227,7 +182,7 @@ export const LandingPage = () => {
                   <Link
                     to="/register"
                     className="btn-gradient"
-                    style={{ textDecoration: 'none', fontSize: '0.95rem', padding: '0.6rem 1.5rem', boxShadow: '0 0 20px rgba(168,85,247,0.4)' }}
+                    style={{ textDecoration: 'none', fontSize: '0.95rem', padding: '0.6rem 1.5rem', boxShadow: '0 10px 24px rgba(157,108,48,0.24)' }}
                   >
                     {t('getStarted')}
                   </Link>
@@ -238,322 +193,39 @@ export const LandingPage = () => {
         </div>
       </header>
 
-      {/* ════ LIVE TICKER BAR ═══════════════════════════════════════ */}
-      <div style={{
-        background: isDark ? 'linear-gradient(90deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.12) 100%)' : 'rgba(249,250,251,1)',
-        borderBottom: isDark ? '1px solid rgba(99,102,241,0.15)' : '1px solid #e5e7eb',
-        padding: '0.65rem 0',
-        overflow: 'hidden',
-        minHeight: '2.5rem',
-        display: 'flex',
-        alignItems: 'center'
-      }}>
-        <div style={centerStyle}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tickerIdx}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.25 }}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}
-            >
-            <span style={{
-              background: isDark ? 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.15))' : '#10b981',
-              color: isDark ? '#4ade80' : '#ffffff', border: isDark ? '1px solid rgba(34,197,94,0.35)' : 'none',
-              borderRadius: '9999px', padding: '0.1rem 0.55rem',
-              fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
-            }}>● LIVE</span>
-            <span style={{ color: isDark ? '#6b7280' : '#4b5563' }}>{t('latestBid')}</span>
-            <span style={{ color: isDark ? '#e5e7eb' : '#111827', fontWeight: 600 }}>
-              {TICKER_BIDS[tickerIdx].item}
-            </span>
-            <span style={{ color: '#818cf8', fontWeight: 700 }}>
-              {TICKER_BIDS[tickerIdx].bid}
-            </span>
-            <span style={{ color: isDark ? '#4b5563' : '#6b7280' }}>{t('by')} {TICKER_BIDS[tickerIdx].user}</span>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-
       {/* ════ HERO ══════════════════════════════════════════════════ */}
-      <section style={{ 
-        position: 'relative', 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'flex-start',
-        padding: '3.5rem 1.5rem 7rem',
-        overflow: 'hidden' 
-      }}>
-        {/* Deep Glowing Premium Backgrounds */}
-        <div style={{
-          position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', pointerEvents: 'none',
-          background: 'radial-gradient(circle at 50% 30%, rgba(139, 92, 246, 0.15), transparent 60%)',
-          filter: 'blur(100px)', zIndex: 0
-        }} />
-        <div style={{
-          position: 'absolute', top: '10%', left: '10%', width: '30vw', height: '30vw', pointerEvents: 'none',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 60%)',
-          filter: 'blur(80px)', zIndex: 0
-        }} />
-        <div style={{
-          position: 'absolute', top: '20%', right: '10%', width: '30vw', height: '30vw', pointerEvents: 'none',
-          background: 'radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 60%)',
-          filter: 'blur(80px)', zIndex: 0
-        }} />
-
-        {/* Floating Ambient Circles */}
-        <motion.div animate={{ y: [0, -30, 0], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'absolute', top: '15%', left: '20%', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(99,102,241,0.2)', filter: 'blur(30px)' }} />
-        <motion.div animate={{ y: [0, 40, 0], opacity: [0.2, 0.5, 0.2] }} transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'absolute', top: '65%', right: '15%', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(168,85,247,0.2)', filter: 'blur(40px)' }} />
-
-        <div style={{ maxWidth: '1200px', width: '100%', position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          {/* Live Indicator Dot */}
-          <FadeUp delay={0.05}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(34,197,94,0.08)', padding: '0.35rem 1rem', borderRadius: '9999px', border: '1px solid rgba(34,197,94,0.25)', marginBottom: '1.5rem', backdropFilter: 'blur(10px)' }}>
-              <div className="pulse-live" style={{ width: '8px', height: '8px', background: '#4ade80', borderRadius: '50%' }} />
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#4ade80', letterSpacing: '0.08em' }}>{t('liveAuctionsRunning')}</span>
-            </div>
-          </FadeUp>
-
-          {/* Badge */}
-          <FadeUp delay={0.1}>
-            <div
-              style={{ 
-                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                margin: '0 auto 2rem', padding: '0.5rem 1.25rem',
-                background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(139,92,246,0.08)',
-                border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(139,92,246,0.2)',
-                backdropFilter: 'blur(16px)',
-                borderRadius: '9999px',
-                color: isDark ? '#e2e8f0' : '#6d28d9', fontSize: '0.875rem', fontWeight: 600,
-                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)' : '0 2px 10px rgba(139,92,246,0.1)'
-              }}
-            >
-              <Zap style={{ width: '1rem', height: '1rem', color: '#c084fc' }} />
-              {t('indiasPremierPlatform')}
-            </div>
-          </FadeUp>
-
-          {/* H1 */}
-          <FadeUp delay={0.2}>
-            <h1
-              style={{
-                margin: '0 auto 1.5rem',
-                fontWeight: 900,
-                letterSpacing: '-0.05em',
-                lineHeight: 1.1,
-                maxWidth: '1000px',
-              }}
-            >
-              <span style={{ color: isDark ? '#f8fafc' : '#111827', display: 'block', fontSize: 'clamp(2.5rem, 6vw, 4.5rem)' }}>
-                {t('discoverPremium')}
-              </span>
-              <AnimatePresence mode="popLayout">
-                <motion.span
-                  key={headingIdx}
-                  initial={{ y: 30, opacity: 0, scale: 0.95 }}
-                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -30, opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
-                  className="gradient-text"
-                  style={{ display: 'inline-block', fontSize: 'clamp(3rem, 8vw, 6.5rem)', padding: '0.2em 0' }}
-                >
-                  {HEADINGS[headingIdx]}
-                </motion.span>
-              </AnimatePresence>
-            </h1>
-          </FadeUp>
-
-          {/* Sub-heading */}
-          <FadeUp delay={0.4}>
-            <p
-              style={{
-                fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
-                color: isDark ? '#94a3b8' : '#374151',
-                maxWidth: '650px',
-                margin: '0 auto 3rem',
-                lineHeight: 1.7,
-                fontWeight: 400,
-              }}
-            >
-              {t('heroBodyText')}
-            </p>
-          </FadeUp>
-
-          {/* CTA buttons */}
-          <FadeUp delay={0.6}>
-            <div style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleGetStarted}
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                  fontSize: '1.05rem', fontWeight: 600, padding: '1rem 2.5rem',
-                  background: 'linear-gradient(135deg, #7e22ce 0%, #4f46e5 100%)',
-                  color: 'white', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 10px 30px -5px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-                  cursor: 'pointer', transition: 'box-shadow 0.3s'
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.boxShadow = '0 20px 40px -5px rgba(168,85,247,0.6), inset 0 1px 0 rgba(255,255,255,0.3)')}
-                onMouseOut={(e) => (e.currentTarget.style.boxShadow = '0 10px 30px -5px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)')}
-              >
-                {t('getStartedFree')}
-                <ArrowRight style={{ width: '1.2rem', height: '1.2rem' }} />
-              </motion.button>
-              
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/auctions"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                    padding: '1rem 2.5rem',
-                    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #d1d5db',
-                    borderRadius: '1rem',
-                    color: isDark ? '#e2e8f0' : '#374151', fontWeight: 600, fontSize: '1.05rem',
-                    textDecoration: 'none',
-                    background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
-                    backdropFilter: 'blur(20px)',
-                    transition: 'all 0.3s',
-                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.08)',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : '#f9fafb';
-                    e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.2)' : '#9ca3af';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : '#ffffff';
-                    e.currentTarget.style.borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#d1d5db';
-                  }}
-                >
-                  {t('exploreAuctions')}
-                  <ChevronRight style={{ width: '1.2rem', height: '1.2rem' }} />
-                </Link>
-              </motion.div>
-            </div>
-          </FadeUp>
-          
-          {/* Trust strip */}
-          <FadeUp delay={0.8}>
-            <p style={{ marginTop: '3rem', fontSize: '0.85rem', color: isDark ? '#64748b' : '#6b7280', fontWeight: 500 }}>
-              {t('noCreditCard')}
-            </p>
-          </FadeUp>
-        </div>
-      </section>
-
-      {/* ════ BLURRED PREVIEW OVERLAY ═══════════════════════════════ */}
-      <section style={{ position: 'relative', marginTop: '-5rem', paddingBottom: '5rem', zIndex: 10 }}>
-        <FadeUp delay={0.9}>
-          <div style={{ ...centerStyle, display: 'flex', justifyContent: 'center' }}>
-            <motion.div 
-              initial="initial" whileHover="hover"
-              style={{
-                width: '100%', maxWidth: '1000px', height: '360px',
-                background: 'linear-gradient(180deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '1.5rem',
-                border: '1px solid rgba(255,255,255,0.05)',
-                boxShadow: '0 -20px 40px rgba(0,0,0,0.5)',
-                display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-                overflow: 'hidden', position: 'relative', padding: '1.5rem',
-                cursor: 'pointer'
-              }}
-              onClick={handleGetStarted}
-            >
-              {/* Real Data UI Mockup */}
-              <motion.div 
-                variants={{
-                  initial: { filter: 'blur(3px) saturate(80%)', opacity: 0.65, scale: 0.98 },
-                  hover:   { filter: 'blur(0px) saturate(100%)', opacity: 1, scale: 1 }
-                }}
-                transition={{ duration: 0.4 }}
-                style={{ display: 'flex', gap: '1.5rem', pointerEvents: 'none', justifyContent: 'center', width: '100%' }}
-              >
-                {displayAuctions.length > 0 ? (
-                  displayAuctions.map(auction => (
-                    <div key={auction.id} style={{ width: '280px', flexShrink: 0 }}>
-                      <AuctionCard auction={auction} />
-                    </div>
-                  ))
-                ) : (
-                  [1, 2, 3].map(i => (
-                    <div key={i} style={{ width: '280px', height: '300px', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.05)', padding: '1rem' }}>
-                      <div style={{ width: '100%', height: '160px', background: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem', marginBottom: '1rem' }} />
-                      <div style={{ width: '80%', height: '1.2rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.2rem', marginBottom: '0.5rem' }} />
-                      <div style={{ width: '50%', height: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.2rem' }} />
-                    </div>
-                  ))
-                )}
-              </motion.div>
-              
-              {/* CTA Overlay */}
-              <motion.div 
-                variants={{
-                  initial: { background: 'linear-gradient(180deg, transparent 0%, #030712 90%)' },
-                  hover:   { background: 'linear-gradient(180deg, transparent 0%, rgba(3,7,18,0.5) 90%)' }
-                }}
-                style={{
-                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
-                  paddingBottom: '3rem', pointerEvents: 'none'
-                }}>
-                <button 
-                  style={{
-                    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(10px)', color: 'white', padding: '0.75rem 2.5rem',
-                    borderRadius: '9999px', fontSize: '1rem', fontWeight: 600,
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.5), 0 0 20px rgba(99,102,241,0.3)',
-                  }}
-                >
-                  {t('viewLiveGallery')}
-                </button>
-              </motion.div>
-            </motion.div>
+      <motion.section
+        className="landing-hero"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12 } } }}
+      >
+        <motion.div
+          className="landing-hero-inner"
+          variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="section-label" style={{ marginBottom: '1.25rem' }}>
+            <Star style={{ width: '0.95rem', height: '0.95rem', color: '#d8af68' }} />
+            Beadwork · Artisan finds · Live auctions
           </div>
-        </FadeUp>
-      </section>
-
-      {/* ════ STATS ════════════════════════════════════════════════ */}
-      <section style={{ padding: '2rem 0 6rem 0' }}>
-        <div style={{ ...centerStyle, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-          {STAT_KEYS.map(({ num, prefix, suffix, decimals, isComma, labelKey, icon: Icon }, i) => (
-            <FadeUp key={labelKey} delay={i * 0.1}>
-              <motion.div 
-                whileHover={{ scale: 1.05, y: -5 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-                style={{ 
-                  textAlign: 'center', 
-                  background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
-                  backdropFilter: 'blur(16px)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e5e7eb',
-                  borderRadius: '1.5rem',
-                  padding: '2rem 1.5rem',
-                  boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.2)' : '0 10px 25px rgba(0,0,0,0.07)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                  <div style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(139,92,246,0.1)', padding: '0.75rem', borderRadius: '1rem' }}>
-                    <Icon style={{ width: '1.75rem', height: '1.75rem', color: '#818cf8' }} />
-                  </div>
-                </div>
-                <div style={{
-                  fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                  fontWeight: 900, letterSpacing: '-0.03em',
-                  background: isDark ? 'linear-gradient(135deg, #e0e7ff, #a5b4fc)' : 'linear-gradient(135deg, #7e22ce, #4f46e5)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}>
-                  <AnimatedStat num={num} prefix={prefix} suffix={suffix} decimals={decimals} isComma={isComma} />
-                </div>
-                <div style={{ fontSize: '0.95rem', color: isDark ? '#94a3b8' : '#4b5563', marginTop: '0.5rem', fontWeight: 500 }}>{t(labelKey)}</div>
-              </motion.div>
-            </FadeUp>
-          ))}
-        </div>
-      </section>
+          <h1>
+            <span>Made to be</span>
+            <span className="gradient-text">treasured.</span>
+          </h1>
+          <p>Discover handmade beadwork and one-of-a-kind finds. Meet the makers, follow every bid, and bring home a piece with a story.</p>
+          <div className="landing-hero-actions">
+            <Link to="/auctions" className="btn-gradient">
+              Explore the collection <ArrowRight size={18} />
+            </Link>
+            <button className="landing-secondary-action" onClick={handleGetStarted}>
+              {user ? 'Go to auctions' : 'Join BidZo'} <ChevronRight size={18} />
+            </button>
+          </div>
+          <span className="landing-hero-note">A thoughtful marketplace for makers, collectors, and curious minds.</span>
+        </motion.div>
+        <BeadArtwork />
+      </motion.section>
 
       {/* ════ FEATURES ══════════════════════════════════════════════ */}
       <section style={{ padding: '6rem 0' }}>
@@ -578,7 +250,7 @@ export const LandingPage = () => {
             </div>
           </FadeUp>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div className="auction-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {FEATURE_KEYS.map(({ icon: Icon, color, bg, border, titleKey, descKey }, i) => (
               <FadeUp key={titleKey} delay={i * 0.07}>
                 <motion.div
@@ -607,7 +279,7 @@ export const LandingPage = () => {
       {/* ════ HOW IT WORKS ══════════════════════════════════════════ */}
       <section style={{
         padding: '6rem 0',
-        background: 'linear-gradient(180deg, transparent 0%, rgba(15,10,40,0.5) 50%, transparent 100%)',
+        background: 'linear-gradient(180deg, transparent 0%, rgba(190,143,70,0.07) 50%, transparent 100%)',
       }}>
         <div style={centerStyle}>
           <FadeUp>
@@ -627,12 +299,12 @@ export const LandingPage = () => {
             </div>
           </FadeUp>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem', position: 'relative' }}>
+          <div className="landing-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem', position: 'relative' }}>
             {/* Connecting line (desktop only) */}
             <div style={{
               position: 'absolute', top: '3.5rem', left: '12%', right: '12%',
               height: '1px', pointerEvents: 'none',
-              background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.5) 20%, rgba(168,85,247,0.5) 80%, transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(190,143,70,0.55) 20%, rgba(213,178,105,0.55) 80%, transparent)',
             }} />
 
             {STEP_KEYS.map(({ n, titleKey, descKey, icon: Icon }, i) => (
@@ -643,21 +315,21 @@ export const LandingPage = () => {
                     width: '7rem', height: '7rem', borderRadius: '50%',
                     background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
                     border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e5e7eb',
-                    boxShadow: isDark ? '0 0 40px rgba(99,102,241,0.1), inset 0 0 20px rgba(255,255,255,0.02)' : '0 8px 20px rgba(0,0,0,0.08)',
+                    boxShadow: isDark ? '0 0 40px rgba(190,143,70,0.14), inset 0 0 20px rgba(255,255,255,0.02)' : '0 8px 20px rgba(75,53,26,0.1)',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 1.5rem', position: 'relative', backdropFilter: 'blur(10px)',
                   }}>
                     <div style={{
                       position: 'absolute', top: '-0.5rem', right: '-0.5rem',
                       width: '2rem', height: '2rem', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #4f46e5 0%, #7e22ce 100%)',
+                      background: 'linear-gradient(135deg, #9f6b32 0%, #d0aa62 100%)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.85rem', fontWeight: 800, color: 'white',
-                      boxShadow: '0 0 15px rgba(168,85,247,0.5)',
+                      boxShadow: '0 0 15px rgba(190,143,70,0.4)',
                     }}>
                       {n}
                     </div>
-                    <Icon style={{ width: '2rem', height: '2rem', color: '#818cf8', marginBottom: '0.25rem' }} />
+                    <Icon style={{ width: '2rem', height: '2rem', color: '#c49b5a', marginBottom: '0.25rem' }} />
                   </div>
                   
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: isDark ? '#e2e8f0' : '#111827', marginBottom: '0.6rem' }}>{t(titleKey)}</h3>
@@ -681,14 +353,14 @@ export const LandingPage = () => {
                 textAlign: 'center',
                 position: 'relative',
                 overflow: 'hidden',
-                border: '1px solid rgba(99,102,241,0.25)',
+                border: '1px solid rgba(190,143,70,0.3)',
               }}
             >
               {/* Internal glow */}
               <div style={{
                 position: 'absolute', top: '-30%', left: '50%', transform: 'translateX(-50%)',
                 width: '600px', height: '300px', pointerEvents: 'none',
-                background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(99,102,241,0.2) 0%, transparent 70%)',
+                background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(190,143,70,0.18) 0%, transparent 70%)',
               }} />
 
               <div className="section-label" style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
@@ -701,7 +373,7 @@ export const LandingPage = () => {
                 fontWeight: 900, letterSpacing: '-0.035em', color: isDark ? '#f8fafc' : '#111827',
                 margin: '0 auto 1rem', maxWidth: '600px',
               }}>
-                {t('joinBidders')} <span className="gradient-text">{t('bidderCount')}</span> {t('competingRightNow')}
+                {t('discoverPremium')} <span className="gradient-text">{t('liveAuctions')}</span>
               </h2>
 
               <p style={{
@@ -757,8 +429,8 @@ export const LandingPage = () => {
         }}>
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Flame style={{ width: '1.1rem', height: '1.1rem', color: '#6366f1' }} />
-            <span style={{ color: '#6366f1', fontWeight: 700, fontSize: '1rem' }}>BidZo</span>
+            <Flame style={{ width: '1.1rem', height: '1.1rem', color: '#9a672e' }} />
+            <span style={{ color: '#9a672e', fontWeight: 700, fontSize: '1rem' }}>BidZo</span>
             <span style={{ color: '#4b5563', fontSize: '0.85rem' }}>
               © {new Date().getFullYear()} All rights reserved.
             </span>

@@ -41,10 +41,10 @@ export const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({ userId, className,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #4f46e5, #9333ea)',
+        background: 'linear-gradient(135deg, #8b5e2c, #8b5e2c)',
         borderRadius: '50%',
         padding: '2px',
-        boxShadow: '0 0 10px rgba(99, 102, 241, 0.4)',
+        boxShadow: '0 0 10px rgba(157, 108, 48, 0.4)',
         ...style
       }}
       title="Verified Premium Seller"

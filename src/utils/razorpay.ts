@@ -1,82 +1,82 @@
 import toast from 'react-hot-toast';
+import { getAuthHeaders } from '../services/api';
 
-/**
- * Dynamically loads the official Razorpay Checkout SDK onto the client window.
- */
-export const loadRazorpayScript = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
-       resolve(true);
-       return;
-    }
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+declare global {
+  interface Window { Razorpay?: new (options: Record<string, unknown>) => { open: () => void; on: (event: string, handler: (response: any) => void) => void } }
+}
 
-/**
- * Initializes a mock Razorpay Checkout modal environment.
- * In a true production environment with a Node server, the backend would generate an `order_id`
- * but for this Supabase frontend, we simulate a flawless native "checkout" sequence.
- */
+const loadRazorpayScript = (): Promise<boolean> => new Promise((resolve) => {
+  if (window.Razorpay) return resolve(true);
+  const script = document.createElement('script');
+  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  script.onload = () => resolve(Boolean(window.Razorpay));
+  script.onerror = () => resolve(false);
+  document.body.appendChild(script);
+});
+
+async function readResponse(response: Response) {
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || body.detail || 'Payment request failed.');
+  return body;
+}
+
 export const initializeRazorpayCheckout = async (options: {
-  amount: number;
+  auctionId: number;
   auctionTitle: string;
   userEmail: string;
   userName?: string;
   onSuccess: () => void;
   onFailure?: () => void;
 }) => {
-  const isLoaded = await loadRazorpayScript();
-
-  if (!isLoaded) {
-    toast.error('Razorpay SDK failed to load. Are you online?');
-    return;
-  }
-
-  // Fallback dev key
-  const key_id = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mock_12345';
-
-  const checkoutOptions = {
-    key: key_id,
-    amount: options.amount * 100, // Pass amount in subunits (paise)
-    currency: 'INR',
-    name: 'BidZo Escrow',
-    description: `Settlement for: ${options.auctionTitle}`,
-    image: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', // Gavel icon
-    handler: function (response: any) {
-      if (response.razorpay_payment_id) {
-        toast.success(`Payment verified successfully! Tx: ${response.razorpay_payment_id}`);
-        options.onSuccess();
-      } else {
-        toast.error('Payment callback failed.');
-        if (options.onFailure) options.onFailure();
-      }
-    },
-    prefill: {
-      name: options.userName || 'Valued Bidder',
-      email: options.userEmail,
-    },
-    theme: {
-      color: '#4f46e5' // Primary brand Indigo
-    }
-  };
-
   try {
-    const rzp = new (window as any).Razorpay(checkoutOptions);
-    
-    rzp.on('payment.failed', function (response: any) {
-      toast.error(`Payment Failed: ${response.error.description}`);
-      if (options.onFailure) options.onFailure();
+    const orderResponse = await fetch(`${API_BASE_URL}/payments/orders/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ auction_id: options.auctionId }),
     });
+    const order = await readResponse(orderResponse);
+    if (!(await loadRazorpayScript()) || !window.Razorpay) throw new Error('Razorpay Checkout could not be loaded.');
 
-    rzp.open();
+    const checkout = new window.Razorpay({
+      key: order.key_id,
+      order_id: order.order_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: 'BidZo',
+      description: `Winning bid: ${options.auctionTitle}`,
+      prefill: { name: options.userName || '', email: options.userEmail },
+      theme: { color: '#8b5e2c' },
+      handler: async (paymentResponse: any) => {
+        try {
+          const verifyResponse = await fetch(`${API_BASE_URL}/payments/verify/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(paymentResponse),
+          });
+          await readResponse(verifyResponse);
+          toast.success('Payment verified securely.');
+          options.onSuccess();
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Could not verify payment.');
+          options.onFailure?.();
+        }
+      },
+    });
+    checkout.on('payment.failed', (failure: any) => {
+      toast.error(failure?.error?.description || 'Payment failed.');
+      options.onFailure?.();
+    });
+    checkout.open();
   } catch (error) {
-    console.error('Razorpay initialization error:', error);
-    toast.error('Could not initialize payment gateway.');
+    toast.error(error instanceof Error ? error.message : 'Could not start secure checkout.');
+    options.onFailure?.();
   }
 };
+
+export async function fetchAuctionPaymentStatus(auctionId: number): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/payments/auctions/${auctionId}/`, { headers: getAuthHeaders() });
+  const body = await readResponse(response);
+  return body.status;
+}

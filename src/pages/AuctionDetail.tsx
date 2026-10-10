@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuction } from '../hooks/useAuction';
@@ -9,7 +9,7 @@ import { SmartBidAssistant } from '../components/SmartBidAssistant';
 import { generateMockTxHash, shortenTxHash, copyToClipboard } from '../utils/blockchain';
 import { placeBidRPC } from '../services/bidService';
 import { closeAuctionRPC } from '../services/auctionService';
-import { initializeRazorpayCheckout } from '../utils/razorpay';
+import { initializeRazorpayCheckout, fetchAuctionPaymentStatus } from '../utils/razorpay';
 import { formatCurrency, maskEmail, timeAgo } from '../utils/format';
 import { predictFinalBid, detectFraud } from '../utils/ai';
 import {
@@ -27,12 +27,12 @@ const TimeBlock = ({ value, label, urgent, isDark }: { value: number; label: str
   <div style={{ textAlign: 'center' }}>
     <div style={{
       background: urgent ? (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.05)') : (isDark ? 'rgba(17,24,39,0.8)' : '#ffffff'),
-      border: `1px solid ${urgent ? 'rgba(239,68,68,0.4)' : (isDark ? 'rgba(99,102,241,0.3)' : 'rgba(209,213,219,0.8)')}`,
+      border: `1px solid ${urgent ? 'rgba(239,68,68,0.4)' : (isDark ? 'rgba(157,108,48,0.3)' : 'rgba(209,213,219,0.8)')}`,
       borderRadius: '0.75rem',
       padding: '0.75rem 1rem',
       minWidth: '60px',
       marginBottom: '0.35rem',
-      boxShadow: urgent ? '0 0 20px rgba(239,68,68,0.2)' : '0 0 20px rgba(99,102,241,0.1)',
+      boxShadow: urgent ? '0 0 20px rgba(239,68,68,0.2)' : '0 0 20px rgba(157,108,48,0.1)',
       transition: 'all 0.3s',
     }}>
       <span style={{
@@ -49,17 +49,13 @@ const TimeBlock = ({ value, label, urgent, isDark }: { value: number; label: str
   </div>
 );
 
-// ── Anti-snipe constants ──────────────────────────────────────────────
-const SNIPE_WINDOW_MS  = 30_000; // 30 seconds
-const SNIPE_MAX        = 3;       // max extensions
-
 // ── Main page ─────────────────────────────────────────────────────
 export const AuctionDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role } = useAuth();
-  // We remove isConfigured since the backend does not support it
-  const isConfigured = true;
+  const isConfigured = Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY);
   const { isWatched, toggleWatchlist } = useWatchlist();
   const { isDark } = useTheme();
   const { t } = useTranslation();
@@ -87,27 +83,36 @@ export const AuctionDetail = () => {
   const isOwnAuction = !!(user && auction && auction.seller_id === user.id);
   const isWinning    = isEnded && auction?.winner_id
     ? auction.winner_id === user?.id
-    : !!(user && bids.length > 0 && bids[0].user_email === (user?.email ?? ''));
-    
-  const prevTopBidRef = useRef<string | null>(null);
+    : !!(user && bids.length > 0 && bids[0].bidder_id === user.id);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsPaid(false);
+    if (!user || !auction || !isEnded || !isWinning) return;
+    fetchAuctionPaymentStatus(auction.id)
+      .then((paymentStatus) => { if (!cancelled) setIsPaid(paymentStatus === 'completed'); })
+      .catch((error) => console.warn('[payment] status could not be loaded', error));
+    return () => { cancelled = true; };
+  }, [user, auction?.id, isEnded, isWinning]);
+
+  const prevTopBidRef = useRef<number | null>(null);
 
   // ── Step 5a: Outbid toast ─────────────────────────────────────────
   useEffect(() => {
     if (!user || bids.length === 0) return;
-    const topEmail = bids[0].user_email;
-    const userEmail = user.email ?? '';
+    const topBidderId = bids[0].bidder_id;
 
     // Only fire if we were previously the top bidder and got outbid
     if (
-      prevTopBidRef.current === userEmail &&
-      topEmail !== userEmail
+      prevTopBidRef.current === user.id &&
+      topBidderId !== user.id
     ) {
       toast.error(`You've been outbid! New top: ${formatCurrency(bids[0].amount)}`, {
         icon: '🔔',
         duration: 5000,
       });
     }
-    prevTopBidRef.current = topEmail;
+    prevTopBidRef.current = topBidderId;
   }, [bids, user]);
 
   // ── Step 5b: Ending-soon toast (fires once when < 60s left) ──────
@@ -118,7 +123,7 @@ export const AuctionDetail = () => {
     if (msLeft > 0 && msLeft <= 60_000 && !endingSoonFiredRef.current) {
       endingSoonFiredRef.current = true;
       toast(`⏰ Auction ending in under 1 minute!`, {
-        style: { background: '#1e1b4b', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.4)' },
+        style: { background: '#1e1b4b', color: '#f0d9ae', border: '1px solid rgba(157,108,48,0.4)' },
         duration: 6000,
       });
     }
@@ -129,7 +134,7 @@ export const AuctionDetail = () => {
   // ── Step 5c: Atomic Back-end Closure Trigger ─────────────────────────────
   const closureFiredRef = useRef(false);
   useEffect(() => {
-    if (isEnded && auction && auction.status !== 'ended' && !closureFiredRef.current) {
+    if (isEnded && auction && auction.status !== 'ended' && user && (isOwnAuction || role === 'admin') && !closureFiredRef.current) {
       closureFiredRef.current = true;
       console.log('Timer expired. Requesting atomic formal closure from PostgreSQL...');
       closeAuctionRPC(auction.id).then((res) => {
@@ -139,7 +144,7 @@ export const AuctionDetail = () => {
          }
       });
     }
-  }, [isEnded, auction, refetch]);
+  }, [isEnded, auction, user, isOwnAuction, role, refetch]);
 
   // ── Step 5c: Won toast (fires when auction just ended and user was winning) ──
   const wonFiredRef = useRef(false);
@@ -152,25 +157,12 @@ export const AuctionDetail = () => {
     }
   }, [isEnded, isWinning, auction]);
 
-  const applyAntiSnipe = (auctionEndTime: string): boolean => {
-    const msLeft = new Date(auctionEndTime).getTime() - Date.now();
-    if (msLeft > SNIPE_WINDOW_MS) return false; // not in snipe window
-
-    const count = auction?.extension_count ?? 0;
-    if (count >= SNIPE_MAX) return false; // max extensions reached
-
-    // Supabase/Django mode — anti-sniping should ideally be handled server-side.
-    // For now, trigger optimistic re-render.
-    applyBidOptimistic(auction!.current_price, ''); // no-op price, just trigger re-render
-    return false;
-  };
-
   // ── Bid submission ────────────────────────────────────────────────
   const handlePlaceBid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error('Please log in to place a bid');
-      navigate('/login');
+      navigate('/login', { state: { from: location } });
       return;
     }
     // Sellers cannot bid on their own auctions
@@ -186,7 +178,7 @@ export const AuctionDetail = () => {
     if (!auction) return;
 
     const amount = parseFloat(bidAmount);
-    
+
     // AI Fraud Detection check
     const fraudCheck = detectFraud(amount, auction.current_price, isWinning);
     if (fraudCheck.isFraud) {
@@ -208,7 +200,7 @@ export const AuctionDetail = () => {
       toast.error('This auction has not started yet');
       return;
     }
-    
+
     // Captcha validation
     if (!executeRecaptcha && isConfigured) {
       toast.error('ReCAPTCHA is still loading. Please wait a moment.');
@@ -217,20 +209,20 @@ export const AuctionDetail = () => {
 
     setIsPlacingBid(true);
     try {
+      let recaptchaToken = '';
       if (isConfigured && executeRecaptcha) {
-        const token = await executeRecaptcha('place_bid');
-        if (!token) throw new Error('Failed to verify reCAPTCHA.');
+        recaptchaToken = await executeRecaptcha('place_bid');
+        if (!recaptchaToken) throw new Error('Failed to verify reCAPTCHA.');
       }
       // ── Django API mode ─────────────────────────────────────────────
-      const result = await placeBidRPC(auction.id, amount);
+      const result = await placeBidRPC(auction.id, amount, recaptchaToken);
 
       if (!result.success) {
         toast.error(result.message || 'Failed to place bid');
         return;
       }
 
-      applyBidOptimistic(amount, user.email ?? 'You');
-      applyAntiSnipe(auction.end_time);
+      applyBidOptimistic(amount, user.username || user.email || 'You', user.id);
       setBidAmount('');
       toast.success('Bid placed successfully! 🎉');
     } catch (err: any) {
@@ -243,7 +235,7 @@ export const AuctionDetail = () => {
   const handlePayment = () => {
     if (!auction || !user) return;
     initializeRazorpayCheckout({
-      amount: auction.current_price,
+      auctionId: auction.id,
       auctionTitle: auction.title,
       userEmail: user.email ?? 'buyer@bidzo.com',
       userName: user.username || user.email?.split('@')[0] || 'Valued Bidder',
@@ -259,8 +251,8 @@ export const AuctionDetail = () => {
   if (isLoading) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-        <Loader2 style={{ width: '3rem', height: '3rem', color: '#6366f1', animation: 'spin 1s linear infinite' }} />
-        <p style={{ color: '#818cf8', fontSize: '0.875rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading Auction...</p>
+        <Loader2 style={{ width: '3rem', height: '3rem', color: '#8b5e2c', animation: 'spin 1s linear infinite' }} />
+        <p style={{ color: '#e2c17f', fontSize: '0.875rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading Auction...</p>
       </div>
     );
   }
@@ -280,7 +272,7 @@ export const AuctionDetail = () => {
           </button>
           <button
             onClick={refetch}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '0.75rem', color: '#a5b4fc', padding: '0.65rem 1.25rem', cursor: 'pointer', fontSize: '0.875rem' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(157,108,48,0.15)', border: '1px solid rgba(157,108,48,0.4)', borderRadius: '0.75rem', color: '#f0d9ae', padding: '0.65rem 1.25rem', cursor: 'pointer', fontSize: '0.875rem' }}
           >
             <RefreshCw style={{ width: '0.9rem', height: '0.9rem' }} /> Retry
           </button>
@@ -310,7 +302,7 @@ export const AuctionDetail = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
         {/* Main 2-col layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)', gap: '2rem', alignItems: 'start' }}>
+        <div className="auction-detail-columns" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)', gap: '2rem', alignItems: 'start' }}>
 
           {/* LEFT — Image + Details */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -441,7 +433,7 @@ export const AuctionDetail = () => {
             {/* ── Step 2: Current Bid (real-time animated) ─────────────── */}
             <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem', textAlign: 'center' }}>
               <p style={{ color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                <TrendingUp style={{ width: '0.875rem', height: '0.875rem', color: '#818cf8' }} />
+                <TrendingUp style={{ width: '0.875rem', height: '0.875rem', color: '#e2c17f' }} />
                 {t('currentBid')}
               </p>
               <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -452,7 +444,7 @@ export const AuctionDetail = () => {
                   transition={{ duration: 1.2, ease: 'easeOut' }}
                   style={{
                     fontSize: '2.75rem', fontWeight: 900,
-                    background: 'linear-gradient(to right, #818cf8, #c084fc)',
+                    background: 'linear-gradient(to right, #e2c17f, #d4aa5f)',
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                     lineHeight: 1,
                     margin: 0,
@@ -489,11 +481,11 @@ export const AuctionDetail = () => {
 
               {/* AI Prediction Box */}
               {!isEnded && !isUpcoming && (
-                <div style={{ marginTop: '1rem', background: 'rgba(99,102,241,0.05)', borderRadius: '0.75rem', padding: '0.75rem', border: '1px dashed rgba(99,102,241,0.3)' }}>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ marginTop: '1rem', background: 'rgba(157,108,48,0.05)', borderRadius: '0.75rem', padding: '0.75rem', border: '1px dashed rgba(157,108,48,0.3)' }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#e2c17f', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     <Zap style={{ width: '0.8rem', height: '0.8rem' }} /> AI Predicted Final Bid
                   </p>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#e0e7ff' }}>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '1.25rem', fontWeight: 800, color: '#f2e2bd' }}>
                     {formatCurrency(predictFinalBid(auction.current_price, auction.start_price, msLeft, bids.length))}
                   </p>
                 </div>
@@ -555,14 +547,8 @@ export const AuctionDetail = () => {
                 background: urgentTimer ? 'rgba(239,68,68,0.04)' : undefined,
               }}>
                 <p style={{ color: urgentTimer ? '#f87171' : '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Clock style={{ width: '0.875rem', height: '0.875rem', color: urgentTimer ? '#f87171' : '#818cf8' }} />
+                  <Clock style={{ width: '0.875rem', height: '0.875rem', color: urgentTimer ? '#f87171' : '#e2c17f' }} />
                   {isUpcoming ? 'Starts In' : urgentTimer ? '⚡ Ending Soon!' : 'Time Remaining'}
-                  {/* Anti-snipe extensions indicator */}
-                  {(auction.extension_count ?? 0) < SNIPE_MAX && !isEnded && !isUpcoming && (
-                    <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#4b5563', fontWeight: 500 }}>
-                      Anti-snipe: {SNIPE_MAX - (auction.extension_count ?? 0)} ext. left
-                    </span>
-                  )}
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                   <TimeBlock value={parts.days}    label="Days"  urgent={urgentTimer} isDark={isDark} />
@@ -579,8 +565,8 @@ export const AuctionDetail = () => {
             {/* Ended Banner */}
             {isEnded && (
               <div style={{
-                background: isWinning ? (isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(99, 102, 241, 0.1)') : 'rgba(239, 68, 68, 0.08)',
-                border: `1px solid ${isWinning ? (isPaid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(99, 102, 241, 0.4)') : 'rgba(239, 68, 68, 0.25)'}`,
+                background: isWinning ? (isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(157, 108, 48, 0.1)') : 'rgba(239, 68, 68, 0.08)',
+                border: `1px solid ${isWinning ? (isPaid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(157, 108, 48, 0.4)') : 'rgba(239, 68, 68, 0.25)'}`,
                 borderRadius: '1rem', padding: '1.25rem',
                 display: 'flex', flexDirection: 'column', gap: '1rem',
               }}>
@@ -605,14 +591,14 @@ export const AuctionDetail = () => {
                       borderRadius: '0.75rem', border: 'none', cursor: 'pointer',
                       fontSize: '0.95rem', fontWeight: 700, color: 'white',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                      boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+                      boxShadow: '0 0 15px rgba(157, 108, 48, 0.4)'
                     }}
                   >
                     <CreditCard style={{ width: '1.1rem', height: '1.1rem' }} />
                     Pay Escrow Securely
                   </button>
                 )}
-                
+
                 {isWinning && isPaid && (
                   <p style={{ margin: 0, fontSize: '0.8rem', color: '#4ade80', textAlign: 'center', fontWeight: 600 }}>
                     Your item is being prepared for shipment.
@@ -622,26 +608,10 @@ export const AuctionDetail = () => {
             )}
 
             {/* Bid Form — for users who do not own the auction */}
-            {!isEnded && !isUpcoming && !isOwnAuction && role === 'seller' && (
-              <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem', textAlign: 'center' }}>
-                <div style={{
-                    background: 'rgba(239,68,68,0.08)',
-                    border: '1px solid rgba(239,68,68,0.2)',
-                    borderRadius: '0.75rem', padding: '1rem',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem'
-                  }}>
-                    <AlertCircle style={{ width: '1.1rem', height: '1.1rem', color: '#f87171', flexShrink: 0 }} />
-                    <p style={{ color: '#fca5a5', fontSize: '0.85rem', margin: 0, fontWeight: 500 }}>
-                      Sellers cannot participate in bidding. Please use a Buyer account.
-                    </p>
-                  </div>
-              </div>
-            )}
-
-            {!isEnded && !isUpcoming && !isOwnAuction && role !== 'seller' && (
+            {!isEnded && !isUpcoming && !isOwnAuction && (
               <div className="glass-card" style={{ borderRadius: '1rem', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-                  <Flame style={{ width: '1.125rem', height: '1.125rem', color: '#818cf8' }} />
+                  <Flame style={{ width: '1.125rem', height: '1.125rem', color: '#e2c17f' }} />
                   <h3 style={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>Place Your Bid</h3>
                 </div>
 
@@ -655,7 +625,7 @@ export const AuctionDetail = () => {
                   }}>
                     <AlertCircle style={{ width: '1rem', height: '1rem', color: '#fbbf24', flexShrink: 0 }} />
                     <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>
-                      <Link to="/login" style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 600 }}>Sign in</Link>
+                      <Link to="/login" style={{ color: '#e2c17f', textDecoration: 'none', fontWeight: 600 }}>Sign in</Link>
                       {' '}to place a bid
                     </p>
                   </div>
@@ -675,12 +645,12 @@ export const AuctionDetail = () => {
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
                       <span>Your Bid Amount</span>
-                      <span style={{ color: '#818cf8', fontWeight: 600 }}>Min {formatCurrency(minBid)}</span>
+                      <span style={{ color: '#e2c17f', fontWeight: 600 }}>Min {formatCurrency(minBid)}</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <span style={{
                         position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)',
-                        color: isWinning ? '#4b5563' : '#818cf8', fontWeight: 700, fontSize: '0.9rem',
+                        color: isWinning ? '#4b5563' : '#e2c17f', fontWeight: 700, fontSize: '0.9rem',
                       }}>₹</span>
                       <input
                         type="number"
@@ -700,7 +670,7 @@ export const AuctionDetail = () => {
                           transition: 'border-color 0.2s',
                           cursor: isWinning ? 'not-allowed' : 'text',
                         }}
-                        onFocus={e => { if (!isWinning) e.target.style.borderColor = 'rgba(99,102,241,0.7)'; }}
+                        onFocus={e => { if (!isWinning) e.target.style.borderColor = 'rgba(157,108,48,0.7)'; }}
                         onBlur={e  => { if (!isWinning) e.target.style.borderColor = 'rgba(75,85,99,0.6)'; }}
                         disabled={!user || isPlacingBid || isWinning}
                       />
@@ -737,25 +707,25 @@ export const AuctionDetail = () => {
                     whileTap={{ scale: (!user || isPlacingBid || isWinning) ? 1 : 0.97 }}
                     style={{
                       width: '100%', padding: '0.9rem',
-                      background: isWinning 
-                        ? 'rgba(34,197,94,0.1)' 
-                        : user && !(bidAmount !== '' && parseFloat(bidAmount) < minBid) 
-                          ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' 
+                      background: isWinning
+                        ? 'rgba(34,197,94,0.1)'
+                        : user && !(bidAmount !== '' && parseFloat(bidAmount) < minBid)
+                          ? 'linear-gradient(135deg, #8b5e2c, #a97734)'
                           : 'rgba(55,65,81,0.5)',
-                      color: isWinning ? '#4ade80' : (user && !(bidAmount !== '' && parseFloat(bidAmount) < minBid) ? 'white' : '#9ca3af'), 
+                      color: isWinning ? '#4ade80' : (user && !(bidAmount !== '' && parseFloat(bidAmount) < minBid) ? 'white' : '#9ca3af'),
                       border: isWinning ? '1px solid rgba(34,197,94,0.3)' : 'none',
-                      borderRadius: '0.75rem', 
+                      borderRadius: '0.75rem',
                       cursor: (!user || isPlacingBid || isWinning || (bidAmount !== '' && parseFloat(bidAmount) < minBid)) ? 'not-allowed' : 'pointer',
                       fontSize: '0.95rem', fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                      boxShadow: (!user || isPlacingBid || isWinning || (bidAmount !== '' && parseFloat(bidAmount) < minBid)) ? 'none' : '0 0 20px rgba(99,102,241,0.35)',
+                      boxShadow: (!user || isPlacingBid || isWinning || (bidAmount !== '' && parseFloat(bidAmount) < minBid)) ? 'none' : '0 0 20px rgba(157,108,48,0.35)',
                       transition: 'all 0.2s',
                     }}
                   >
                     {isPlacingBid ? (
                       <><Loader2 style={{ width: '1rem', height: '1rem', animation: 'spin 1s linear infinite' }} /> Placing Bid...</>
                     ) : isWinning ? (
-                      isEnded 
+                      isEnded
                         ? <><Trophy style={{ width: '1rem', height: '1rem' }} /> You won this auction</>
                         : <><Trophy style={{ width: '1rem', height: '1rem' }} /> Top Bidder</>
                     ) : (
@@ -772,12 +742,12 @@ export const AuctionDetail = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{
                     width: '2.5rem', height: '2.5rem', borderRadius: '50%', flexShrink: 0,
-                    background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)',
+                    background: 'rgba(196,155,90,0.15)', border: '1px solid rgba(196,155,90,0.3)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '1.1rem',
                   }}>🏷️</div>
                   <div>
-                    <p style={{ color: '#d8b4fe', fontWeight: 700, fontSize: '0.95rem', margin: 0 }}>
+                    <p style={{ color: '#f0d9ae', fontWeight: 700, fontSize: '0.95rem', margin: 0 }}>
                       Your Listing Dashboard
                     </p>
                     <p style={{ color: '#6b7280', fontSize: '0.78rem', marginTop: '0.1rem' }}>
@@ -795,7 +765,7 @@ export const AuctionDetail = () => {
                     </div>
                     <div style={{ background: 'rgba(17,24,39,0.5)', borderRadius: '0.6rem', padding: '0.75rem', textAlign: 'center' }}>
                       <p style={{ color: '#6b7280', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>Current Price</p>
-                      <p style={{ color: '#a5b4fc', fontWeight: 800, fontSize: '1rem' }}>{formatCurrency(auction.current_price)}</p>
+                      <p style={{ color: '#f0d9ae', fontWeight: 800, fontSize: '1rem' }}>{formatCurrency(auction.current_price)}</p>
                     </div>
                   </div>
               </div>
@@ -835,24 +805,24 @@ export const AuctionDetail = () => {
                     }}>
                       Top {Math.min(bids.length, 10)}
                     </span>
-                    <button 
+                    <button
                       onClick={() => setIsBidHistoryModalOpen(true)}
                       style={{
                         fontSize: '0.75rem', fontWeight: 600,
-                        background: 'rgba(99, 102, 241, 0.15)',
-                        color: '#a5b4fc',
-                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        background: 'rgba(157, 108, 48, 0.15)',
+                        color: '#f0d9ae',
+                        border: '1px solid rgba(157, 108, 48, 0.4)',
                         borderRadius: '0.5rem',
                         padding: '0.25rem 0.75rem',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                       }}
-                      onMouseOver={(e) => { 
-                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.25)'; 
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(157, 108, 48, 0.25)';
                         e.currentTarget.style.transform = 'scale(1.05)';
                       }}
-                      onMouseOut={(e) => { 
-                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)'; 
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(157, 108, 48, 0.15)';
                         e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
@@ -872,7 +842,7 @@ export const AuctionDetail = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   <AnimatePresence initial={false}>
                     {bids.slice(0, 10).map((bid, i) => {
-                      const isMe = user?.email === bid.user_email;
+                      const isMe = user?.id === bid.bidder_id;
                       return (
                         <motion.div
                           key={bid.id}
@@ -888,13 +858,13 @@ export const AuctionDetail = () => {
                             background: i === 0
                               ? isMe
                                 ? 'rgba(34,197,94,0.08)'
-                                : 'rgba(99,102,241,0.1)'
+                                : 'rgba(157,108,48,0.1)'
                               : 'rgba(17,24,39,0.5)',
                             borderRadius: '0.6rem',
                             border: i === 0
                               ? isMe
                                 ? '1px solid rgba(34,197,94,0.3)'
-                                : '1px solid rgba(99,102,241,0.3)'
+                                : '1px solid rgba(157,108,48,0.3)'
                               : '1px solid rgba(55,65,81,0.3)',
                           }}
                         >
@@ -903,16 +873,16 @@ export const AuctionDetail = () => {
                             <div style={{
                               width: '1.5rem', height: '1.5rem', flexShrink: 0,
                               borderRadius: '50%',
-                              background: i === 0 ? 'rgba(99,102,241,0.25)' : 'rgba(55,65,81,0.5)',
+                              background: i === 0 ? 'rgba(157,108,48,0.25)' : 'rgba(55,65,81,0.5)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: '0.65rem', fontWeight: 700,
-                              color: i === 0 ? '#a5b4fc' : '#6b7280',
+                              color: i === 0 ? '#f0d9ae' : '#6b7280',
                             }}>
                               #{i + 1}
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <div style={{
-                                color: i === 0 ? (isMe ? '#4ade80' : '#c4b5fd') : '#9ca3af',
+                                color: i === 0 ? (isMe ? '#4ade80' : '#f0d9ae') : '#9ca3af',
                                 fontSize: '0.8rem', fontWeight: 500,
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                               }}>
@@ -921,9 +891,9 @@ export const AuctionDetail = () => {
                                   <span style={{
                                     marginLeft: '0.4rem',
                                     fontSize: '0.65rem', fontWeight: 700,
-                                    color: isMe ? '#4ade80' : '#a5b4fc',
-                                    background: isMe ? 'rgba(34,197,94,0.1)' : 'rgba(99,102,241,0.15)',
-                                    border: `1px solid ${isMe ? 'rgba(34,197,94,0.25)' : 'rgba(99,102,241,0.25)'}`,
+                                    color: isMe ? '#4ade80' : '#f0d9ae',
+                                    background: isMe ? 'rgba(34,197,94,0.1)' : 'rgba(157,108,48,0.15)',
+                                    border: `1px solid ${isMe ? 'rgba(34,197,94,0.25)' : 'rgba(157,108,48,0.25)'}`,
                                     borderRadius: '9999px',
                                     padding: '0.05rem 0.4rem',
                                   }}>
@@ -934,7 +904,7 @@ export const AuctionDetail = () => {
                               <div style={{ color: '#4b5563', fontSize: '0.7rem', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span>{timeAgo(bid.created_at)}</span>
                                 <span style={{ color: '#374151' }}>•</span>
-                                <button 
+                                <button
                                   onClick={() => copyToClipboard(generateMockTxHash(bid.id), 'Transaction Hash')}
                                   style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
@@ -961,7 +931,7 @@ export const AuctionDetail = () => {
 
                           {/* Right — amount */}
                           <span style={{
-                            color: i === 0 ? (isMe ? '#4ade80' : '#a5b4fc') : '#e5e7eb',
+                            color: i === 0 ? (isMe ? '#4ade80' : '#f0d9ae') : '#e5e7eb',
                             fontWeight: 700,
                             fontSize: '0.9rem',
                             whiteSpace: 'nowrap',
@@ -979,11 +949,11 @@ export const AuctionDetail = () => {
         </div>
       </div>
 
-      <BidHistoryModal 
-        isOpen={isBidHistoryModalOpen} 
-        onClose={() => setIsBidHistoryModalOpen(false)} 
-        auctionId={id ?? ''} 
-        currentUserEmail={user?.email} 
+      <BidHistoryModal
+        isOpen={isBidHistoryModalOpen}
+        onClose={() => setIsBidHistoryModalOpen(false)}
+        auctionId={id ?? ''}
+        currentUserId={user?.id}
       />
     </div>
   );

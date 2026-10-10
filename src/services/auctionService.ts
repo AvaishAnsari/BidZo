@@ -1,12 +1,13 @@
 /**
  * auctionService.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Migrated from Supabase to Django REST API for the auctions feature.
+ * Calls the Django REST API for auction data.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import type { Auction } from '../types';
 import { getAuthHeaders } from './api';
+import { placeBidRPC as placeBidThroughApi } from './bidService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -14,6 +15,9 @@ export interface BidRecord {
   id: number;
   amount: number;
   created_at: string;
+  bidder_id: number;
+  bidder_name: string;
+  /** Kept for components that display a masked bidder label. */
   user_email: string;
 }
 
@@ -28,6 +32,49 @@ async function handleResponse(response: Response) {
 
 // ── Django API Mappings & Queries ───────────────────────────────────────────
 
+export function mapAuction(item: any): Auction {
+  const startPrice = Number(item.starting_price);
+  const bidAmounts = Array.isArray(item.bids) ? item.bids.map((bid: any) => Number(bid.amount)) : [];
+  const highestRecordedBid = bidAmounts.length ? Math.max(...bidAmounts) : 0;
+  const endTimestamp = Date.parse(item.end_time);
+  const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
+  const status: Auction['status'] = item.status === 'upcoming'
+    ? 'upcoming'
+    : item.status === 'active' && !isExpired
+      ? 'live'
+      : 'ended';
+
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    image_url: item.image_url || '',
+    start_price: startPrice,
+    current_price: Math.max(startPrice, Number(item.current_highest_bid || 0), highestRecordedBid),
+    min_increment: item.min_increment ? Number(item.min_increment) : 50,
+    start_time: item.created_at || new Date().toISOString(),
+    end_time: item.end_time,
+    status,
+    created_at: item.created_at || new Date().toISOString(),
+    seller_id: item.seller ? (typeof item.seller === 'object' ? item.seller.id : item.seller) : 0,
+    category: item.category || 'General',
+    bid_count: Array.isArray(item.bids) ? item.bids.length : 0,
+    winner_id: item.winner_id ?? undefined,
+  };
+}
+
+function mapBid(bid: any): BidRecord {
+  const bidderName = bid.bidder_name || bid.bidder_username || 'Anonymous';
+  return {
+    id: bid.id,
+    amount: Number(bid.amount),
+    created_at: bid.timestamp || bid.created_at || new Date().toISOString(),
+    bidder_id: Number(bid.bidder),
+    bidder_name: bidderName,
+    user_email: bidderName,
+  };
+}
+
 /**
  * Fetch ALL auctions ordered by newest-first.
  */
@@ -36,22 +83,7 @@ export async function fetchAuctions(): Promise<Auction[]> {
     const response = await fetch(`${API_BASE_URL}/auctions/`);
     const data = await handleResponse(response);
 
-    return data.map((item: any) => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      image_url: item.image_url || '',
-      start_price: Number(item.starting_price),
-      current_price: Number(item.current_highest_bid > 0 ? item.current_highest_bid : item.starting_price),
-      min_increment: item.min_increment ? Number(item.min_increment) : 50,
-      start_time: item.created_at || new Date().toISOString(),
-      end_time: item.end_time,
-      status: item.status === 'active' ? 'live' : item.status === 'completed' ? 'ended' : (item.status || 'live'),
-      created_at: item.created_at || new Date().toISOString(),
-      seller_id: item.seller ? (typeof item.seller === 'object' ? item.seller.id : item.seller) : 0,
-      category: item.category || 'General',
-      bid_count: item.bids ? item.bids.length : 0,
-    })) as Auction[];
+    return data.map(mapAuction);
   } catch (error: any) {
     console.error('[auctionService] fetchAuctions error:', error.message);
     throw error;
@@ -65,6 +97,7 @@ export async function createAuctionAPI(payload: {
   title: string;
   description: string;
   starting_price: number;
+  min_increment: number;
   end_time: string;
   category?: string;
   image_url?: string;
@@ -91,6 +124,24 @@ export async function createAuctionAPI(payload: {
   }
 }
 
+export async function uploadAuctionImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const headers = getAuthHeaders();
+  delete headers['Content-Type']; // The browser adds the multipart boundary.
+
+  const response = await fetch(`${API_BASE_URL}/uploads/auction-image/`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.image_url) {
+    throw new Error(result.error || 'Could not upload the image. Please choose a JPG, PNG, WEBP, or GIF under 5 MB.');
+  }
+  return result.image_url;
+}
+
 /**
  * Fetch a SINGLE auction by ID.
  */
@@ -99,22 +150,7 @@ export async function fetchAuction(id: string | number): Promise<Auction> {
     const response = await fetch(`${API_BASE_URL}/auctions/${id}/`);
     const item = await handleResponse(response);
 
-    return {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      image_url: item.image_url || '',
-      start_price: Number(item.starting_price),
-      current_price: Number(item.current_highest_bid > 0 ? item.current_highest_bid : item.starting_price),
-      min_increment: item.min_increment ? Number(item.min_increment) : 50,
-      start_time: item.created_at || new Date().toISOString(),
-      end_time: item.end_time,
-      status: item.status === 'active' ? 'live' : item.status === 'completed' ? 'ended' : (item.status || 'live'),
-      created_at: item.created_at || new Date().toISOString(),
-      seller_id: item.seller ? (typeof item.seller === 'object' ? item.seller.id : item.seller) : 0,
-      category: item.category || 'General',
-      bid_count: item.bids ? item.bids.length : 0,
-    } as Auction;
+    return mapAuction(item);
   } catch (error: any) {
     console.error('[auctionService] fetchAuction error:', error.message);
     throw error;
@@ -129,12 +165,7 @@ export async function fetchBids(auctionId: string | number): Promise<BidRecord[]
     const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`);
     const data = await handleResponse(response);
 
-    return (Array.isArray(data) ? data : []).slice(0, 10).map((b: any) => ({
-      id: b.id,
-      amount: Number(b.amount),
-      created_at: b.timestamp || b.created_at || new Date().toISOString(),
-      user_email: b.bidder_username || b.bidder?.email || b.bidder?.username || 'Anonymous',
-    }));
+    return (Array.isArray(data) ? data : []).slice(0, 10).map(mapBid);
   } catch (error: any) {
     console.error('[auctionService] fetchBids error:', error.message);
     return [];
@@ -149,12 +180,7 @@ export async function fetchAllBids(auctionId: string | number): Promise<BidRecor
     const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`);
     const data = await handleResponse(response);
 
-    return (Array.isArray(data) ? data : []).map((b: any) => ({
-      id: b.id,
-      amount: Number(b.amount),
-      created_at: b.timestamp || b.created_at || new Date().toISOString(),
-      user_email: b.bidder_username || b.bidder?.email || b.bidder?.username || 'Anonymous',
-    }));
+    return (Array.isArray(data) ? data : []).map(mapBid);
   } catch (error: any) {
     console.error('[auctionService] fetchAllBids error:', error.message);
     return [];
@@ -166,10 +192,9 @@ export async function fetchAllBids(auctionId: string | number): Promise<BidRecor
  */
 export async function markAuctionEnded(auctionId: string | number): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/`, {
-      method: 'PATCH',
+    const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/close/`, {
+      method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ status: 'completed' }),
     });
     await handleResponse(response);
   } catch (error: any) {
@@ -195,17 +220,15 @@ export async function closeAuctionRPC(auctionId: number): Promise<{ success: boo
       method: 'POST',
       headers: getAuthHeaders(),
     });
-    await handleResponse(response);
+    const result = await handleResponse(response);
+    if (!result.success) return { success: false, message: result.error || 'Auction could not be closed.' };
     return { success: true, message: 'Auction closed securely' };
   } catch (err: any) {
     return { success: false, message: err.message || 'Unknown network error' };
   }
 }
 
-/**
- * Mock implementation of placeBidRPC to satisfy the frontend imports
- */
+/** Compatibility export that always sends bids to the Django API. */
 export async function placeBidRPC(auctionId: number, amount: number): Promise<{ success: boolean; message?: string }> {
-  console.log('placeBidRPC called with:', auctionId, amount);
-  return { success: true, message: 'Bid processed' };
+  return placeBidThroughApi(auctionId, amount);
 }

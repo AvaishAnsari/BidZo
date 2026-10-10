@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Flame, LogOut, User as UserIcon, Sun, Moon, Bell } from 'lucide-react';
+import { LogOut, User as UserIcon, Sun, Moon, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../context/NotificationContext';
 import BackToTop from './BackToTop';
+import BrandMark from './BrandMark';
 const centerStyle: React.CSSProperties = {
   maxWidth: '1280px',
   marginLeft: 'auto',
@@ -35,39 +36,37 @@ export const Layout = () => {
   const navLinks = [
     { name: t('auctions'), path: '/auctions' },
     ...(user ? [{ name: t('watchlist'), path: '/watchlist' }] : []),
-    ...(role === 'seller' ? [{ name: t('createAuction'), path: '/create-auction' }] : []),
+    ...(user ? [{ name: t('createAuction'), path: '/create-auction' }] : []),
     ...(role === 'admin' ? [{ name: t('adminDashboard'), path: '/admin' }] : []),
   ];
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
       {/* Navigation */}
-      <header className="glass" style={{ position: 'sticky', top: '-1px', paddingTop: '1px', margin: 0, zIndex: 50 }}>
+      <header className="glass app-header" style={{ position: 'sticky', top: '-1px', paddingTop: '1px', margin: 0, zIndex: 50 }}>
         <div style={centerStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
+          <div className="app-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
             {/* Logo */}
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
               <motion.div
                 whileHover={{ rotate: 15, scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  background: 'linear-gradient(135deg, #8e5f2d, #d5b269)',
                   padding: '0.6rem',
                   borderRadius: '0.75rem',
-                  boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+                  boxShadow: '0 8px 24px rgba(157,108,48,0.35)',
                   border: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex',
                 }}
               >
-                <Flame style={{ width: '1.5rem', height: '1.5rem', color: 'white' }} />
+                <BrandMark size={26} />
               </motion.div>
               <span style={{
                 fontSize: '1.5rem',
                 fontWeight: 800,
-                background: 'linear-gradient(to right, #f1f5f9, #94a3b8)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+                color: isDark ? '#f7f1e7' : '#805329',
+                WebkitTextFillColor: isDark ? '#f7f1e7' : '#805329',
                 letterSpacing: '-0.02em',
               }}>
                 BidZo
@@ -75,7 +74,7 @@ export const Layout = () => {
             </Link>
 
             {/* Nav Links */}
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <nav className="app-primary-nav" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
@@ -87,7 +86,7 @@ export const Layout = () => {
                       fontWeight: 500,
                       fontSize: '0.95rem',
                       textDecoration: 'none',
-                      color: isActive ? '#818cf8' : '#9ca3af',
+                      color: isActive ? (isDark ? '#d4aa5f' : '#865826') : (isDark ? '#b8aa95' : '#655947'),
                       paddingBottom: '0.25rem',
                       transition: 'color 0.2s',
                     }}
@@ -102,7 +101,7 @@ export const Layout = () => {
                           left: 0,
                           right: 0,
                           height: '2px',
-                          background: '#6366f1',
+                          background: '#b98342',
                           borderRadius: '9999px',
                         }}
                         initial={false}
@@ -119,7 +118,12 @@ export const Layout = () => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:text-white transition-colors ml-2"
-                style={{ overflow: 'hidden' }}
+                style={{
+                  overflow: 'hidden',
+                  background: isDark ? 'rgba(31,41,55,0.5)' : '#f1f5f9',
+                  borderColor: isDark ? 'rgba(55,65,81,0.5)' : '#cbd5e1',
+                  color: isDark ? '#d1d5db' : '#475569',
+                }}
                 title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
               >
                 <AnimatePresence mode="wait">
@@ -159,6 +163,11 @@ export const Layout = () => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:text-white transition-colors"
+                    style={{
+                      background: isDark ? 'rgba(31,41,55,0.5)' : '#f1f5f9',
+                      borderColor: isDark ? 'rgba(55,65,81,0.5)' : '#cbd5e1',
+                      color: isDark ? '#d1d5db' : '#475569',
+                    }}
                   >
                     <Bell size={18} />
                     {unreadCount > 0 && (
@@ -194,7 +203,7 @@ export const Layout = () => {
                         <div style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isDark ? 'white' : '#111827' }}>{t('notifications')}</h3>
                           {unreadCount > 0 && (
-                            <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{t('markAllRead')}</button>
+                            <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#b98342', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{t('markAllRead')}</button>
                           )}
                         </div>
                         <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
@@ -202,10 +211,10 @@ export const Layout = () => {
                             <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>{t('noNotificationsYet')}</p>
                           ) : (
                             notifications.map(n => (
-                              <div key={n.id} onClick={() => !n.read && markAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.1)', background: n.read ? 'transparent' : (isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)'), cursor: n.read ? 'default' : 'pointer', transition: 'background 0.2s' }}>
+                              <div key={n.id} onClick={() => !n.read && markAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.1)', background: n.read ? 'transparent' : (isDark ? 'rgba(190,143,70,0.12)' : 'rgba(190,143,70,0.09)'), cursor: n.read ? 'default' : 'pointer', transition: 'background 0.2s' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isDark ? '#e5e7eb' : '#1f2937' }}>{n.title}</span>
-                                  {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />}
+                                  {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b98342', flexShrink: 0 }} />}
                                 </div>
                                 <p style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 0.5rem 0', lineHeight: 1.4 }}>{n.message}</p>
                                 <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>{new Date(n.created_at).toLocaleString()}</span>
@@ -221,7 +230,7 @@ export const Layout = () => {
 
               {user ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>
-                  <Link to="/profile" style={{ textDecoration: 'none' }}>
+                  <Link to="/profile/details" style={{ textDecoration: 'none' }}>
                     <motion.div 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -230,19 +239,19 @@ export const Layout = () => {
                       alignItems: 'center',
                       gap: '0.5rem',
                       fontSize: '0.8rem',
-                      color: '#d1d5db',
-                      background: 'rgba(31,41,55,0.6)',
-                      border: '1px solid rgba(55,65,81,0.5)',
+                      color: isDark ? '#d1d5db' : '#334155',
+                      background: isDark ? 'rgba(31,41,55,0.6)' : '#f1f5f9',
+                      border: `1px solid ${isDark ? 'rgba(55,65,81,0.5)' : '#cbd5e1'}`,
                       padding: '0.4rem 0.75rem',
                       borderRadius: '9999px',
                       cursor: 'pointer',
                     }}>
-                      <UserIcon style={{ width: '1rem', height: '1rem', color: '#818cf8' }} />
+                      <UserIcon style={{ width: '1rem', height: '1rem', color: isDark ? '#d4aa5f' : '#865826' }} />
                       <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.username ?? user.email}</span>
                       <span style={{
-                        background: 'rgba(99,102,241,0.2)',
-                        color: '#a5b4fc',
-                        border: '1px solid rgba(99,102,241,0.3)',
+                        background: 'rgba(190,143,70,0.16)',
+                        color: isDark ? '#e2c17f' : '#795329',
+                        border: '1px solid rgba(190,143,70,0.32)',
                         fontSize: '0.65rem',
                         fontWeight: 700,
                         padding: '0.15rem 0.5rem',
@@ -250,7 +259,7 @@ export const Layout = () => {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                       }}>
-                        {role}
+                        {role === 'admin' ? 'Admin' : 'Member'}
                       </span>
                     </motion.div>
                   </Link>
@@ -262,7 +271,7 @@ export const Layout = () => {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      color: '#6b7280',
+                      color: isDark ? '#6b7280' : '#475569',
                       padding: '0.5rem',
                       borderRadius: '9999px',
                       display: 'flex',
@@ -279,7 +288,7 @@ export const Layout = () => {
                   <Link
                     to="/login"
                     style={{
-                      color: '#9ca3af',
+                      color: isDark ? '#9ca3af' : '#475569',
                       fontWeight: 500,
                       textDecoration: 'none',
                       padding: '0.5rem 1rem',
@@ -294,15 +303,15 @@ export const Layout = () => {
                   <Link
                     to="/register"
                     style={{
-                      background: '#4f46e5',
+                      background: 'linear-gradient(125deg, #9f6b32, #d0aa62)',
                       color: 'white',
                       fontWeight: 600,
                       textDecoration: 'none',
                       padding: '0.55rem 1.25rem',
                       borderRadius: '0.75rem',
                       fontSize: '0.9rem',
-                      border: '1px solid rgba(99,102,241,0.3)',
-                      boxShadow: '0 0 15px rgba(99,102,241,0.3)',
+                      border: '1px solid rgba(190,143,70,0.3)',
+                      boxShadow: '0 8px 20px rgba(157,108,48,0.22)',
                       transition: 'all 0.2s',
                     }}
                   >
@@ -326,7 +335,7 @@ export const Layout = () => {
       <footer className="glass" style={{ borderTop: '1px solid rgba(55,65,81,0.4)', marginTop: 'auto' }}>
         <div style={{ ...centerStyle, paddingTop: '2rem', paddingBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
-            <span style={{ color: '#6366f1', fontWeight: 600 }}>BidZo</span>
+            <span style={{ color: '#9a672e', fontWeight: 600 }}>BidZo</span>
             {' '}© {new Date().getFullYear()} All rights reserved.
           </p>
           <div style={{ display: 'flex', gap: '1.5rem' }}>

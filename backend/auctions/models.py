@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -12,9 +13,33 @@ class UserProfile(models.Model):
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='buyer')
+    phone_number = models.CharField(max_length=16, unique=True, blank=True, null=True)
+    email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+
+class OneTimeCode(models.Model):
+    CHANNEL_CHOICES = [('email', 'Email'), ('sms', 'SMS')]
+    PURPOSE_CHOICES = [
+        ('login', 'Login'),
+        ('phone_registration', 'Phone registration'),
+        ('contact_change', 'Contact change'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_codes', blank=True, null=True)
+    identifier = models.CharField(max_length=254, blank=True, default='')
+    channel = models.CharField(max_length=8, choices=CHANNEL_CHOICES)
+    purpose = models.CharField(max_length=24, choices=PURPOSE_CHOICES, default='login')
+    code_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(blank=True, null=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        indexes = [models.Index(fields=['user', 'identifier', 'channel', 'purpose', '-created_at'])]
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
@@ -40,6 +65,7 @@ class AuctionItem(models.Model):
     category = models.CharField(max_length=100, blank=True, null=True)
     image_url = models.URLField(max_length=1000, blank=True, null=True)
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
+    min_increment = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('50.00'))
     current_highest_bid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     end_time = models.DateTimeField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
@@ -76,3 +102,43 @@ def update_auction_highest_bid(sender, instance, created, **kwargs):
             auction.status = 'completed'
 
         auction.save()
+
+
+class WatchlistItem(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='watchlist_items')
+    auction = models.ForeignKey(AuctionItem, on_delete=models.CASCADE, related_name='watchers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'auction'], name='unique_user_watchlist_auction')]
+        ordering = ['-created_at']
+
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('bid_update', 'Bid update'),
+        ('auction_ending', 'Auction ending'),
+        ('outbid', 'Outbid'),
+        ('system', 'System'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=120)
+    message = models.CharField(max_length=500)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
+    auction = models.ForeignKey(AuctionItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
+    read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class AuctionPayment(models.Model):
+    STATUS_CHOICES = [('pending', 'Pending'), ('completed', 'Completed'), ('failed', 'Failed')]
+    auction = models.ForeignKey(AuctionItem, on_delete=models.PROTECT, related_name='payments')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='auction_payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    razorpay_order_id = models.CharField(max_length=80, unique=True)
+    razorpay_payment_id = models.CharField(max_length=80, blank=True, default='')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)

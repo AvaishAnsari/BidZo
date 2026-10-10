@@ -4,7 +4,7 @@ import { AuctionCard } from '../components/AuctionCard';
 import { Loader2, Zap, RefreshCw, Flame, Search, Filter, TrendingUp, Clock, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
-import { AUCTION_CATEGORIES } from './CreateAuction';
+import { AUCTION_CATEGORIES, AUCTION_CATEGORY_ALIASES, getAuctionCategoryGroup } from '../constants/auctionCategories';
 import { useTranslation } from 'react-i18next';
 import CategoryBrowser from '../components/CategoryBrowser';
 
@@ -41,27 +41,9 @@ export const Home = () => {
   // Category counts
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    const CATEGORY_ALIASES: Record<string, string[]> = {
-      'Electronics': ['Smartphones', 'Laptops', 'Tablets', 'Mobile Accessories', 'Electronics'],
-      'Fashion': ['Beauty', 'Fragrances', 'Skin Care', 'Womens Dresses', 'Tops', 'Mens Shirts', 'Womens Shoes', 'Mens Shoes', 'Fashion'],
-      'Watches': ['Womens Watches', 'Mens Watches', 'Watches'],
-      'Jewelry': ['Womens Jewellery', 'Mens Jewellery', 'Jewelry'],
-      'Antiques': ['Furniture', 'Home Decoration', 'Kitchen Accessories', 'Antiques'],
-      'Vehicles': ['Vehicle', 'Motorcycle', 'Vehicles'],
-      'Sports': ['Sports Accessories', 'Sports'],
-      'Collectibles': ['Groceries', 'Collectibles'],
-    };
-
     auctions.forEach(a => {
       if (!a.category) return;
-      // Find the main category this item belongs to, or use its own category if it's already a main one
-      let mainCategory = a.category;
-      for (const [key, aliases] of Object.entries(CATEGORY_ALIASES)) {
-        if (aliases.includes(a.category)) {
-          mainCategory = key;
-          break;
-        }
-      }
+      const mainCategory = getAuctionCategoryGroup(a.category) || a.category;
       counts[mainCategory] = (counts[mainCategory] || 0) + 1;
     });
     return counts;
@@ -90,19 +72,7 @@ export const Home = () => {
     }
 
     if (filterCategory !== 'all') {
-      const CATEGORY_ALIASES: Record<string, string[]> = {
-        'Electronics': ['Smartphones', 'Laptops', 'Tablets', 'Mobile Accessories', 'Electronics'],
-        'Fashion': ['Beauty', 'Fragrances', 'Skin Care', 'Womens Dresses', 'Tops', 'Mens Shirts', 'Womens Shoes', 'Mens Shoes', 'Fashion'],
-        'Watches': ['Womens Watches', 'Mens Watches', 'Watches'],
-        'Jewelry': ['Womens Jewellery', 'Mens Jewellery', 'Jewelry'],
-        'Antiques': ['Furniture', 'Home Decoration', 'Kitchen Accessories', 'Antiques'],
-        'Vehicles': ['Vehicle', 'Motorcycle', 'Vehicles'],
-        'Sports': ['Sports Accessories', 'Sports'],
-        'Collectibles': ['Groceries', 'Collectibles'],
-      };
-      
-      // Match against the exact category or any of its aliases
-      const allowed = CATEGORY_ALIASES[filterCategory] || [];
+      const allowed = AUCTION_CATEGORY_ALIASES[filterCategory] || [];
       result = result.filter(a => a.category === filterCategory || allowed.includes(a.category ?? ''));
     }
 
@@ -168,7 +138,7 @@ export const Home = () => {
           className="section-label"
           style={{ marginBottom: '1.5rem' }}
         >
-          <Zap style={{ width: '0.9rem', height: '0.9rem', color: '#c084fc' }} />
+          <Zap style={{ width: '0.9rem', height: '0.9rem', color: '#d4aa5f' }} />
           {t('nextGenerationBidding')}
         </motion.div>
 
@@ -207,15 +177,15 @@ export const Home = () => {
             display: 'inline-flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center',
             padding: '0.8rem 2rem',
             background: isDark ? 'rgba(15,12,40,0.6)' : 'rgba(255,255,255,0.8)',
-            border: `1px solid ${isDark ? 'rgba(99,102,241,0.2)' : 'rgba(209,213,219,0.8)'}`,
+            border: `1px solid ${isDark ? 'rgba(157,108,48,0.2)' : 'rgba(209,213,219,0.8)'}`,
             borderRadius: '1rem', backdropFilter: 'blur(12px)',
           }}
         >
           {[
             { icon: <Flame size={15} color="#ef4444" />, value: liveCount, label: 'Live Now', color: '#4ade80' },
-            { icon: <TrendingUp size={15} color="#818cf8" />, value: totalBids, label: 'Total Bids', color: '#a5b4fc' },
+            { icon: <TrendingUp size={15} color="#e2c17f" />, value: totalBids, label: 'Total Bids', color: '#f0d9ae' },
             { icon: <Clock size={15} color="#fbbf24" />, value: endingSoonCount, label: 'Ending < 1h', color: '#fbbf24' },
-            { icon: <Layers size={15} color="#c084fc" />, value: auctions.length, label: 'Auctions', color: '#c084fc' },
+            { icon: <Layers size={15} color="#d4aa5f" />, value: auctions.length, label: 'Auctions', color: '#d4aa5f' },
           ].map(({ icon, value, label, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {icon}
@@ -242,8 +212,8 @@ export const Home = () => {
       {/* ── Content ── */}
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0', gap: '1rem' }}>
-          <Loader2 style={{ width: '3rem', height: '3rem', color: '#6366f1', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#818cf8', fontSize: '0.8rem', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
+          <Loader2 style={{ width: '3rem', height: '3rem', color: '#8b5e2c', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: '#e2c17f', fontSize: '0.8rem', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600 }}>
             {t('loadingAuctions')}
           </p>
         </div>
@@ -264,10 +234,10 @@ export const Home = () => {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
               padding: '0.65rem 1.5rem',
-              background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
-              border: '1px solid rgba(99,102,241,0.4)',
+              background: isDark ? 'rgba(157,108,48,0.15)' : 'rgba(157,108,48,0.1)',
+              border: '1px solid rgba(157,108,48,0.4)',
               borderRadius: '0.75rem',
-              color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600, fontSize: '0.875rem',
+              color: isDark ? '#f0d9ae' : '#8b5e2c', fontWeight: 600, fontSize: '0.875rem',
               cursor: 'pointer',
             }}
           >
@@ -295,7 +265,7 @@ export const Home = () => {
                     outline: 'none', boxSizing: 'border-box', fontSize: '0.9rem',
                     transition: 'border-color 0.2s',
                   }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.6)'}
+                  onFocus={e => e.target.style.borderColor = 'rgba(157,108,48,0.6)'}
                   onBlur={e => e.target.style.borderColor = isDark ? 'rgba(75,85,99,0.6)' : '#d1d5db'}
                 />
               </div>
@@ -323,9 +293,9 @@ export const Home = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.5rem',
                   padding: '0.85rem 1.25rem',
-                  background: showFilters ? 'rgba(99,102,241,0.2)' : 'rgba(75,85,99,0.2)',
-                  border: `1px solid ${showFilters ? 'rgba(99,102,241,0.5)' : 'rgba(75,85,99,0.4)'}`,
-                  color: showFilters ? '#a5b4fc' : (isDark ? '#d1d5db' : '#4b5563'),
+                  background: showFilters ? 'rgba(157,108,48,0.2)' : 'rgba(75,85,99,0.2)',
+                  border: `1px solid ${showFilters ? 'rgba(157,108,48,0.5)' : 'rgba(75,85,99,0.4)'}`,
+                  color: showFilters ? '#f0d9ae' : (isDark ? '#d1d5db' : '#4b5563'),
                   borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600,
                   position: 'relative', transition: 'all 0.2s',
                 }}
@@ -335,7 +305,7 @@ export const Home = () => {
                 {activeFiltersCount > 0 && (
                   <span style={{
                     position: 'absolute', top: '-0.4rem', right: '-0.4rem',
-                    background: '#6366f1', color: 'white', borderRadius: '50%',
+                    background: '#8b5e2c', color: 'white', borderRadius: '50%',
                     width: '1.25rem', height: '1.25rem', fontSize: '0.75rem',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
                   }}>
@@ -438,7 +408,7 @@ export const Home = () => {
                 </h2>
                 <span className="badge-urgent" style={{ marginLeft: 'auto', animation: 'none' }}>{t('endingSoon')}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.75rem' }}>
+              <div className="auction-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.75rem' }}>
                 {trendingAuctions.map(auction => (
                   <motion.div key={auction.id} whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
                     <AuctionCard auction={auction} />
@@ -456,12 +426,12 @@ export const Home = () => {
           >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', gap: '0.75rem' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: isDark ? '#e5e7eb' : '#111827' }}>
-                {filterCategory !== 'all' ? filterCategory : t('allLiveAuctions')}
+                {filterCategory !== 'all' ? filterCategory : filterStatus === 'live' ? t('allLiveAuctions') : 'All Auctions'}
               </h2>
               {filteredAndSortedAuctions.length > 0 && (
                 <span style={{
-                  background: 'rgba(99,102,241,0.15)', color: '#818cf8',
-                  border: '1px solid rgba(99,102,241,0.3)',
+                  background: 'rgba(157,108,48,0.15)', color: '#e2c17f',
+                  border: '1px solid rgba(157,108,48,0.3)',
                   borderRadius: '9999px', padding: '0.15rem 0.6rem',
                   fontSize: '0.75rem', fontWeight: 700,
                 }}>
@@ -471,7 +441,7 @@ export const Home = () => {
             </div>
 
             {filteredAndSortedAuctions.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.75rem' }}>
+              <div className="auction-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.75rem' }}>
                 {filteredAndSortedAuctions.map(auction => (
                   <motion.div
                     key={auction.id}
@@ -496,8 +466,8 @@ export const Home = () => {
                 <button
                   onClick={resetFilters}
                   style={{
-                    marginTop: '1rem', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)',
-                    color: '#818cf8', borderRadius: '0.75rem', padding: '0.5rem 1.25rem',
+                    marginTop: '1rem', background: 'rgba(157,108,48,0.1)', border: '1px solid rgba(157,108,48,0.3)',
+                    color: '#e2c17f', borderRadius: '0.75rem', padding: '0.5rem 1.25rem',
                     cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
                   }}
                 >

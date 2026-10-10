@@ -2,20 +2,17 @@ import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { AUCTION_CATEGORIES } from '../constants/auctionCategories';
 
-export const CATEGORIES_WITH_META = [
-  { key: 'all',          label: 'All',          emoji: '✨', color: '#818cf8' },
-  { key: 'Watches',      label: 'Watches',       emoji: '⌚', color: '#fbbf24' },
-  { key: 'Art',          label: 'Art',           emoji: '🎨', color: '#f87171' },
-  { key: 'Jewelry',     label: 'Jewelry',      emoji: '💎', color: '#c084fc' },
-  { key: 'Antiques',     label: 'Antiques',      emoji: '🏺', color: '#34d399' },
-  { key: 'Electronics',  label: 'Electronics',   emoji: '📱', color: '#60a5fa' },
-  { key: 'Vehicles',     label: 'Vehicles',      emoji: '🚗', color: '#f97316' },
-  { key: 'Collectibles', label: 'Collectibles',  emoji: '🪄', color: '#e879f9' },
-  { key: 'Books',        label: 'Books',         emoji: '📚', color: '#a3e635' },
-  { key: 'Fashion',      label: 'Fashion',       emoji: '👗', color: '#fb7185' },
-  { key: 'Sports',       label: 'Sports',        emoji: '⚽', color: '#4ade80' },
-  { key: 'Real Estate',  label: 'Real Estate',   emoji: '🏠', color: '#38bdf8' },
+const categoryIcons = ['💎', '🫧', '🧵', '🪡', '📖', '🎨', '🏺', '✨'];
+const CATEGORIES_WITH_META = [
+  { key: 'all', label: 'All', emoji: '✨', color: '#e2c17f' },
+  ...AUCTION_CATEGORIES.map((label, index) => ({
+    key: label,
+    label,
+    emoji: categoryIcons[index],
+    color: ['#d4aa5f', '#60a5fa', '#f87171', '#34d399', '#a78bfa', '#fb7185', '#f97316', '#9ca3af'][index],
+  })),
 ];
 
 interface Props {
@@ -52,10 +49,10 @@ export default function CategoryBrowser({ selected, onChange, counts = {} }: Pro
           style={{
             position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
             zIndex: 10, background: isDark ? 'rgba(15,12,40,0.95)' : 'white',
-            border: '1px solid rgba(99,102,241,0.3)', borderRadius: '50%',
+            border: '1px solid rgba(157,108,48,0.3)', borderRadius: '50%',
             width: '2rem', height: '2rem', display: 'flex', alignItems: 'center',
             justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            color: '#818cf8',
+            color: '#e2c17f',
           }}
         >
           <ChevronLeft size={16} />
@@ -70,10 +67,10 @@ export default function CategoryBrowser({ selected, onChange, counts = {} }: Pro
           style={{
             position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
             zIndex: 10, background: isDark ? 'rgba(15,12,40,0.95)' : 'white',
-            border: '1px solid rgba(99,102,241,0.3)', borderRadius: '50%',
+            border: '1px solid rgba(157,108,48,0.3)', borderRadius: '50%',
             width: '2rem', height: '2rem', display: 'flex', alignItems: 'center',
             justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            color: '#818cf8',
+            color: '#e2c17f',
           }}
         >
           <ChevronRight size={16} />
@@ -118,7 +115,8 @@ export default function CategoryBrowser({ selected, onChange, counts = {} }: Pro
                   : isDark ? 'rgba(17,24,39,0.5)' : 'rgba(255,255,255,0.8)',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                minWidth: '5rem',
+                width: '8.5rem',
+                minHeight: '4.2rem',
                 position: 'relative',
                 backdropFilter: 'blur(10px)',
                 boxShadow: isActive
@@ -132,7 +130,9 @@ export default function CategoryBrowser({ selected, onChange, counts = {} }: Pro
                 fontWeight: 700,
                 color: isActive ? cat.color : isDark ? '#9ca3af' : '#4b5563',
                 letterSpacing: '0.02em',
-                whiteSpace: 'nowrap',
+                whiteSpace: 'normal',
+                textAlign: 'center',
+                lineHeight: 1.2,
               }}>
                 {cat.label}
               </span>
@@ -141,7 +141,7 @@ export default function CategoryBrowser({ selected, onChange, counts = {} }: Pro
                   position: 'absolute',
                   top: '-0.4rem',
                   right: '-0.4rem',
-                  background: isActive ? cat.color : '#6366f1',
+                  background: isActive ? cat.color : '#8b5e2c',
                   color: 'white',
                   fontSize: '0.6rem',
                   fontWeight: 800,
