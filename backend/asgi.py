@@ -13,15 +13,19 @@ import sys
 # Add the backend directory to sys.path so 'auctions' can be found
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
 from django.core.asgi import get_asgi_application
+django_asgi_app = get_asgi_application()
+
 from channels.routing import ProtocolTypeRouter, URLRouter
 from auctions.middleware import JWTAuthMiddlewareStack
 from auctions.routing import websocket_urlpatterns
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
+    "http": django_asgi_app,
     "websocket": JWTAuthMiddlewareStack(
         URLRouter(
             websocket_urlpatterns
