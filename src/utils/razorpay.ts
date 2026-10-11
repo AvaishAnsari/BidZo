@@ -25,10 +25,11 @@ export const loadRazorpayScript = (): Promise<boolean> => {
  */
 export const initializeRazorpayCheckout = async (options: {
   amount: number;
+  orderId: string;
   auctionTitle: string;
   userEmail: string;
   userName?: string;
-  onSuccess: () => void;
+  onSuccess: (response: any) => void;
   onFailure?: () => void;
 }) => {
   const isLoaded = await loadRazorpayScript();
@@ -45,13 +46,13 @@ export const initializeRazorpayCheckout = async (options: {
     key: key_id,
     amount: options.amount * 100, // Pass amount in subunits (paise)
     currency: 'INR',
+    order_id: options.orderId, // Add this crucial field!
     name: 'BidZo Escrow',
     description: `Settlement for: ${options.auctionTitle}`,
     image: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', // Gavel icon
     handler: function (response: any) {
       if (response.razorpay_payment_id) {
-        toast.success(`Payment verified successfully! Tx: ${response.razorpay_payment_id}`);
-        options.onSuccess();
+        options.onSuccess(response);
       } else {
         toast.error('Payment callback failed.');
         if (options.onFailure) options.onFailure();

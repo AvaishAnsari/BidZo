@@ -605,7 +605,7 @@ export const LandingPage = () => {
       </section>
 
       {/* ════ HOW IT WORKS ══════════════════════════════════════════ */}
-      <section style={{
+      <section id="how-it-works" style={{
         padding: '6rem 0',
         background: 'linear-gradient(180deg, transparent 0%, rgba(15,10,40,0.5) 50%, transparent 100%)',
       }}>

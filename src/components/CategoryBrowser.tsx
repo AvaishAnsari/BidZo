@@ -1,21 +1,19 @@
-import { useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useRef, useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, LayoutGrid, Laptop, Shirt, Gem, Car, Watch, Palette, Book, Home, Diamond, Map, Trophy } from 'lucide-react';
 
 export const CATEGORIES_WITH_META = [
-  { key: 'all',          label: 'All',          emoji: '✨', color: '#818cf8' },
-  { key: 'Watches',      label: 'Watches',       emoji: '⌚', color: '#fbbf24' },
-  { key: 'Art',          label: 'Art',           emoji: '🎨', color: '#f87171' },
-  { key: 'Jewelry',     label: 'Jewelry',      emoji: '💎', color: '#c084fc' },
-  { key: 'Antiques',     label: 'Antiques',      emoji: '🏺', color: '#34d399' },
-  { key: 'Electronics',  label: 'Electronics',   emoji: '📱', color: '#60a5fa' },
-  { key: 'Vehicles',     label: 'Vehicles',      emoji: '🚗', color: '#f97316' },
-  { key: 'Collectibles', label: 'Collectibles',  emoji: '🪄', color: '#e879f9' },
-  { key: 'Books',        label: 'Books',         emoji: '📚', color: '#a3e635' },
-  { key: 'Fashion',      label: 'Fashion',       emoji: '👗', color: '#fb7185' },
-  { key: 'Sports',       label: 'Sports',        emoji: '⚽', color: '#4ade80' },
-  { key: 'Real Estate',  label: 'Real Estate',   emoji: '🏠', color: '#38bdf8' },
+  { key: 'all',          label: 'All', icon: <LayoutGrid className="w-6 h-6 text-[var(--text-main)]" /> },
+  { key: 'Electronics',  label: 'Electronics', icon: <Laptop className="w-6 h-6 text-[var(--primary)]" /> },
+  { key: 'Fashion',      label: 'Fashion', icon: <Shirt className="w-6 h-6 text-[#ec4899]" /> },
+  { key: 'Collectibles', label: 'Collectibles', icon: <Gem className="w-6 h-6 text-[var(--warning)]" /> },
+  { key: 'Vehicles',     label: 'Vehicles', icon: <Car className="w-6 h-6 text-[var(--danger)]" /> },
+  { key: 'Watches',      label: 'Watches', icon: <Watch className="w-6 h-6 text-[#06b6d4]" /> },
+  { key: 'Jewelry',      label: 'Jewelry', icon: <Diamond className="w-6 h-6 text-[#10b981]" /> },
+  { key: 'Art',          label: 'Art', icon: <Palette className="w-6 h-6 text-[#f59e0b]" /> },
+  { key: 'Antiques',     label: 'Antiques', icon: <Map className="w-6 h-6 text-[#8b5cf6]" /> },
+  { key: 'Books',        label: 'Books', icon: <Book className="w-6 h-6 text-[#a855f7]" /> },
+  { key: 'Sports',       label: 'Sports', icon: <Trophy className="w-6 h-6 text-[#ef4444]" /> },
+  { key: 'Real Estate',  label: 'Real Estate', icon: <Home className="w-6 h-6 text-[#3b82f6]" /> },
 ];
 
 interface Props {
@@ -25,14 +23,13 @@ interface Props {
 }
 
 export default function CategoryBrowser({ selected, onChange, counts = {} }: Props) {
-  const { isDark } = useTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(true);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({ left: dir === 'left' ? -240 : 240, behavior: 'smooth' });
+    scrollRef.current.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
   };
 
   const handleScroll = () => {
@@ -42,152 +39,66 @@ export default function CategoryBrowser({ selected, onChange, counts = {} }: Pro
     setShowRight(scrollLeft + clientWidth < scrollWidth - 10);
   };
 
+  useEffect(() => {
+    handleScroll();
+  }, []);
+
   return (
-    <div style={{ position: 'relative', marginBottom: '2rem' }}>
+    <div className="relative mb-6 group">
       {/* Left arrow */}
       {showLeft && (
-        <motion.button
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        <button
           onClick={() => scroll('left')}
-          style={{
-            position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-            zIndex: 10, background: isDark ? 'rgba(15,12,40,0.95)' : 'white',
-            border: '1px solid rgba(99,102,241,0.3)', borderRadius: '50%',
-            width: '2rem', height: '2rem', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            color: '#818cf8',
-          }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer bg-[var(--surface)] border border-[var(--border)] text-[var(--text-main)] shadow-md hover:bg-[var(--elevated)] transition-all -ml-5"
         >
-          <ChevronLeft size={16} />
-        </motion.button>
+          <ChevronLeft size={20} />
+        </button>
       )}
 
       {/* Right arrow */}
       {showRight && (
-        <motion.button
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        <button
           onClick={() => scroll('right')}
-          style={{
-            position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
-            zIndex: 10, background: isDark ? 'rgba(15,12,40,0.95)' : 'white',
-            border: '1px solid rgba(99,102,241,0.3)', borderRadius: '50%',
-            width: '2rem', height: '2rem', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            color: '#818cf8',
-          }}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer bg-[var(--surface)] border border-[var(--border)] text-[var(--text-main)] shadow-md hover:bg-[var(--elevated)] transition-all -mr-5"
         >
-          <ChevronRight size={16} />
-        </motion.button>
+          <ChevronRight size={20} />
+        </button>
       )}
 
       {/* Scroll container */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        style={{
-          display: 'flex',
-          gap: '0.65rem',
-          overflowX: 'auto',
-          padding: '0.5rem 2.5rem',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
+        className="flex items-center gap-3 overflow-x-auto py-4 px-1 no-scrollbar"
       >
         {CATEGORIES_WITH_META.map((cat) => {
           const isActive = selected === cat.key;
           const count = cat.key === 'all' ? undefined : counts[cat.key];
           return (
-            <motion.button
+            <button
               key={cat.key}
               onClick={() => onChange(cat.key)}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.3rem',
-                padding: '0.65rem 1rem',
-                borderRadius: '1rem',
-                border: isActive
-                  ? `1px solid ${cat.color}55`
-                  : `1px solid ${isDark ? 'rgba(55,65,81,0.5)' : 'rgba(209,213,219,0.8)'}`,
-                background: isActive
-                  ? `linear-gradient(135deg, ${cat.color}22, ${cat.color}11)`
-                  : isDark ? 'rgba(17,24,39,0.5)' : 'rgba(255,255,255,0.8)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                minWidth: '5rem',
-                position: 'relative',
-                backdropFilter: 'blur(10px)',
-                boxShadow: isActive
-                  ? `0 0 20px ${cat.color}33, 0 4px 12px rgba(0,0,0,0.2)`
-                  : '0 2px 8px rgba(0,0,0,0.1)',
-              }}
+              className={`relative shrink-0 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all w-[100px] h-[85px] rounded-2xl shadow-sm border ${
+                isActive
+                  ? 'bg-[var(--primary)]/10 border-[var(--primary)] text-[var(--primary)]'
+                  : 'bg-[var(--elevated)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-main)] hover:shadow-md hover:-translate-y-1'
+              }`}
             >
-              <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{cat.emoji}</span>
-              <span style={{
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                color: isActive ? cat.color : isDark ? '#9ca3af' : '#4b5563',
-                letterSpacing: '0.02em',
-                whiteSpace: 'nowrap',
-              }}>
+              <div className="flex items-center justify-center h-8">
+                {cat.icon}
+              </div>
+              <span className={`text-xs font-bold ${isActive ? 'text-[var(--primary)]' : 'text-[var(--text-main)]'}`}>
                 {cat.label}
               </span>
               {count !== undefined && count > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-0.4rem',
-                  right: '-0.4rem',
-                  background: isActive ? cat.color : '#6366f1',
-                  color: 'white',
-                  fontSize: '0.6rem',
-                  fontWeight: 800,
-                  width: '1.2rem',
-                  height: '1.2rem',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  {count > 9 ? '9+' : count}
+                <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-[var(--bg)] border border-[var(--border)] px-1.5 py-0.5 rounded-full text-[var(--text-muted)]">
+                  {count}
                 </span>
               )}
-              {isActive && (
-                <motion.div
-                  layoutId="category-indicator"
-                  style={{
-                    position: 'absolute',
-                    bottom: '0.3rem',
-                    width: '1.5rem',
-                    height: '2px',
-                    borderRadius: '9999px',
-                    background: cat.color,
-                  }}
-                />
-              )}
-            </motion.button>
+            </button>
           );
         })}
       </div>
-
-      {/* fade edges */}
-      <div style={{
-        position: 'absolute', left: '2.5rem', top: 0, bottom: 0, width: '2rem', pointerEvents: 'none',
-        background: isDark
-          ? 'linear-gradient(to right, rgba(2,6,23,0.9), transparent)'
-          : 'linear-gradient(to right, rgba(255,255,255,0.9), transparent)',
-        zIndex: 5,
-      }} />
-      <div style={{
-        position: 'absolute', right: '2.5rem', top: 0, bottom: 0, width: '2rem', pointerEvents: 'none',
-        background: isDark
-          ? 'linear-gradient(to left, rgba(2,6,23,0.9), transparent)'
-          : 'linear-gradient(to left, rgba(255,255,255,0.9), transparent)',
-        zIndex: 5,
-      }} />
     </div>
   );
 }

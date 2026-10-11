@@ -40,15 +40,17 @@ export function useAuction(id: string | undefined): UseAuctionResult {
   const [error, setError] = useState<string | null>(null);
 
   // Countdown is derived from auction.end_time (or a safe fallback)
-  const { parts, timeLeft, isEnded } = useCountdown(
+  const { parts, timeLeft, isEnded: countdownEnded } = useCountdown(
     auction?.end_time ?? FALLBACK_END,
   );
 
+  const isEnded = countdownEnded || (auction?.status === 'ended');
+
   const isUpcoming = auction
-    ? new Date(auction.start_time) > new Date() && auction.status === 'upcoming'
+    ? !isEnded && (new Date(auction.start_time).getTime() > Date.now() || auction.status === 'upcoming')
     : false;
 
-  const minBid = auction ? auction.current_price + auction.min_increment : 0;
+  const minBid = auction ? auction.current_price + 0.01 : 0;
 
   // ── Data loading ────────────────────────────────────────────────
   const load = useCallback(async () => {

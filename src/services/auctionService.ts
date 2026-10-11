@@ -6,9 +6,7 @@
  */
 
 import type { Auction } from '../types';
-import { getAuthHeaders } from './api';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+import { getAuthHeaders, API_BASE_URL } from './api';
 
 export interface BidRecord {
   id: number;
@@ -33,7 +31,9 @@ async function handleResponse(response: Response) {
  */
 export async function fetchAuctions(): Promise<Auction[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/`);
+    const response = await fetch(`${API_BASE_URL}/auctions/`, {
+      headers: getAuthHeaders(),
+    });
     const data = await handleResponse(response);
 
     return data.map((item: any) => ({
@@ -43,7 +43,7 @@ export async function fetchAuctions(): Promise<Auction[]> {
       image_url: item.image_url || '',
       start_price: Number(item.starting_price),
       current_price: Number(item.current_highest_bid > 0 ? item.current_highest_bid : item.starting_price),
-      min_increment: item.min_increment ? Number(item.min_increment) : 50,
+      min_increment: 0,
       start_time: item.created_at || new Date().toISOString(),
       end_time: item.end_time,
       status: item.status === 'active' ? 'live' : item.status === 'completed' ? 'ended' : (item.status || 'live'),
@@ -51,11 +51,51 @@ export async function fetchAuctions(): Promise<Auction[]> {
       seller_id: item.seller ? (typeof item.seller === 'object' ? item.seller.id : item.seller) : 0,
       category: item.category || 'General',
       bid_count: item.bids ? item.bids.length : 0,
+      moderation_status: item.moderation_status,
+      seller_name: item.seller_name || '',
+      images: item.images || (item.image_url ? [item.image_url] : []),
     })) as Auction[];
   } catch (error: any) {
     console.error('[auctionService] fetchAuctions error:', error.message);
     throw error;
   }
+}
+
+/**
+ * Upload 1 or more image files to Django /api/upload/
+ */
+export async function uploadAuctionImages(files: File[]): Promise<string[]> {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('images', file);
+  });
+
+  const token = localStorage.getItem('access_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/upload/`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Image upload failed (${response.status})`;
+    try {
+      const data = await response.json();
+      errorMsg = data.error || data.detail || errorMsg;
+    } catch {
+      const text = await response.text();
+      if (text) errorMsg = text;
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await response.json();
+  return data.urls || (data.url ? [data.url] : []);
 }
 
 /**
@@ -68,6 +108,7 @@ export async function createAuctionAPI(payload: {
   end_time: string;
   category?: string;
   image_url?: string;
+  images?: string[];
 }): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/auctions/`, {
@@ -77,11 +118,19 @@ export async function createAuctionAPI(payload: {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw new Error('Authentication failed. Please log in to create an auction.');
+      let errorMsg = `Failed to create auction: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.error || errorData.detail || errorMsg;
+      } catch {
+        const errorText = await response.text();
+        if (errorText) errorMsg = errorText;
       }
-      const errorText = await response.text();
-      throw new Error(errorText || `Failed to create auction: ${response.status}`);
+
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please log in again to create an auction.');
+      }
+      throw new Error(errorMsg);
     }
 
     return response.json();
@@ -96,7 +145,9 @@ export async function createAuctionAPI(payload: {
  */
 export async function fetchAuction(id: string | number): Promise<Auction> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/${id}/`);
+    const response = await fetch(`${API_BASE_URL}/auctions/${id}/`, {
+      headers: getAuthHeaders(),
+    });
     const item = await handleResponse(response);
 
     return {
@@ -106,7 +157,7 @@ export async function fetchAuction(id: string | number): Promise<Auction> {
       image_url: item.image_url || '',
       start_price: Number(item.starting_price),
       current_price: Number(item.current_highest_bid > 0 ? item.current_highest_bid : item.starting_price),
-      min_increment: item.min_increment ? Number(item.min_increment) : 50,
+      min_increment: 0,
       start_time: item.created_at || new Date().toISOString(),
       end_time: item.end_time,
       status: item.status === 'active' ? 'live' : item.status === 'completed' ? 'ended' : (item.status || 'live'),
@@ -114,6 +165,9 @@ export async function fetchAuction(id: string | number): Promise<Auction> {
       seller_id: item.seller ? (typeof item.seller === 'object' ? item.seller.id : item.seller) : 0,
       category: item.category || 'General',
       bid_count: item.bids ? item.bids.length : 0,
+      moderation_status: item.moderation_status,
+      seller_name: item.seller_name || '',
+      images: item.images || (item.image_url ? [item.image_url] : []),
     } as Auction;
   } catch (error: any) {
     console.error('[auctionService] fetchAuction error:', error.message);

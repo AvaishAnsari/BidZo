@@ -8,10 +8,10 @@ def main():
     """Run administrative tasks."""
     # Ensure current directory is added to sys.path so Django can locate local apps (like auctions)
     BASE_DIR = Path(__file__).resolve().parent
-    sys.path.append(str(BASE_DIR))
+    sys.path.append(str(BASE_DIR.parent))
 
     # Point directly to settings.py inside the same directory
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

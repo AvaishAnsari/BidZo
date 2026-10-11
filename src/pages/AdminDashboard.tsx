@@ -1,14 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Navigate } from 'react-router-dom';
 import { ShieldAlert, Users, TrendingUp, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { getAuthHeaders, API_BASE_URL } from '../services/api';
 
 export const AdminDashboard: React.FC = () => {
   const { user, role } = useAuth();
   const { isDark } = useTheme();
+
+  const [activeTab, setActiveTab] = useState<'flags' | 'sellers' | 'products'>('sellers');
+  const [pendingSellers, setPendingSellers] = useState<any[]>([]);
+  const [pendingProducts, setPendingProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user && role === 'admin') {
+      fetchData();
+    }
+  }, [user, role]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const sellersRes = await fetch(`${API_BASE_URL}/admin/users/pending/`, {
+        headers: getAuthHeaders()
+      });
+      const productsRes = await fetch(`${API_BASE_URL}/admin/auctions/pending/`, {
+        headers: getAuthHeaders()
+      });
+
+      if (sellersRes.ok) {
+        setPendingSellers(await sellersRes.json());
+      }
+      if (productsRes.ok) {
+        setPendingProducts(await productsRes.json());
+      }
+    } catch (error) {
+      toast.error('Failed to load pending applications.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Protect route strictly
   if (!user || role !== 'admin') {
@@ -28,26 +63,43 @@ export const AdminDashboard: React.FC = () => {
     { id: 3, user: 'sniper@bot.net', reason: 'Api rate limiting exceeded', time: '3 hrs ago' },
   ];
 
-  const [activeTab, setActiveTab] = useState<'flags' | 'sellers' | 'products'>('sellers');
-
-  const [pendingSellers, setPendingSellers] = useState([
-    { id: '101', name: 'Alice Smith', email: 'alice@seller.com', doc: 'ID_Passport_Front.pdf' },
-    { id: '102', name: 'Bob Johnson', email: 'bob@seller.com', doc: 'Business_License.png' },
-  ]);
-
-  const [pendingProducts, setPendingProducts] = useState([
-    { id: 'p1', sellerName: 'Alice Smith', title: 'Vintage Rolex', price: '₹ 2,50,000' },
-    { id: 'p2', sellerName: 'Charlie Brown', title: 'PS5 Console', price: '₹ 45,000' },
-  ]);
-
-  const approveSeller = (id: string) => {
-    setPendingSellers(prev => prev.filter(s => s.id !== id));
-    toast.success('Seller approved successfully!');
+  const approveSeller = async (id: number, verify: boolean) => {
+    try {
+      const status = verify ? 'VERIFIED' : 'REJECTED';
+      const res = await fetch(`${API_BASE_URL}/admin/users/${id}/verify/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ verification_status: status })
+      });
+      if (res.ok) {
+        setPendingSellers(prev => prev.filter(s => s.user?.id !== id && s.id !== id));
+        toast.success(verify ? 'Seller verified.' : 'Seller rejected.');
+        fetchData(); // refresh products in case any got rejected automatically
+      } else {
+        toast.error('Error updating seller status.');
+      }
+    } catch (error) {
+      toast.error('Error updating seller status.');
+    }
   };
 
-  const approveProduct = (id: string) => {
-    setPendingProducts(prev => prev.filter(p => p.id !== id));
-    toast.success('Product approved and is now live!');
+  const approveProduct = async (id: number, approve: boolean) => {
+    try {
+      const status = approve ? 'APPROVED' : 'REJECTED';
+      const res = await fetch(`${API_BASE_URL}/admin/auctions/${id}/moderate/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ moderation_status: status })
+      });
+      if (res.ok) {
+        setPendingProducts(prev => prev.filter(p => p.id !== id));
+        toast.success(approve ? 'Product approved.' : 'Product rejected.');
+      } else {
+        toast.error('Error updating product status.');
+      }
+    } catch (error) {
+      toast.error('Error updating product status.');
+    }
   };
 
   return (
@@ -93,56 +145,68 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {activeTab === 'flags' && recentFlags.map((flag) => (
-            <div key={flag.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '1rem', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)',
-              borderRadius: '0.75rem'
-            }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827' }}>{flag.user}</p>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444' }}>{flag.reason}</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>{flag.time}</p>
-                <button style={{ marginTop: '0.5rem', padding: '0.3rem 0.75rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
-                  Ban User
-                </button>
-              </div>
-            </div>
-          ))}
+          {loading ? (
+            <p style={{ color: '#6b7280' }}>Loading pending reviews...</p>
+          ) : (
+            <>
+              {activeTab === 'flags' && recentFlags.map((flag) => (
+                <div key={flag.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '1rem', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                  borderRadius: '0.75rem'
+                }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827' }}>{flag.user}</p>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444' }}>{flag.reason}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>{flag.time}</p>
+                    <button style={{ marginTop: '0.5rem', padding: '0.3rem 0.75rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                      Ban User
+                    </button>
+                  </div>
+                </div>
+              ))}
 
-          {activeTab === 'sellers' && pendingSellers.length === 0 && (
-            <p style={{ color: '#6b7280' }}>No pending sellers to review.</p>
-          )}
-          {activeTab === 'sellers' && pendingSellers.map((seller) => (
-            <div key={seller.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.1rem' }}>{seller.name}</p>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af', marginTop: '0.25rem' }}>{seller.email} • <a href="#" style={{ color: '#3b82f6', textDecoration: 'underline' }}>View KYC Doc: {seller.doc}</a></p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => approveSeller(seller.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><CheckCircle className="w-4 h-4"/> Approve</button>
-                <button onClick={() => setPendingSellers(prev => prev.filter(s => s.id !== seller.id))} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><XCircle className="w-4 h-4"/> Reject</button>
-              </div>
-            </div>
-          ))}
+              {activeTab === 'sellers' && pendingSellers.length === 0 && (
+                <p style={{ color: '#6b7280' }}>No pending sellers to review.</p>
+              )}
+              {activeTab === 'sellers' && pendingSellers.map((seller) => (
+                <div key={seller.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.1rem' }}>{seller.business_name || seller.username}</p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                      {seller.email} •
+                      {seller.business_registration_number && ` Reg No: ${seller.business_registration_number}`}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => approveSeller(seller.id, true)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><CheckCircle className="w-4 h-4"/> Approve</button>
+                    <button onClick={() => approveSeller(seller.id, false)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><XCircle className="w-4 h-4"/> Reject</button>
+                  </div>
+                </div>
+              ))}
 
-          {activeTab === 'products' && pendingProducts.length === 0 && (
-            <p style={{ color: '#6b7280' }}>No pending products to review.</p>
+              {activeTab === 'products' && pendingProducts.length === 0 && (
+                <p style={{ color: '#6b7280' }}>No pending products to review.</p>
+              )}
+              {activeTab === 'products' && pendingProducts.map((prod) => (
+                <div key={prod.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {prod.image_url && <img src={prod.image_url} alt={prod.title} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '0.5rem' }} />}
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.1rem' }}>{prod.title}</p>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af', marginTop: '0.25rem' }}>Seller: {prod.seller_name} • <span style={{ color: '#c084fc', fontWeight: 'bold' }}>₹ {prod.starting_price}</span></p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => approveProduct(prod.id, true)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><CheckCircle className="w-4 h-4"/> Approve</button>
+                    <button onClick={() => approveProduct(prod.id, false)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><XCircle className="w-4 h-4"/> Reject</button>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
-          {activeTab === 'products' && pendingProducts.map((prod) => (
-            <div key={prod.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}>
-              <div>
-                <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.1rem' }}>{prod.title}</p>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af', marginTop: '0.25rem' }}>Seller: {prod.sellerName} • <span style={{ color: '#c084fc', fontWeight: 'bold' }}>{prod.price}</span></p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => approveProduct(prod.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><CheckCircle className="w-4 h-4"/> Approve</button>
-                <button onClick={() => setPendingProducts(prev => prev.filter(p => p.id !== prod.id))} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><XCircle className="w-4 h-4"/> Reject</button>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

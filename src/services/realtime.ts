@@ -18,7 +18,10 @@ class RealtimeService {
       ? new URL(import.meta.env.VITE_API_BASE_URL).host
       : 'localhost:8000';
 
-    this.url = auctionId ? `${protocol}//${host}/ws/auctions/${auctionId}/` : `${protocol}//${host}/ws/auctions/`;
+    const token = localStorage.getItem('access_token');
+    const tokenQuery = token ? `?token=${token}` : '';
+
+    this.url = auctionId ? `${protocol}//${host}/ws/auctions/${auctionId}/${tokenQuery}` : `${protocol}//${host}/ws/auctions/${tokenQuery}`;
 
     this.isConnecting = true;
     this.socket = new WebSocket(this.url);

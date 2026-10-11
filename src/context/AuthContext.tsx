@@ -23,8 +23,8 @@ export interface AuthContextType {
   userRole: UserRole | null;
   userName: string | null;
   session: any | null; // Placeholder for legacy compatibility
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, recaptchaToken?: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, name: string, role: UserRole, recaptchaToken?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 
   signInWithOtp: (email: string) => Promise<{ error: string | null }>;
@@ -37,7 +37,7 @@ export interface AuthContextType {
   refreshUser: () => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+import { API_BASE_URL } from '../services/api';
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
@@ -105,12 +105,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signIn = useCallback(
-    async (email: string, password: string): Promise<{ error: string | null }> => {
+    async (email: string, password: string, recaptchaToken?: string): Promise<{ error: string | null }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/login/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: email, password }),
+          body: JSON.stringify({ username: email, password, recaptcha_token: recaptchaToken }),
         });
         const result = await response.json();
         if (response.ok && result.success) {
@@ -132,16 +132,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string, userRole: UserRole): Promise<{ error: string | null }> => {
+    async (email: string, password: string, name: string, userRole: UserRole, recaptchaToken?: string): Promise<{ error: string | null }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/register/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, username: name, role: userRole }),
+          body: JSON.stringify({ email, password, username: name, role: userRole, recaptcha_token: recaptchaToken }),
         });
         const result = await response.json();
         if (response.ok) {
-          return await signIn(email, password);
+          return await signIn(email, password, recaptchaToken);
         } else {
           return { error: result.error || 'Registration failed.' };
         }
@@ -207,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signInWithGoogle,
         signOut,
         updateRole,
-        isConfigured: true,
+        isConfigured: !!import.meta.env.VITE_RECAPTCHA_SITE_KEY,
         refreshUser
       }}
     >
