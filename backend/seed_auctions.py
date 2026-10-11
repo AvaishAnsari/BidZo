@@ -149,7 +149,8 @@ def seed():
             image_url=item['image_url'],
             start_time=timezone.now(),
             end_time=timezone.now() + datetime.timedelta(days=item['end_days']),
-            status='live'
+            status='live',
+            moderation_status='APPROVED'
         )
     print(f"Successfully seeded {len(dataset)} premium auction items!")
 
