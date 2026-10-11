@@ -1,8 +1,12 @@
-export const API_BASE_URL =
+const rawBase: string =
   import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` : 'http://localhost:8000/api');
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:8000/api';
 
-export const API_ROOT_URL =
+const cleanBase = rawBase.replace(/\/+$/, '');
+export const API_BASE_URL: string = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
+
+export const API_ROOT_URL: string =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '') : 'http://localhost:8000');
 
