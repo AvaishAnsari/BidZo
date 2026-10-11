@@ -40,6 +40,9 @@ export interface Auction {
   /** How many times the end_time has been extended by anti-sniping (max 3) */
   extension_count?: number;
   bid_count?: number;
+  moderation_status?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+  seller_name?: string;
+  images?: string[];
 }
 
 export interface Bid {

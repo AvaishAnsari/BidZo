@@ -68,6 +68,7 @@ export function useAuctions(): UseAuctionsResult {
         status: auction.status === 'active' ? 'live' : auction.status,
         created_at: auction.created_at,
         seller_id: auction.seller?.id || '',
+        images: auction.images || (auction.image_url ? [auction.image_url] : []),
       };
       setAuctions(prev => [newAuction, ...prev]);
     };

@@ -38,3 +38,4 @@ ujson==6.0.0
 urllib3==2.8.0
 websockets==17.1
 zope.interface==8.6
+razorpay==2.0.1

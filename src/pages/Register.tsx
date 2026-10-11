@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const hasGoogleConfig = clientId && clientId !== 'your_google_client_id_here' && clientId !== '';
@@ -22,14 +23,14 @@ const schema = z.object({
 type FormVals = z.infer<typeof schema>;
 
 export const Register = () => {
-  // The backend currently has no registration endpoint, so we mock these
-
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
-
+  const { signUp, signInWithGoogle } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const { executeRecaptcha } = useGoogleReCaptcha();
+  const isConfigured = !!import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 
 
@@ -47,25 +48,24 @@ export const Register = () => {
     setErrorMsg(null);
     setLoading(true);
 
-    try {
-      const res = await fetch('http://localhost:8000/api/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: data.name,
-          email: data.email,
-          password: data.password,
-          role: data.role
-        })
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Registration failed');
+    let recaptchaToken = '';
+    if (isConfigured && executeRecaptcha) {
+      try {
+        recaptchaToken = (await executeRecaptcha('register')) || '';
+      } catch (err: any) {
+        console.warn('[Register] reCAPTCHA skipped:', err);
       }
+    }
 
-      toast.success('Registration successful! Please sign in.');
-      navigate('/login');
+    try {
+      const { error } = await signUp(data.email.trim(), data.password, data.name.trim(), data.role, recaptchaToken);
+
+      if (error) {
+        setErrorMsg(error);
+      } else {
+        toast.success('Registration successful! You are now signed in.');
+        navigate('/');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'An error occurred.');
     } finally {
@@ -85,10 +85,10 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#020617] text-white overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[var(--bg)] text-[var(--text-main)] overflow-hidden font-sans">
 
       {/* ─── LEFT PANEL (HERO) ─── */}
-      <div className="w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
+      <div className="w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-[var(--border)] min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
 
         {/* Background Effects */}
         <div className="absolute inset-0 z-0">
@@ -105,93 +105,93 @@ export const Register = () => {
         {/* Navbar / Logo */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-20 flex justify-between items-center w-full mb-12">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#c084fc] flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)]">
-              <Flame className="w-6 h-6 text-white transform -rotate-12" strokeWidth={2.5}/>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary)] flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)]">
+              <Flame className="w-6 h-6 text-[var(--text-main)] transform -rotate-12" strokeWidth={2.5}/>
             </div>
             <span className="text-3xl font-extrabold tracking-tight">BidZo</span>
           </div>
-          <div className="hidden sm:flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 shadow-xl">
+          <div className="hidden sm:flex items-center gap-3 bg-[var(--elevated)] backdrop-blur-md border border-[var(--border)] rounded-full px-3 py-1.5 shadow-xl">
             <div className="flex -space-x-2">
-              <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
-              <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
-              <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[#181226]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[var(--bg)]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[var(--bg)]" alt="user"/>
+              <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[var(--bg)]" alt="user"/>
             </div>
-            <span className="text-xs font-medium text-gray-300 pr-1">12,000+ Active Bidders</span>
+            <span className="text-xs font-medium text-[var(--text-muted)] pr-1">12,000+ Active Bidders</span>
           </div>
         </motion.div>
 
         {/* Main Hero Content */}
         <div className="relative z-20 flex-1 flex flex-col justify-center max-w-xl w-full mx-auto lg:mx-0 py-4">
           <div className="space-y-8">
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-gray-200 bg-white/5 border border-white/10 backdrop-blur-md">
-              <ShieldCheck className="w-4 h-4 text-[#c084fc]"/> Trusted by thousands of bidders worldwide
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-[var(--text-main)] bg-[var(--elevated)] border border-[var(--border)] backdrop-blur-md">
+              <ShieldCheck className="w-4 h-4 text-[var(--primary)]"/> Trusted by thousands of bidders worldwide
             </motion.div>
 
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="text-4xl lg:text-[4.5rem] font-extrabold leading-[1.05] tracking-tight">
-              The smarter way <br className="hidden lg:block"/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#c084fc] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">bid & win</span>
+              Discover. <br className="hidden lg:block"/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">bid & win</span>
             </motion.h1>
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-gray-300 text-base lg:text-xl leading-relaxed max-w-md font-medium">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-[var(--text-muted)] text-base lg:text-xl leading-relaxed max-w-md font-medium">
               Real-time auctions, instant notifications, and secure payments — all in one place.
             </motion.p>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }} className="flex items-center gap-8 lg:gap-10 pt-4 lg:pt-6">
               <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/10 border border-[var(--primary)]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">12K+</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Active Bidders</div>
+                  <div className="text-2xl lg:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">12K+</div>
+                  <div className="text-xs lg:text-sm font-medium text-[var(--text-muted)]">Active Bidders</div>
                 </div>
               </div>
               <div className="w-px h-12 lg:h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
               <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#9333ea]/20 to-[#c084fc]/10 border border-[#9333ea]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/10 border border-[var(--primary)]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">38K+</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Auctions Won</div>
+                  <div className="text-2xl lg:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">38K+</div>
+                  <div className="text-xs lg:text-sm font-medium text-[var(--text-muted)]">Auctions Won</div>
                 </div>
               </div>
             </motion.div>
 
             {/* Bottom Features */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8 }} className="grid grid-cols-3 gap-6 pt-6 mt-6 border-t border-white/10">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8 }} className="grid grid-cols-3 gap-6 pt-6 mt-6 border-t border-[var(--border)]">
               <div>
-                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
-                  <Zap className="w-5 h-5 text-[#c084fc]"/>
+                <div className="w-10 h-10 rounded-xl bg-[var(--elevated)] border border-[var(--border)] flex items-center justify-center mb-3 shadow-inner">
+                  <Zap className="w-5 h-5 text-[var(--primary)]"/>
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">Real-time Bidding</h4>
-                <p className="text-xs text-gray-400 font-medium">Instant bid updates</p>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">Real-time Bidding</h4>
+                <p className="text-xs text-[var(--text-muted)] font-medium">Instant bid updates</p>
               </div>
               <div>
-                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
-                  <ShieldCheck className="w-5 h-5 text-[#c084fc]"/>
+                <div className="w-10 h-10 rounded-xl bg-[var(--elevated)] border border-[var(--border)] flex items-center justify-center mb-3 shadow-inner">
+                  <ShieldCheck className="w-5 h-5 text-[var(--primary)]"/>
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">Anti-Sniping</h4>
-                <p className="text-xs text-gray-400 font-medium">Fair play for everyone</p>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">Anti-Sniping</h4>
+                <p className="text-xs text-[var(--text-muted)] font-medium">Fair play for everyone</p>
               </div>
               <div>
-                <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
-                  <Shield className="w-5 h-5 text-[#c084fc]"/>
+                <div className="w-10 h-10 rounded-xl bg-[var(--elevated)] border border-[var(--border)] flex items-center justify-center mb-3 shadow-inner">
+                  <Shield className="w-5 h-5 text-[var(--primary)]"/>
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">Secure Signups</h4>
-                <p className="text-xs text-gray-400 font-medium">OTP & Bot Protection</p>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">Secure Signups</h4>
+                <p className="text-xs text-[var(--text-muted)] font-medium">OTP & Bot Protection</p>
               </div>
             </motion.div>
           </div>
         </div>
 
         {/* Footer */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }} className="relative z-20 mt-12 hidden lg:flex justify-between items-center text-xs font-medium text-gray-500 w-full">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }} className="relative z-20 mt-12 hidden lg:flex justify-between items-center text-xs font-medium text-[var(--text-muted)] w-full">
           <p>© {new Date().getFullYear()} BidZo. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-gray-300 transition-colors">About</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Contact</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">About</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Privacy</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Terms</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Contact</a>
           </div>
         </motion.div>
       </div>
@@ -202,7 +202,7 @@ export const Register = () => {
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="w-full max-w-[480px] bg-[#0f111a]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-[0_0_60px_rgba(139,92,246,0.12)] relative z-10 border border-white/10"
+          className="w-full max-w-[480px] bg-[var(--surface)]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-[0_0_60px_rgba(139,92,246,0.12)] relative z-10 border border-[var(--border)]"
         >
           {/* Subtle inner radial glow */}
           <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent rounded-3xl pointer-events-none"></div>
@@ -214,7 +214,7 @@ export const Register = () => {
 
                   <motion.div variants={itemVariants} className="text-center">
                     <h2 className="text-3xl lg:text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 drop-shadow-sm">Create account ✨</h2>
-                    <p className="text-gray-400 text-sm font-medium">Join BidZo — fast, free, and secure</p>
+                    <p className="text-[var(--text-muted)] text-sm font-medium">Join BidZo — fast, free, and secure</p>
                   </motion.div>
 
                   {errorMsg && (
@@ -230,12 +230,16 @@ export const Register = () => {
                           onSuccess={async (credentialResponse) => {
                             setLoading(true);
                             if (credentialResponse.credential) {
-                              const { error } = await signInWithGoogle(credentialResponse.credential);
+                              const { error, isNewUser } = await signInWithGoogle(credentialResponse.credential);
                               if (error) {
                                 setErrorMsg(error);
                               } else {
                                 toast.success('Registration successful! Welcome to BidZo.');
-                                navigate('/');
+                                if (isNewUser) {
+                                  navigate('/select-role');
+                                } else {
+                                  navigate('/');
+                                }
                               }
                             }
                             setLoading(false);
@@ -256,7 +260,7 @@ export const Register = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setErrorMsg('Google configuration is missing. Please set VITE_GOOGLE_CLIENT_ID in your .env file.')}
-                        className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
+                        className="w-full flex items-center justify-center gap-3 bg-[var(--elevated)] hover:bg-white/10 backdrop-blur-md border border-[var(--border)] h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
                       >
                         <svg width="20" height="20" viewBox="0 0 24 24">
                           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -271,7 +275,7 @@ export const Register = () => {
 
                   <motion.div variants={itemVariants} className="flex items-center gap-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10"></div>
-                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">or with email verification</span>
+                    <span className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">or with email verification</span>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
                   </motion.div>
 
@@ -279,17 +283,17 @@ export const Register = () => {
 
                     <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                       <div className="relative w-full">
-                        <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${nameVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
+                        <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-all duration-200 pointer-events-none z-10 ${nameVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                         <input
                           type="text"
                           id="name"
                           autoComplete="name"
                           {...register('name')}
                           style={{ paddingLeft: '44px' }}
-                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          className="peer w-full h-[48px] bg-[var(--elevated)] border border-[var(--border)] rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-all placeholder-transparent shadow-inner"
                           placeholder="Full Name"
                         />
-                        <label htmlFor="name" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                        <label htmlFor="name" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[var(--primary)] pointer-events-none">
                           Full Name
                         </label>
                       </div>
@@ -298,17 +302,17 @@ export const Register = () => {
 
                     <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                       <div className="relative w-full">
-                        <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#c084fc] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
+                        <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}/>
                         <input
                           type="email"
                           id="email"
                           autoComplete="email"
                           {...register('email')}
                           style={{ paddingLeft: '44px' }}
-                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          className="peer w-full h-[48px] bg-[var(--elevated)] border border-[var(--border)] rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-all placeholder-transparent shadow-inner"
                           placeholder="Email Address"
                         />
-                        <label htmlFor="email" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                        <label htmlFor="email" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[var(--primary)] pointer-events-none">
                           Email Address
                         </label>
                       </div>
@@ -318,17 +322,17 @@ export const Register = () => {
                     <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Lock className="w-4 h-4 text-gray-400 group-focus-within:text-[#c084fc] transition-colors"/>
+                          <Lock className="w-4 h-4 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors"/>
                         </div>
                         <input
                           id="password"
                           type="password"
                           {...register('password')}
                           style={{ paddingLeft: '44px' }}
-                          className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#9333ea]/50 focus:border-[#c084fc] transition-all placeholder-transparent shadow-inner"
+                          className="peer w-full h-[48px] bg-[var(--elevated)] border border-[var(--border)] rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-all placeholder-transparent shadow-inner"
                           placeholder="Password"
                         />
-                        <label htmlFor="password" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#c084fc] pointer-events-none">
+                        <label htmlFor="password" style={{ left: '44px' }} className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[var(--primary)] pointer-events-none">
                           Password
                         </label>
                       </div>
@@ -336,7 +340,7 @@ export const Register = () => {
                     </motion.div>
 
                     <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-[8px] pl-1">Account Type</label>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-[8px] pl-1">Account Type</label>
                       <div className="grid grid-cols-2 gap-3">
                         {(['buyer','seller'] as const).map(r => (
                           <button key={r} type="button" onClick={()=>setValue('role',r,{shouldValidate:true})}
@@ -368,20 +372,18 @@ export const Register = () => {
                       disabled={loading}
                       className="w-full relative group overflow-hidden rounded-[8px] p-[1px] shadow-xl"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#9333ea] to-[#c084fc] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
-                      <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#9333ea] to-[#c084fc] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
+                      <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] h-[48px] rounded-[8px] text-sm font-bold text-[var(--text-main)] shadow-inner border border-[var(--border)]">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Zap className="w-5 h-5"/>}
                         Create Account
                       </div>
                     </motion.button>
                   </form>
 
-                  <motion.p variants={itemVariants} className="text-[10px] text-center text-gray-500">
-                    Protected by reCAPTCHA and subject to Google's <a href="https://policies.google.com/privacy" className="text-[#c084fc] hover:text-[#d8b4fe] transition-colors font-semibold">Privacy Policy</a>
-                  </motion.p>
 
-                  <motion.p variants={itemVariants} className="text-center text-sm font-medium text-gray-400 mt-[8px]">
-                    Have an account? <Link to="/login" className="text-[#c084fc] font-bold hover:text-[#d8b4fe] transition-colors">Sign in →</Link>
+
+                  <motion.p variants={itemVariants} className="text-center text-sm font-medium text-[var(--text-muted)] mt-[8px]">
+                    Have an account? <Link to="/login" className="text-[var(--primary)] font-bold hover:text-[var(--primary-hover)] transition-colors">Sign in →</Link>
                   </motion.p>
                 </motion.div>
               )
@@ -391,7 +393,7 @@ export const Register = () => {
 
         {/* Global Floating Actions */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="absolute bottom-[60px] lg:bottom-6 right-6 hidden sm:flex gap-3 z-30">
-          <div className="flex items-center justify-center gap-2 text-xs font-medium text-gray-400 bg-[#161722]/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 shadow-lg">
+          <div className="flex items-center justify-center gap-2 text-xs font-medium text-[var(--text-muted)] bg-[#161722]/80 backdrop-blur-md px-4 py-2 rounded-full border border-[var(--border)] shadow-lg">
             <Shield className="w-3.5 h-3.5 text-[#34d399]"/> 256-bit SSL secured
           </div>
         </motion.div>
