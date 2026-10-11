@@ -14,16 +14,22 @@ django.setup()
 from django.contrib.auth.models import User
 from auctions.models import AuctionItem, Bid
 
-def seed():
+def seed(force=False):
+    if not force and AuctionItem.objects.filter(moderation_status='APPROVED').exists():
+        print("Approved auctions already exist. Skipping automatic seed.")
+        return
+
     print("Clearing existing junk auctions...")
     AuctionItem.objects.all().delete()
 
     print("Creating premium seller...")
-    user, created = User.objects.get_or_create(username='premium_seller', email='seller@bidzo.com')
+    user, created = User.objects.get_or_create(username='premium_seller', defaults={'email': 'seller@bidzo.com'})
     if created:
         user.set_password('securepassword123')
         user.save()
+    if hasattr(user, 'profile'):
         user.profile.role = 'seller'
+        user.profile.is_verified_seller = True
         user.profile.save()
 
     print("Seeding premium dataset...")
@@ -149,7 +155,8 @@ def seed():
             image_url=item['image_url'],
             start_time=timezone.now(),
             end_time=timezone.now() + datetime.timedelta(days=item['end_days']),
-            status='live'
+            status='live',
+            moderation_status='APPROVED'
         )
     print(f"Successfully seeded {len(dataset)} premium auction items!")
 

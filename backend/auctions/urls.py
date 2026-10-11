@@ -7,10 +7,11 @@ from .views import (
     OrderListView, OrderDetailView, AuctionOrderCreateView, PaymentVerificationView,
     ShipmentUpdateView, AdminSellerVerificationView, AdminAuctionModerationView,
     AdminPendingSellersView, AdminPendingAuctionsView, RazorpayWebhookView,
-    FileUploadView
+    FileUploadView, api_seed_view
 )
 
 urlpatterns = [
+    path('seed/', api_seed_view, name='api-seed'),
     path('upload/', FileUploadView.as_view(), name='file-upload'),
     path('auctions/', AuctionListCreateView.as_view(), name='auction-list-create'),
     path('auctions/<int:auction_id>/', AuctionDetailView.as_view(), name='auction-detail'),
