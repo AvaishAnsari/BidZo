@@ -733,3 +733,20 @@ class FileUploadView(APIView):
             "urls": urls,
             "url": urls[0] if urls else ""
         }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def api_seed_view(request):
+    try:
+        from seed_auctions import seed
+    except ImportError:
+        from backend.seed_auctions import seed
+    force = request.GET.get('force', 'false').lower() == 'true'
+    seed(force=force)
+    count = AuctionItem.objects.filter(moderation_status='APPROVED').count()
+    return Response({
+        "success": True,
+        "message": f"Database contains {count} approved live auctions.",
+        "approved_count": count
+    })
