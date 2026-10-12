@@ -1,7 +1,7 @@
 /**
  * useAuction.ts
  * Fetches a single auction + its recent bids, and subscribes to
- * Django Channels so that:
+ * Supabase Realtime so that:
  *   - new bids appear instantly in the bid history
  *   - current_price updates live for all viewers
  *
@@ -28,7 +28,7 @@ export interface UseAuctionResult {
   minBid: number;
   refetch: () => Promise<void>;
   /** Update auction's current_price optimistically (called by bidding logic) */
-  applyBidOptimistic: (amount: number, bidderName: string, bidderId: number) => void;
+  applyBidOptimistic: (amount: number, bidderEmail: string) => void;
 }
 
 const FALLBACK_END = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // 1 h from now
@@ -91,14 +91,12 @@ export function useAuction(id: string | undefined): UseAuctionResult {
         id: bid.id,
         amount: bid.amount,
         created_at: bid.timestamp || new Date().toISOString(),
-        bidder_id: Number(bid.bidder),
-        bidder_name: bid.bidder_name || bid.bidder_username || 'Anonymous',
-        user_email: bid.bidder_name || bid.bidder_username || 'Anonymous',
+        user_email: bid.bidder_username || 'Anonymous', // We mapped this in serializer
       };
 
       setBids(prev => {
         // Deduplicate in case optimistic update already added a fake ID or we get double events
-        if (prev.some(b => b.id === record.id || (b.amount === record.amount && b.bidder_id === record.bidder_id))) {
+        if (prev.some(b => b.id === record.id || (b.amount === record.amount && b.user_email === record.user_email))) {
           return prev;
         }
         return [record, ...prev.slice(0, 9)];
@@ -118,16 +116,14 @@ export function useAuction(id: string | undefined): UseAuctionResult {
   }, [id, load]);
 
   // ── Optimistic update (called immediately after local bid submit) ─
-  const applyBidOptimistic = useCallback((amount: number, bidderName: string, bidderId: number) => {
+  const applyBidOptimistic = useCallback((amount: number, bidderEmail: string) => {
     setAuction(prev => (prev ? { ...prev, current_price: amount } : null));
     setBids(prev => [
       {
         id: Date.now(),
         amount,
         created_at: new Date().toISOString(),
-        bidder_id: bidderId,
-        bidder_name: bidderName,
-        user_email: bidderName,
+        user_email: bidderEmail,
       },
       ...prev.slice(0, 9),
     ]);

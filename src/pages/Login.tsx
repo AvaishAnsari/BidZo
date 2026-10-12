@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Loader2, Mail, Phone, Lock, Eye, EyeOff, ShieldCheck, Shield, Users, Trophy } from 'lucide-react';
+import { Loader2, Mail, Lock, Flame, Eye, EyeOff, ShieldCheck, Shield, Users, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
@@ -10,19 +10,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { GoogleLogin } from '@react-oauth/google';
-import BrandMark from '../components/BrandMark';
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const hasGoogleConfig = clientId && clientId !== 'your_google_client_id_here' && clientId !== '';
 
 const schema = z.object({
-  email: z.string().min(1, 'Enter your email address or mobile number.'),
+  email: z.string().min(1, 'Email is required.').email('Invalid email address.'),
   password: z.string().optional(),
 });
 type FormVals = z.infer<typeof schema>;
 
 export const Login = () => {
-  const { signIn, signInWithGoogle, signInWithOtp, verifyOtp, isConfigured } = useAuth();
+  const { signIn, signInWithGoogle, isConfigured } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -31,10 +30,6 @@ export const Login = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
   const { executeRecaptcha } = useGoogleReCaptcha();
-  const [useOtp, setUseOtp] = useState(false);
-  const [otpChannel, setOtpChannel] = useState<'email' | 'sms'>('email');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpValue, setOtpValue] = useState('');
 
   // Form setup
   const {
@@ -57,44 +52,13 @@ export const Login = () => {
     setErrorMsg(null);
     setLoading(true);
 
-    let captchaToken = '';
-    // Captcha validation
-    if (!executeRecaptcha && isConfigured) {
-      setErrorMsg('ReCAPTCHA is still loading. Please wait a moment.');
-      setLoading(false);
-      return;
-    }
-
-    // Captcha validation (Bypassed if it fails in local dev due to test keys)
-    try {
-      if (isConfigured && executeRecaptcha) {
-        captchaToken = await executeRecaptcha('login');
-        if (!captchaToken) throw new Error('Failed to verify reCAPTCHA.');
+    let recaptchaToken = '';
+    if (isConfigured && executeRecaptcha) {
+      try {
+        recaptchaToken = (await executeRecaptcha('login')) || '';
+      } catch (err: any) {
+        console.warn('[Login] reCAPTCHA skipped:', err);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Could not verify this sign-in request.');
-      setLoading(false);
-      return;
-    }
-
-    // Request or verify an email/mobile one-time code.
-    if (useOtp) {
-      const identifier = data.email.trim();
-      const result = otpSent
-        ? await verifyOtp(identifier, otpValue, otpChannel, captchaToken)
-        : await signInWithOtp(identifier, otpChannel, captchaToken);
-      if (result.error) {
-        setErrorMsg(result.error);
-        toast.error(result.error);
-      } else if (otpSent) {
-        toast.success('You are signed in.');
-        navigate(from, { replace: true });
-      } else {
-        setOtpSent(true);
-        toast.success(otpChannel === 'email' ? 'Check your email for the code.' : 'Check your phone for the code.');
-      }
-      setLoading(false);
-      return;
     }
 
     // Password Flow (Django API Integration via AuthContext)
@@ -105,7 +69,7 @@ export const Login = () => {
     }
 
     try {
-      const { error } = await signIn(data.email.trim(), data.password, captchaToken);
+      const { error } = await signIn(data.email.trim(), data.password, recaptchaToken);
       if (error) {
         setErrorMsg(error);
       } else {
@@ -131,14 +95,14 @@ export const Login = () => {
   };
 
   return (
-    <div className="auth-shell min-h-screen w-full flex flex-col lg:flex-row bg-[#020617] text-white overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[var(--bg)] text-[var(--text-main)] overflow-hidden font-sans">
       {/* ─── LEFT PANEL (HERO) ─── */}
-      <div className="auth-aside w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
+      <div className="w-full lg:w-1/2 relative flex flex-col p-8 lg:p-14 border-b lg:border-b-0 lg:border-r border-[var(--border)] min-h-[50vh] lg:min-h-screen overflow-y-auto no-scrollbar">
         {/* Background Gradient Mesh */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0f111a] via-[#161225] to-[#1e1633]"></div>
-          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#c49b5a]/10 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#d4aa5f]/10 rounded-full blur-[120px]"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg)] via-[var(--bg)] to-[var(--surface)]"></div>
+          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[var(--primary)]/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[var(--primary)]/10 rounded-full blur-[120px]"></div>
         </div>
 
         {/* Navbar / Logo */}
@@ -148,15 +112,20 @@ export const Login = () => {
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className="relative z-20 flex justify-between items-center w-full mb-12"
         >
-          <Link to="/" aria-label="BidZo home" className="flex items-center gap-2 text-white no-underline">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8e5f2d] to-[#d5b269] text-[#382719] flex items-center justify-center shadow-[0_8px_24px_rgba(157,108,48,0.35)] border border-white/10">
-              <BrandMark size={26} />
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary)] flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)]">
+              <Flame className="w-6 h-6 text-[var(--text-main)]" strokeWidth={2.5} />
             </div>
             <span className="text-3xl font-extrabold tracking-tight">BidZo</span>
-          </Link>
-          <Link to="/register" className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
-            Create account
-          </Link>
+          </div>
+          <div className="hidden sm:flex items-center gap-3 bg-[var(--elevated)] backdrop-blur-md border border-[var(--border)] rounded-full px-3 py-1.5 shadow-xl">
+            <div className="flex -space-x-2">
+              <img src="https://i.pravatar.cc/100?img=11" className="w-6 h-6 rounded-full border-2 border-[var(--bg)]" alt="user" />
+              <img src="https://i.pravatar.cc/100?img=32" className="w-6 h-6 rounded-full border-2 border-[var(--bg)]" alt="user" />
+              <img src="https://i.pravatar.cc/100?img=59" className="w-6 h-6 rounded-full border-2 border-[var(--bg)]" alt="user" />
+            </div>
+            <span className="text-xs font-medium text-[var(--text-muted)] pr-1">12K+ Active Bidders</span>
+          </div>
         </motion.div>
 
         {/* Main Hero Content */}
@@ -168,7 +137,7 @@ export const Login = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-[var(--text-main)] bg-[var(--elevated)] border border-[var(--border)] backdrop-blur-md"
             >
-              <ShieldCheck className="w-4 h-4 text-[#d4aa5f]" /> Trusted worldwide
+              <ShieldCheck className="w-4 h-4 text-[var(--primary)]" /> Trusted worldwide
             </motion.div>
 
             <motion.h1
@@ -177,8 +146,8 @@ export const Login = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="text-4xl lg:text-[4.5rem] font-extrabold leading-[1.05] tracking-tight"
             >
-              The smarter way <br className="hidden lg:block" /> to{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#c49b5a] to-[#f0d9ae] drop-shadow-[0_0_15px_rgba(196,155,90,0.4)]">
+              Discover. <br className="hidden lg:block" /> to{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">
                 bid & win
               </span>
             </motion.h1>
@@ -200,26 +169,77 @@ export const Login = () => {
               className="flex items-center gap-8 lg:gap-10 pt-4 lg:pt-6"
             >
               <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#8b5e2c]/20 to-[#d4aa5f]/10 border border-[#8b5e2c]/30 flex items-center justify-center shadow-[0_0_15px_rgba(157,108,48,0.15)]">
-                  <Users className="w-5 h-5 lg:w-6 lg:h-6 text-[#d4aa5f]" />
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/10 border border-[var(--primary)]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                  <Users className="w-5 h-5 lg:w-6 lg:h-6 text-[var(--primary)]" />
                 </div>
                 <div>
-                  <div className="text-lg lg:text-xl font-extrabold text-white tracking-tight">Live bidding</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Follow every bid</div>
+                  <div className="text-2xl lg:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">12K+</div>
+                  <div className="text-xs lg:text-sm font-medium text-[var(--text-muted)]">Active Bidders</div>
                 </div>
               </div>
               <div className="w-px h-12 lg:h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
               <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[#8b5e2c]/20 to-[#d4aa5f]/10 border border-[#8b5e2c]/30 flex items-center justify-center shadow-[0_0_15px_rgba(157,108,48,0.15)]">
-                  <Trophy className="w-5 h-5 lg:w-6 lg:h-6 text-[#d4aa5f]" />
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/10 border border-[var(--primary)]/30 flex items-center justify-center shadow-[0_0_15px_rgba(147,51,234,0.15)]">
+                  <Trophy className="w-5 h-5 lg:w-6 lg:h-6 text-[var(--primary)]" />
                 </div>
                 <div>
-                  <div className="text-lg lg:text-xl font-extrabold text-white tracking-tight">One account</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Buy or sell on BidZo</div>
+                  <div className="text-2xl lg:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">38K+</div>
+                  <div className="text-xs lg:text-sm font-medium text-[var(--text-muted)]">Auctions Won</div>
                 </div>
               </div>
             </motion.div>
 
+            {/* Live Auction Card Preview */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1, y: [-5, 5, -5] }}
+              transition={{
+                opacity: { duration: 0.6, delay: 0.8 },
+                scale: { duration: 0.6, delay: 0.8 },
+                y: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1.4 },
+              }}
+              className="mt-8 lg:mt-10 bg-[var(--surface)]/80 backdrop-blur-xl rounded-2xl p-4 flex gap-4 lg:gap-5 items-center relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[var(--primary)]/20 hover:border-[var(--primary)]/40 transition-colors duration-300"
+            >
+              {/* Clarify it's a preview */}
+              <div className="absolute top-2 right-2 z-10 bg-black/60 text-[9px] font-bold text-[var(--text-muted)] px-2 py-0.5 rounded-md uppercase tracking-wider">
+                Live Preview
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-50 pointer-events-none"></div>
+              <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-xl overflow-hidden relative shrink-0 shadow-inner">
+                <div className="absolute top-2 left-2 z-10 bg-rose-500/90 text-[var(--text-main)] text-[10px] font-bold px-2 py-0.5 rounded-md shadow-lg flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                  LIVE
+                </div>
+                <img
+                  src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=600&auto=format&fit=crop"
+                  alt="Premium Watch"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1 relative z-10 flex flex-col justify-between h-full py-1">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-sm lg:text-base text-[var(--text-main)]">Premium Watch</h3>
+                    <div className="bg-black/60 rounded-md px-2 py-1 border border-[var(--border)]">
+                      <div className="text-[#f43f5e] font-mono text-xs lg:text-sm font-bold tracking-widest">
+                        00:02:45
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] font-medium">Luxury Edition</p>
+                </div>
+
+                <div className="flex justify-between items-end mt-4">
+                  <div>
+                    <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest mb-0.5">Current Bid</p>
+                    <p className="text-[var(--text-main)] font-extrabold text-lg lg:text-xl drop-shadow-md">₹48,750</p>
+                  </div>
+                  <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] hover:brightness-110 text-[var(--text-main)] text-xs font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg flex items-center gap-1 shadow-lg transition-all duration-300 pointer-events-none">
+                    Place Bid <span className="text-base leading-none">→</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
 
@@ -240,12 +260,12 @@ export const Login = () => {
       </div>
 
       {/* ─── RIGHT PANEL (FORM) ─── */}
-      <div className="auth-panel w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="auth-card w-full max-w-[480px] bg-[#0f111a]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-[0_0_60px_rgba(196,155,90,0.12)] relative z-10 border border-white/10"
+          className="w-full max-w-[480px] bg-[var(--surface)]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-[0_0_60px_rgba(139,92,246,0.12)] relative z-10 border border-[var(--border)]"
         >
           {/* Subtle inner radial glow */}
           <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent rounded-3xl pointer-events-none"></div>
@@ -278,12 +298,16 @@ export const Login = () => {
                     onSuccess={async (credentialResponse) => {
                       setLoading(true);
                       if (credentialResponse.credential) {
-                        const { error } = await signInWithGoogle(credentialResponse.credential);
+                        const { error, isNewUser } = await signInWithGoogle(credentialResponse.credential);
                         if (error) {
                           setErrorMsg(error);
                         } else {
                           toast.success(t('auth.welcomeBackToast', 'Welcome back! 👋'));
-                          navigate(from, { replace: true });
+                          if (isNewUser) {
+                            navigate('/select-role', { replace: true });
+                          } else {
+                            navigate(from, { replace: true });
+                          }
                         }
                       }
                       setLoading(false);
@@ -320,7 +344,7 @@ export const Login = () => {
             {/* Divider */}
             <motion.div variants={itemVariants} className="flex items-center gap-4">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10"></div>
-              <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">sign in with email or mobile</span>
+              <span className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">or sign in with email</span>
               <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10"></div>
             </motion.div>
 
@@ -329,28 +353,26 @@ export const Login = () => {
               {/* Email Input */}
               <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
                 <div className="relative w-full">
-                  {useOtp && otpChannel === 'sms' ? <Phone
-                    className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'}`}
-                  /> : <Mail
-                    className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${
+                  <Mail
+                    className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-all duration-200 pointer-events-none z-10 ${
                       emailVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'
                     }`}
-                  />}
+                  />
                   <input
-                    type={useOtp && otpChannel === 'sms' ? 'tel' : 'email'}
+                    type="email"
                     id="email"
-                    autoComplete={useOtp && otpChannel === 'sms' ? 'tel' : 'email'}
+                    autoComplete="email"
                     {...register('email')}
                     style={{ paddingLeft: '44px' }}
-                    className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
-                    placeholder={useOtp && otpChannel === 'sms' ? 'Mobile number, e.g. +919876543210' : t('auth.emailAddress', 'Email Address')}
+                    className="peer w-full h-[48px] bg-[var(--elevated)] border border-[var(--border)] rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-all placeholder-transparent shadow-inner"
+                    placeholder={t('auth.emailAddress', 'Email Address')}
                   />
                   <label
                     htmlFor="email"
                     style={{ left: '44px' }}
-                    className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none"
+                    className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[var(--primary)] pointer-events-none"
                   >
-                    {useOtp && otpChannel === 'sms' ? 'Mobile Number' : useOtp ? 'Email Address' : t('auth.emailAddress', 'Email Address')}
+                    {t('auth.emailAddress', 'Email Address')}
                   </label>
                 </div>
                 {touchedFields.email && errors.email && (
@@ -358,115 +380,79 @@ export const Login = () => {
                 )}
               </motion.div>
 
-              {useOtp && (
-                <div className="mb-4 grid grid-cols-2 gap-2" role="group" aria-label="OTP delivery method">
-                  {(['email', 'sms'] as const).map((channel) => (
-                    <button
-                      key={channel}
-                      type="button"
-                      onClick={() => { setOtpChannel(channel); setOtpSent(false); setOtpValue(''); setErrorMsg(null); }}
-                      className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${otpChannel === channel ? 'border-teal-400/60 bg-teal-500/10 text-teal-200' : 'border-white/10 bg-white/[0.02] text-gray-400 hover:bg-white/[0.06]'}`}
-                    >
-                      {channel === 'email' ? 'Email code' : 'Mobile code'}
-                    </button>
-                  ))}
+              {/* Password Input */}
+              <motion.div variants={itemVariants} className="flex flex-col">
+                <div className="relative group w-full">
+                  <Lock
+                    className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-all duration-200 pointer-events-none z-10 ${
+                      passwordVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'
+                    }`}
+                  />
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    id="password"
+                    autoComplete="current-password"
+                    {...register('password')}
+                    style={{ paddingLeft: '44px', paddingRight: '44px' }}
+                    className="peer w-full h-[48px] bg-[var(--elevated)] border border-[var(--border)] rounded-[8px] pt-4 pb-1 text-sm font-medium text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-all placeholder-transparent shadow-inner"
+                    placeholder={t('auth.password', 'Password')}
+                  />
+                  <label
+                    htmlFor="password"
+                    style={{ left: '44px' }}
+                    className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[var(--primary)] pointer-events-none"
+                  >
+                    {t('auth.password', 'Password')}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors z-10"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-              )}
-
-              {/* Password Input (shown when not using OTP) */}
-              {!useOtp && (
-                <motion.div variants={itemVariants} className="flex flex-col">
-                  <div className="relative group w-full">
-                    <Lock
-                      className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${
-                        passwordVal ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'
-                      }`}
-                    />
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      id="password"
-                      autoComplete="current-password"
-                      {...register('password')}
-                      style={{ paddingLeft: '44px', paddingRight: '44px' }}
-                      className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
-                      placeholder={t('auth.password', 'Password')}
-                    />
-                    <label
-                      htmlFor="password"
-                      style={{ left: '44px' }}
-                      className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none"
-                    >
-                      {t('auth.password', 'Password')}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowPw(!showPw)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#d4aa5f] transition-colors z-10"
-                    >
-                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {touchedFields.password && errors.password && (
-                    <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.password.message}</p>
-                  )}
-                </motion.div>
-              )}
-
-              {/* OTP Code Input */}
-              {useOtp && otpSent && (
-                <motion.div variants={itemVariants} className="flex flex-col">
-                  <div className="relative group w-full">
-                    <Lock
-                      className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#d4aa5f] transition-all duration-200 pointer-events-none z-10 ${
-                        otpValue ? 'opacity-0 scale-75 -translate-x-1' : 'opacity-100 scale-100 translate-x-0'
-                      }`}
-                    />
-                    <input
-                      type="text"
-                      id="otp"
-                      value={otpValue}
-                      onChange={(e) => setOtpValue(e.target.value)}
-                      style={{ paddingLeft: '44px' }}
-                      className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
-                      placeholder="Enter OTP"
-                    />
-                    <label
-                      htmlFor="otp"
-                      style={{ left: '44px' }}
-                      className="absolute top-[6px] text-[10px] uppercase font-bold tracking-wider text-gray-500 transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-[14px] peer-placeholder-shown:normal-case peer-placeholder-shown:font-medium peer-focus:top-[6px] peer-focus:text-[10px] peer-focus:uppercase peer-focus:font-bold peer-focus:text-[#d4aa5f] pointer-events-none"
-                    >
-                      Enter OTP
-                    </label>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Forgot password & Switch OTP/Password */}
-              <motion.div variants={itemVariants} className="flex justify-between items-center px-1 mt-[8px]">
-                {!useOtp ? (
-                  <Link to="#" className="text-xs font-semibold text-gray-400 hover:text-[#d4aa5f] transition-colors">
-                    Forgot password?
-                  </Link>
-                ) : (
-                  <span className="text-xs text-gray-500">Check your {otpChannel === 'email' ? 'email' : 'phone'} for the code</span>
+                {touchedFields.password && errors.password && (
+                  <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.password.message}</p>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUseOtp(!useOtp);
-                    setOtpSent(false);
-                    setOtpValue('');
-                    setErrorMsg(null);
-                  }}
-                  className="text-xs font-bold text-[#d4aa5f] hover:text-[#f0d9ae] transition-colors"
-                >
-                  {useOtp ? 'Sign in with password' : 'Sign in with OTP'}
-                </button>
               </motion.div>
 
-              {/* Authentication is intentionally isolated per tab. */}
-              <motion.div variants={itemVariants} className="mt-[12px] px-1 text-xs text-gray-400">
-                This tab has its own sign-in, so you can use separate accounts in other tabs.
+              {/* Forgot password */}
+              <motion.div variants={itemVariants} className="flex justify-between items-center px-1 mt-[8px]">
+                <Link to="#" className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors">
+                  Forgot password?
+                </Link>
+              </motion.div>
+
+              {/* Keep me signed in */}
+              <motion.div variants={itemVariants} className="flex items-center gap-3 mt-[12px]">
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    className="peer w-5 h-5 rounded-md border border-[var(--border)] bg-[var(--elevated)] checked:bg-[var(--primary)] checked:border-transparent focus:ring-2 focus:ring-[var(--primary)]/50 appearance-none transition-all cursor-pointer"
+                  />
+                  <svg
+                    className="absolute w-3 h-3 pointer-events-none opacity-0 peer-checked:opacity-100 text-[var(--text-main)]"
+                    viewBox="0 0 14 10"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M1 5L4.5 8.5L13 1"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <label
+                  htmlFor="remember"
+                  className="text-sm font-medium text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-main)] transition-colors"
+                >
+                  Keep me signed in
+                </label>
               </motion.div>
 
               {/* Submit Button */}
@@ -478,17 +464,17 @@ export const Login = () => {
                 disabled={loading}
                 className="w-full relative group overflow-hidden rounded-[8px] p-[1px] mt-[16px] shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
-                <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="flex items-center text-[#382719]"><BrandMark size={20} /></span>}
-                  {useOtp ? (otpSent ? 'Verify code' : 'Send code') : 'Sign in securely'}
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
+                <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] h-[48px] rounded-[8px] text-sm font-bold text-[var(--text-main)] shadow-inner border border-[var(--border)]">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5" />}
+                  Sign in securely
                 </div>
               </motion.button>
             </form>
 
             <motion.p variants={itemVariants} className="text-center text-sm font-medium text-[var(--text-muted)]">
               New to BidZo?{' '}
-              <Link to="/register" className="text-[#d4aa5f] font-bold hover:text-[#f0d9ae] transition-colors">
+              <Link to="/register" className="text-[var(--primary)] font-bold hover:text-[var(--primary-hover)] transition-colors">
                 Create free account
               </Link>
             </motion.p>

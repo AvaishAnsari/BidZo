@@ -1,30 +1,99 @@
 import React, { useState } from 'react';
-import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LogOut, User as UserIcon, Sun, Moon, Bell } from 'lucide-react';
+import { Flame, LogOut, Sun, Moon, Bell, Search, Heart, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import LanguageSwitcher from './LanguageSwitcher';
-import { useTranslation } from 'react-i18next';
+import { useWatchlist } from '../hooks/useWatchlist';
+
+
 import { useNotifications } from '../context/NotificationContext';
 import BackToTop from './BackToTop';
-import BrandMark from './BrandMark';
+
+const BackgroundDecorations = () => (
+  <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden hidden xl:block">
+    {/* Dotted Grid Overlay with mask to only show on edges */}
+    <div
+      className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+      style={{
+        backgroundImage: 'radial-gradient(circle at 2px 2px, var(--text-main) 1px, transparent 0)',
+        backgroundSize: '32px 32px',
+        maskImage: 'linear-gradient(to right, black 0%, transparent 20%, transparent 80%, black 100%)',
+        WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 20%, transparent 80%, black 100%)'
+      }}
+    />
+
+    {/* Left Side Glows & Assets */}
+    <div className="absolute top-[20%] -left-[10%] w-[500px] h-[500px] bg-[var(--primary)]/10 rounded-full blur-[120px]"></div>
+
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.4, y: [-10, 10, -10], rotate: [0, 5, 0] }}
+      transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute top-[30%] left-[2%] w-48 h-48 drop-shadow-[0_0_30px_rgba(139,92,246,0.4)] mix-blend-screen"
+    >
+      {/* Abstract 3D Gavel Representation */}
+      <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M40 160L80 120L120 160L80 200L40 160Z" fill="url(#grad1)" />
+        <path d="M70 110L140 40L170 70L100 140L70 110Z" fill="url(#grad2)" />
+        <path d="M130 30L170 70L190 50L150 10L130 30Z" fill="url(#grad1)" />
+        <circle cx="160" cy="40" r="15" fill="var(--primary)" opacity="0.6" filter="blur(10px)"/>
+        <defs>
+          <linearGradient id="grad1" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+            <stop stopColor="var(--primary)" />
+            <stop offset="1" stopColor="var(--accent)" />
+          </linearGradient>
+          <linearGradient id="grad2" x1="0" y1="200" x2="200" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stopColor="var(--accent)" stopOpacity="0.9" />
+            <stop offset="1" stopColor="var(--primary)" stopOpacity="0.3" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </motion.div>
+
+    {/* Right Side Glows & Assets */}
+    <div className="absolute top-[40%] -right-[10%] w-[600px] h-[600px] bg-[var(--accent)]/10 rounded-full blur-[120px]"></div>
+
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.4, y: [10, -10, 10], rotate: [0, -5, 0] }}
+      transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute top-[45%] right-[2%] w-56 h-56 drop-shadow-[0_0_30px_rgba(236,72,153,0.4)] mix-blend-screen"
+    >
+      {/* Abstract Antique Vase Representation */}
+      <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M100 10L180 80L140 190H60L20 80L100 10Z" fill="url(#grad3)" />
+        <path d="M100 10V190" stroke="var(--bg)" strokeWidth="4" />
+        <path d="M20 80H180" stroke="var(--bg)" strokeWidth="4" />
+        <circle cx="100" cy="100" r="20" fill="var(--accent)" opacity="0.6" filter="blur(15px)"/>
+        <defs>
+          <linearGradient id="grad3" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+            <stop stopColor="var(--accent)" />
+            <stop offset="1" stopColor="var(--primary)" stopOpacity="0.6" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </motion.div>
+  </div>
+);
+
 const centerStyle: React.CSSProperties = {
-  maxWidth: '1600px',
+  maxWidth: '1280px',
   marginLeft: 'auto',
   marginRight: 'auto',
   paddingLeft: '1.5rem',
   paddingRight: '1.5rem',
   width: '100%',
+  position: 'relative',
+  zIndex: 10
 };
 
 export const Layout = () => {
   const { user, role, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { watchlist } = useWatchlist();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { t } = useTranslation();
-  
+
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
@@ -33,97 +102,82 @@ export const Layout = () => {
     navigate('/');
   };
 
-  const navLinks = [
-    { name: t('auctions'), path: '/auctions' },
-    ...(user ? [{ name: t('watchlist'), path: '/watchlist' }] : []),
-    ...(user ? [{ name: t('createAuction'), path: '/create-auction' }] : []),
-    ...(role === 'admin' ? [{ name: t('adminDashboard'), path: '/admin' }] : []),
-  ];
-
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <div className="min-h-screen flex flex-col w-full bg-[var(--bg)] text-[var(--text-main)] transition-colors duration-300 relative">
+      <BackgroundDecorations />
       {/* Navigation */}
-      <header className="glass app-header" style={{ position: 'sticky', top: '-1px', paddingTop: '1px', margin: 0, zIndex: 50 }}>
+      <header className="navbar relative z-20">
         <div style={centerStyle}>
-          <div className="app-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
-            {/* Logo */}
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
-              <motion.div
-                whileHover={{ rotate: 15, scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                style={{
-                  background: 'linear-gradient(135deg, #8e5f2d, #d5b269)',
-                  padding: '0.6rem',
-                  borderRadius: '0.75rem',
-                  boxShadow: '0 8px 24px rgba(157,108,48,0.35)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex',
-                }}
-              >
-                <BrandMark size={26} />
-              </motion.div>
-              <span style={{
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                color: isDark ? '#f7f1e7' : '#805329',
-                WebkitTextFillColor: isDark ? '#f7f1e7' : '#805329',
-                letterSpacing: '-0.02em',
-              }}>
-                BidZo
-              </span>
-            </Link>
+          <div className="flex justify-between items-center h-[72px] gap-4">
+            {/* Left Section */}
+            <div className="flex items-center gap-8 shrink-0">
+              {/* Logo */}
+              <Link to="/" className="flex items-center gap-2 no-underline group">
+                <motion.div
+                  whileHover={{ rotate: 15, scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="bg-[var(--primary)] p-1.5 rounded-full shadow-md flex items-center justify-center"
+                >
+                  <Flame className="w-5 h-5 text-white" />
+                </motion.div>
+                <span className="text-xl font-black tracking-tight bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent transition-colors pr-2 drop-shadow-sm">
+                  BidZo
+                </span>
+              </Link>
 
-            {/* Nav Links */}
-            <nav className="app-primary-nav" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              {navLinks.map((link) => {
-                const isActive = location.pathname === link.path;
-                return (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    style={{
-                      position: 'relative',
-                      fontWeight: 500,
-                      fontSize: '0.95rem',
-                      textDecoration: 'none',
-                      color: isActive ? (isDark ? '#d4aa5f' : '#865826') : (isDark ? '#b8aa95' : '#655947'),
-                      paddingBottom: '0.25rem',
-                      transition: 'color 0.2s',
-                    }}
-                  >
-                    {link.name}
-                    {isActive && (
-                      <motion.div
-                        layoutId="nav-indicator"
-                        style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: '2px',
-                          background: '#b98342',
-                          borderRadius: '9999px',
-                        }}
-                        initial={false}
-                        transition={{ duration: 0.3 }}
-                      />
-                    )}
+              {/* Nav Links */}
+              <nav className="hidden xl:flex items-center gap-6 font-semibold text-[0.9rem]">
+                <Link to="/auctions" className="text-[var(--primary)] border-b-2 border-[var(--primary)] pb-1 no-underline">Auctions</Link>
+                <Link to="/watchlist" className="flex items-center gap-1.5 text-[var(--text-muted)] hover:text-red-400 no-underline transition-colors">
+                  <Heart size={15} className={watchlist.length > 0 ? "fill-red-500/20 text-red-500" : ""} />
+                  <span>Wishlist</span>
+                  {watchlist.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                      {watchlist.length}
+                    </span>
+                  )}
+                </Link>
+                <div className="relative group py-2 flex items-center">
+                  <button className="flex items-center gap-1 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors bg-transparent border-none cursor-pointer font-semibold text-[0.9rem] p-0 h-full">
+                    Categories <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <div className="absolute top-full left-0 w-48 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 transform translate-y-2 group-hover:translate-y-0">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl overflow-hidden py-2 backdrop-blur-md">
+                      {['Electronics', 'Fashion', 'Watches', 'Jewelry', 'Antiques', 'Vehicles', 'Sports', 'Collectibles'].map(cat => (
+                        <Link key={cat} to={`/auctions?category=${cat}`} className="block px-4 py-2.5 text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--primary)]/10 no-underline transition-colors">
+                          {cat}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <a href="/#how-it-works" className="text-[var(--text-muted)] hover:text-[var(--text-main)] no-underline transition-colors">How It Works</a>
+                <Link to="/create-auction" className="text-[var(--text-muted)] hover:text-[var(--text-main)] no-underline transition-colors">Sell on BidZo</Link>
+                {role === 'admin' && (
+                  <Link to="/admin" className="text-purple-400 font-bold hover:text-purple-300 no-underline transition-colors flex items-center gap-1">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Admin</span>
                   </Link>
-                );
-              })}
+                )}
+              </nav>
+            </div>
 
-              {/* Theme Toggle */}
+            {/* Global Search */}
+            <div className="flex-1 max-w-xl hidden md:flex items-center bg-[var(--elevated)] border border-[var(--border)] rounded-full px-4 py-2 focus-within:border-[var(--primary)] focus-within:ring-1 focus-within:ring-[var(--primary)] transition-all shadow-inner">
+              <Search className="text-[var(--text-muted)] w-4 h-4 shrink-0 mr-2" />
+              <input
+                type="text"
+                placeholder="Search auctions, products and categories..."
+                className="w-full bg-transparent border-none outline-none text-sm text-[var(--text-main)] placeholder:text-[var(--text-muted)] font-medium"
+              />
+            </div>
+
+            <nav className="flex items-center gap-3">
               <motion.button
                 onClick={toggleTheme}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:text-white transition-colors ml-2"
-                style={{
-                  overflow: 'hidden',
-                  background: isDark ? 'rgba(31,41,55,0.5)' : '#f1f5f9',
-                  borderColor: isDark ? 'rgba(55,65,81,0.5)' : '#cbd5e1',
-                  color: isDark ? '#d1d5db' : '#475569',
-                }}
+                className="relative flex items-center justify-center w-9 h-9 rounded-full bg-[var(--elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors ml-2 overflow-hidden shadow-sm"
                 title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
               >
                 <AnimatePresence mode="wait">
@@ -134,7 +188,7 @@ export const Layout = () => {
                       animate={{ y: 0, opacity: 1, rotate: 0 }}
                       exit={{ y: -20, opacity: 0, rotate: 45 }}
                       transition={{ duration: 0.2 }}
-                      style={{ position: 'absolute' }}
+                      className="absolute"
                     >
                       <Sun size={18} />
                     </motion.div>
@@ -145,44 +199,47 @@ export const Layout = () => {
                       animate={{ y: 0, opacity: 1, rotate: 0 }}
                       exit={{ y: -20, opacity: 0, rotate: 45 }}
                       transition={{ duration: 0.2 }}
-                      style={{ position: 'absolute' }}
+                      className="absolute"
                     >
                       <Moon size={18} />
                     </motion.div>
                   )}
                 </AnimatePresence>
               </motion.button>
-              
-              <LanguageSwitcher />
+
+              {/* Wishlist Quick Icon */}
+              {user && (
+                <Link
+                  to="/watchlist"
+                  title={watchlist.length > 0 ? `My Wishlist (${watchlist.length} saved)` : 'My Wishlist'}
+                  className="relative flex items-center justify-center w-9 h-9 rounded-full bg-[var(--elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-red-400 transition-colors shadow-sm no-underline ml-1"
+                >
+                  <Heart size={18} className={watchlist.length > 0 ? "fill-red-500 text-red-500" : ""} />
+                  {watchlist.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[0.65rem] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-md">
+                      {watchlist.length}
+                    </div>
+                  )}
+                </Link>
+              )}
 
               {/* Notification Bell */}
               {user && (
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
                   <motion.button
                     onClick={() => setShowNotifDropdown(!showNotifDropdown)}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/50 dark:bg-gray-800/50 border border-gray-700/50 text-gray-300 hover:text-white transition-colors"
-                    style={{
-                      background: isDark ? 'rgba(31,41,55,0.5)' : '#f1f5f9',
-                      borderColor: isDark ? 'rgba(55,65,81,0.5)' : '#cbd5e1',
-                      color: isDark ? '#d1d5db' : '#475569',
-                    }}
+                    className="relative flex items-center justify-center w-9 h-9 rounded-full bg-[var(--elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors shadow-sm"
                   >
                     <Bell size={18} />
                     {unreadCount > 0 && (
-                      <div style={{
-                        position: 'absolute', top: -2, right: -2,
-                        background: '#ef4444', color: 'white',
-                        fontSize: '0.65rem', fontWeight: 800,
-                        width: '16px', height: '16px', borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
+                      <div className="absolute -top-1 -right-1 bg-[var(--danger)] text-white text-[0.65rem] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-md">
                         {unreadCount}
                       </div>
                     )}
                   </motion.button>
-                  
+
                   <AnimatePresence>
                     {showNotifDropdown && (
                       <motion.div
@@ -190,34 +247,28 @@ export const Layout = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="glass"
-                        style={{
-                          position: 'absolute', top: '130%', right: 0,
-                          width: '320px', borderRadius: '1rem',
-                          border: isDark ? '1px solid rgba(156,163,175,0.2)' : '1px solid rgba(156,163,175,0.5)',
-                          background: isDark ? 'rgba(31,41,55,0.95)' : 'rgba(255,255,255,0.95)',
-                          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-                          overflow: 'hidden', zIndex: 100,
-                        }}
+                        className="absolute top-[130%] right-0 w-[320px] rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl overflow-hidden z-50"
                       >
-                        <div style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: isDark ? 'white' : '#111827' }}>{t('notifications')}</h3>
+                        <div className="p-4 border-b border-[var(--border)] flex justify-between items-center bg-[var(--elevated)]">
+                          <h3 className="m-0 text-[0.95rem] font-bold text-[var(--text-main)]">Notifications</h3>
                           {unreadCount > 0 && (
-                            <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: '#b98342', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{t('markAllRead')}</button>
+                            <button onClick={markAllAsRead} className="bg-transparent border-none text-[var(--primary)] text-xs font-semibold cursor-pointer hover:underline">
+                              Mark all as read
+                            </button>
                           )}
                         </div>
-                        <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                        <div className="max-h-[350px] overflow-y-auto">
                           {notifications.length === 0 ? (
-                            <p style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>{t('noNotificationsYet')}</p>
+                            <p className="p-8 text-center text-[var(--text-muted)] text-sm m-0">No notifications yet.</p>
                           ) : (
                             notifications.map(n => (
-                              <div key={n.id} onClick={() => !n.read && markAsRead(n.id)} style={{ padding: '1rem', borderBottom: '1px solid rgba(156,163,175,0.1)', background: n.read ? 'transparent' : (isDark ? 'rgba(190,143,70,0.12)' : 'rgba(190,143,70,0.09)'), cursor: n.read ? 'default' : 'pointer', transition: 'background 0.2s' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isDark ? '#e5e7eb' : '#1f2937' }}>{n.title}</span>
-                                  {!n.read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#b98342', flexShrink: 0 }} />}
+                              <div key={n.id} onClick={() => !n.read && markAsRead(n.id)} className={`p-4 border-b border-[var(--border)] cursor-pointer transition-colors ${n.read ? 'bg-transparent' : 'bg-[var(--primary)]/10 hover:bg-[var(--primary)]/20'}`}>
+                                <div className="flex justify-between mb-1">
+                                  <span className="text-sm font-bold text-[var(--text-main)]">{n.title}</span>
+                                  {!n.read && <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0" />}
                                 </div>
-                                <p style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#4b5563', margin: '0 0 0.5rem 0', lineHeight: 1.4 }}>{n.message}</p>
-                                <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>{new Date(n.created_at).toLocaleString()}</span>
+                                <p className="text-xs text-[var(--text-muted)] m-0 mb-2 leading-relaxed">{n.message}</p>
+                                <span className="text-[0.65rem] text-[var(--text-muted)] opacity-80">{new Date(n.created_at).toLocaleString()}</span>
                               </div>
                             ))
                           )}
@@ -229,37 +280,29 @@ export const Layout = () => {
               )}
 
               {user ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>
-                  <Link to="/profile/details" style={{ textDecoration: 'none' }}>
-                    <motion.div 
+                <div className="flex items-center gap-3 pl-2 lg:pl-4 xl:border-l border-[var(--border)]">
+                  {role === 'admin' && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-bold hover:bg-purple-500/30 transition-all no-underline shadow-sm"
+                      title="Admin Dashboard"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="hidden sm:inline">Admin Dashboard</span>
+                    </Link>
+                  )}
+                  <Link to="/profile" className="no-underline">
+                    <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.8rem',
-                      color: isDark ? '#d1d5db' : '#334155',
-                      background: isDark ? 'rgba(31,41,55,0.6)' : '#f1f5f9',
-                      border: `1px solid ${isDark ? 'rgba(55,65,81,0.5)' : '#cbd5e1'}`,
-                      padding: '0.4rem 0.75rem',
-                      borderRadius: '9999px',
-                      cursor: 'pointer',
-                    }}>
-                      <UserIcon style={{ width: '1rem', height: '1rem', color: isDark ? '#d4aa5f' : '#865826' }} />
-                      <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.username ?? user.email}</span>
-                      <span style={{
-                        background: 'rgba(190,143,70,0.16)',
-                        color: isDark ? '#e2c17f' : '#795329',
-                        border: '1px solid rgba(190,143,70,0.32)',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '9999px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}>
-                        {role === 'admin' ? 'Admin' : 'Member'}
+                    className="flex items-center gap-2 text-sm text-[var(--text-main)] bg-[var(--elevated)] border border-[var(--border)] py-1.5 px-3 rounded-full cursor-pointer shadow-sm hover:border-[var(--primary)] transition-colors"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-[var(--text-main)] text-[var(--bg)] flex items-center justify-center font-bold text-xs shrink-0">
+                        {user.username ? user.username[0].toUpperCase() : 'U'}
+                      </div>
+                      <span className="max-w-[100px] overflow-hidden text-ellipsis whitespace-nowrap font-bold text-sm hidden sm:block">{user.username ?? user.email}</span>
+                      <span className="bg-[var(--primary)] text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest hidden sm:block">
+                        {role}
                       </span>
                     </motion.div>
                   </Link>
@@ -267,55 +310,25 @@ export const Layout = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleSignOut}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: isDark ? '#6b7280' : '#475569',
-                      padding: '0.5rem',
-                      borderRadius: '9999px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      transition: 'color 0.2s',
-                    }}
+                    className="bg-transparent border-none cursor-pointer text-[var(--text-muted)] hover:text-[var(--danger)] p-2 rounded-full flex items-center transition-colors shrink-0"
                     title="Sign Out"
                   >
-                    <LogOut style={{ width: '1.25rem', height: '1.25rem' }} />
+                    <LogOut className="w-5 h-5" />
                   </motion.button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '1.5rem', borderLeft: '1px solid rgba(156,163,175,0.3)' }}>
+                <div className="flex items-center gap-3 pl-4 border-l border-[var(--border)] shrink-0">
                   <Link
                     to="/login"
-                    style={{
-                      color: isDark ? '#9ca3af' : '#475569',
-                      fontWeight: 500,
-                      textDecoration: 'none',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.75rem',
-                      border: '1px solid transparent',
-                      transition: 'all 0.2s',
-                      fontSize: '0.9rem',
-                    }}
+                    className="btn-secondary text-sm"
                   >
-                  {t('logIn')}
+                  Log In
                   </Link>
                   <Link
                     to="/register"
-                    style={{
-                      background: 'linear-gradient(125deg, #9f6b32, #d0aa62)',
-                      color: 'white',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      padding: '0.55rem 1.25rem',
-                      borderRadius: '0.75rem',
-                      fontSize: '0.9rem',
-                      border: '1px solid rgba(190,143,70,0.3)',
-                      boxShadow: '0 8px 20px rgba(157,108,48,0.22)',
-                      transition: 'all 0.2s',
-                    }}
+                    className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[var(--primary-hover)] transition-colors shadow-[0_0_15px_rgba(139,92,246,0.3)] no-underline"
                   >
-                    {t('register')}
+                    Register
                   </Link>
                 </div>
               )}
@@ -325,22 +338,22 @@ export const Layout = () => {
       </header>
 
       {/* Main Content */}
-      <main style={{ flex: 1, paddingTop: '2rem', paddingBottom: '4rem' }}>
+      <main className="flex-1 pt-8 pb-16">
         <div style={centerStyle}>
           <Outlet />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="glass" style={{ borderTop: '1px solid rgba(55,65,81,0.4)', marginTop: 'auto' }}>
-        <div style={{ ...centerStyle, paddingTop: '2rem', paddingBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
-            <span style={{ color: '#9a672e', fontWeight: 600 }}>BidZo</span>
+      <footer className="bg-[var(--surface)] border-t border-[var(--border)] mt-auto">
+        <div style={{ ...centerStyle }} className="py-8 flex justify-between items-center flex-wrap gap-4">
+          <p className="text-[var(--text-muted)] text-sm m-0">
+            <span className="text-[var(--primary)] font-bold tracking-tight">BidZo</span>
             {' '}© {new Date().getFullYear()} All rights reserved.
           </p>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <a href="#" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem', transition: 'color 0.2s' }}>{t('privacyPolicy')}</a>
-            <a href="#" style={{ color: '#6b7280', textDecoration: 'none', fontSize: '0.875rem', transition: 'color 0.2s' }}>{t('termsOfService')}</a>
+          <div className="flex gap-6">
+            <a href="#" className="text-[var(--text-muted)] hover:text-[var(--text-main)] no-underline text-sm transition-colors">Privacy Policy</a>
+            <a href="#" className="text-[var(--text-muted)] hover:text-[var(--text-main)] no-underline text-sm transition-colors">Terms of Service</a>
           </div>
         </div>
       </footer>

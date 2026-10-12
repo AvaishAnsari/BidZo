@@ -43,8 +43,8 @@ export const WatchlistPage: React.FC = () => {
 
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '40vh', gap: '1rem' }}>
-          <Loader2 style={{ width: '2.5rem', height: '2.5rem', color: '#8b5e2c', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#e2c17f', fontWeight: 600, letterSpacing: '0.05em' }}>Loading Watchlist...</p>
+          <Loader2 style={{ width: '2.5rem', height: '2.5rem', color: '#6366f1', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: '#818cf8', fontWeight: 600, letterSpacing: '0.05em' }}>Loading Watchlist...</p>
         </div>
       ) : watchedAuctions.length > 0 ? (
         <motion.div
@@ -54,7 +54,7 @@ export const WatchlistPage: React.FC = () => {
             hidden: { opacity: 0 },
             visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
           }}
-          className="auction-grid" style={{
+          style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
             gap: '1.75rem',
