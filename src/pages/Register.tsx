@@ -106,7 +106,7 @@ export const Register = () => {
               The smarter way <br className="hidden lg:block"/> to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] drop-shadow-[0_0_15px_rgba(196,155,90,0.4)]">bid & win</span>
             </motion.h1>
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-gray-300 text-base lg:text-xl leading-relaxed max-w-md font-medium">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-[var(--text-muted)] text-base lg:text-xl leading-relaxed max-w-md font-medium">
               Real-time auctions, instant notifications, and secure payments — all in one place.
             </motion.p>
 
@@ -116,8 +116,8 @@ export const Register = () => {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4aa5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">12K+</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Active Bidders</div>
+                  <div className="text-2xl lg:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">12K+</div>
+                  <div className="text-xs lg:text-sm font-medium text-[var(--text-muted)]">Active Bidders</div>
                 </div>
               </div>
               <div className="w-px h-12 lg:h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
@@ -126,47 +126,47 @@ export const Register = () => {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4aa5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">38K+</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Auctions Won</div>
+                  <div className="text-2xl lg:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">38K+</div>
+                  <div className="text-xs lg:text-sm font-medium text-[var(--text-muted)]">Auctions Won</div>
                 </div>
               </div>
             </motion.div>
 
             {/* Bottom Features */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8 }} className="grid grid-cols-3 gap-6 pt-6 mt-6 border-t border-white/10">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8 }} className="grid grid-cols-3 gap-6 pt-6 mt-6 border-t border-[var(--border)]">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
                   <Zap className="w-5 h-5 text-[#d4aa5f]"/>
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">Real-time Bidding</h4>
-                <p className="text-xs text-gray-400 font-medium">Instant bid updates</p>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">Real-time Bidding</h4>
+                <p className="text-xs text-[var(--text-muted)] font-medium">Instant bid updates</p>
               </div>
               <div>
                 <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
                   <ShieldCheck className="w-5 h-5 text-[#d4aa5f]"/>
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">Anti-Sniping</h4>
-                <p className="text-xs text-gray-400 font-medium">Fair play for everyone</p>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">Anti-Sniping</h4>
+                <p className="text-xs text-[var(--text-muted)] font-medium">Fair play for everyone</p>
               </div>
               <div>
                 <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center mb-3 shadow-inner">
                   <Shield className="w-5 h-5 text-[#d4aa5f]"/>
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">Secure Signups</h4>
-                <p className="text-xs text-gray-400 font-medium">OTP & Bot Protection</p>
+                <h4 className="text-sm font-bold text-[var(--text-main)] mb-1">Secure Signups</h4>
+                <p className="text-xs text-[var(--text-muted)] font-medium">OTP & Bot Protection</p>
               </div>
             </motion.div>
           </div>
         </div>
 
         {/* Footer */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }} className="relative z-20 mt-12 hidden lg:flex justify-between items-center text-xs font-medium text-gray-500 w-full">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }} className="relative z-20 mt-12 hidden lg:flex justify-between items-center text-xs font-medium text-[var(--text-muted)] w-full">
           <p>© {new Date().getFullYear()} BidZo. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-gray-300 transition-colors">About</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Contact</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">About</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Privacy</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Terms</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Contact</a>
           </div>
         </motion.div>
       </div>
@@ -327,7 +327,7 @@ export const Register = () => {
 
         {/* Global Floating Actions */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="absolute bottom-[60px] lg:bottom-6 right-6 hidden sm:flex gap-3 z-30">
-          <div className="flex items-center justify-center gap-2 text-xs font-medium text-gray-400 bg-[#161722]/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 shadow-lg">
+          <div className="flex items-center justify-center gap-2 text-xs font-medium text-[var(--text-muted)] bg-[#161722]/80 backdrop-blur-md px-4 py-2 rounded-full border border-[var(--border)] shadow-lg">
             <Shield className="w-3.5 h-3.5 text-[#34d399]"/> 256-bit SSL secured
           </div>
         </motion.div>

@@ -35,7 +35,7 @@ export function detectFraud(
 
   // 2. Unusually massive leap without reason
   // E.g., someone bids 100x the current price maliciously to lock it
-  if (currentPrice > 0 && newBidAmount > currentPrice * 10) {
+  if (currentPrice > 0 && newBidAmount > Math.max(1000, currentPrice * 10)) {
     return {
       isFraud: true,
       reason: "Anomalous bid amount detected. Bid exceeds 1000% of current price.",

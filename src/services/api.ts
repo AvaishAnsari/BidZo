@@ -1,11 +1,17 @@
-import toast from 'react-hot-toast';
-import { clearTabAuth, migrateLegacyAuthToTab } from './authStorage';
+const rawBase: string =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:8000/api';
 
-let authErrorReported = false;
+const cleanBase = rawBase.replace(/\/+$/, '');
+export const API_BASE_URL: string = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
+
+export const API_ROOT_URL: string =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '') : 'http://localhost:8000');
 
 export function getAuthHeaders(): Record<string, string> {
-  migrateLegacyAuthToTab();
-  const token = sessionStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -15,21 +21,4 @@ export function getAuthHeaders(): Record<string, string> {
   }
 
   return headers;
-}
-
-/** Clear an obsolete/expired Django JWT once instead of showing a toast per card. */
-export function handleAuthError(response: Response, body: any): boolean {
-  const detail = String(body?.detail || body?.error || '').toLowerCase();
-  const invalidToken = response.status === 401 && (
-    body?.code === 'token_not_valid' || detail.includes('token not valid') || detail.includes('token is invalid') || detail.includes('token has expired')
-  );
-  if (!invalidToken) return false;
-
-  clearTabAuth();
-  window.dispatchEvent(new Event('bidzo:auth-expired'));
-  if (!authErrorReported) {
-    authErrorReported = true;
-    toast.error('Your saved sign-in has expired. Please sign in again.');
-  }
-  return true;
 }

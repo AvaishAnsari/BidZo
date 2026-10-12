@@ -7,7 +7,6 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import type { UserRole } from '../types';
-import { clearTabAuth, migrateLegacyAuthToTab, saveTabAuth } from '../services/authStorage';
 
 export interface User {
   id: number;
@@ -25,11 +24,11 @@ export interface AuthContextType {
   userName: string | null;
   session: any | null; // Placeholder for legacy compatibility
   signIn: (email: string, password: string, recaptchaToken?: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, name: string, role: UserRole, phoneNumber: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, name: string, role: UserRole, recaptchaToken?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 
-  signInWithOtp: (identifier: string, channel: 'email' | 'sms', recaptchaToken?: string) => Promise<{ error: string | null }>;
-  verifyOtp: (identifier: string, token: string, channel: 'email' | 'sms', recaptchaToken?: string) => Promise<{ error: string | null }>;
+  signInWithOtp: (email: string) => Promise<{ error: string | null }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
   signUpOtp: (email: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
   signInWithGoogle: (token: string) => Promise<{ error: string | null; isNewUser?: boolean }>;
 
@@ -38,7 +37,7 @@ export interface AuthContextType {
   refreshUser: () => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+import { API_BASE_URL } from '../services/api';
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
@@ -48,9 +47,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole | null>(null);
 
   const refreshUser = useCallback(() => {
-    migrateLegacyAuthToTab();
-    const storedUser = sessionStorage.getItem('user');
-    const token = sessionStorage.getItem('access_token');
+    const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('access_token');
     if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -72,20 +70,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser();
   }, [refreshUser]);
 
-  useEffect(() => {
-    const expireSession = () => {
-      setUser(null);
-      setRole(null);
-      setIsLoading(false);
-    };
-    window.addEventListener('bidzo:auth-expired', expireSession);
-    return () => window.removeEventListener('bidzo:auth-expired', expireSession);
-  }, []);
-
   const updateRole = useCallback(
     async (newRole: UserRole): Promise<{ error: string | null }> => {
       try {
-        const token = sessionStorage.getItem('access_token');
+        const token = localStorage.getItem('access_token');
         if (!token) return { error: 'Not authenticated' };
 
         const response = await fetch(`${API_BASE_URL}/users/role/`, {
@@ -103,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (user) {
             const updatedUser = { ...user, role: newRole };
             setUser(updatedUser);
-            sessionStorage.setItem('user', JSON.stringify(updatedUser));
+            localStorage.setItem('user', JSON.stringify(updatedUser));
           }
           return { error: null };
         } else {
@@ -117,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signIn = useCallback(
-    async (email: string, password: string, recaptchaToken = ''): Promise<{ error: string | null }> => {
+    async (email: string, password: string, recaptchaToken?: string): Promise<{ error: string | null }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/login/`, {
           method: 'POST',
@@ -126,7 +114,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         const result = await response.json();
         if (response.ok && result.success) {
-          saveTabAuth(result.user, result.access, result.refresh);
+          localStorage.setItem('user', JSON.stringify(result.user));
+          localStorage.setItem('access_token', result.access);
+          if (result.refresh) {
+            localStorage.setItem('refresh_token', result.refresh);
+          }
           refreshUser();
           return { error: null };
         } else {
@@ -140,16 +132,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string, userRole: UserRole, phoneNumber: string): Promise<{ error: string | null }> => {
+    async (email: string, password: string, name: string, userRole: UserRole, recaptchaToken?: string): Promise<{ error: string | null }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/register/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, username: name, role: userRole, phone_number: phoneNumber }),
+          body: JSON.stringify({ email, password, username: name, role: userRole, recaptcha_token: recaptchaToken }),
         });
         const result = await response.json();
         if (response.ok) {
-          return await signIn(email, password);
+          return await signIn(email, password, recaptchaToken);
         } else {
           return { error: result.error || 'Registration failed.' };
         }
@@ -161,43 +153,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signOut = useCallback(async () => {
-    clearTabAuth();
+    localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('isAuthenticated');
     setUser(null);
     setRole(null);
   }, []);
 
-  const signInWithOtp = useCallback(async (identifier: string, channel: 'email' | 'sms', recaptchaToken = '') => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/otp/request/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, channel, recaptcha_token: recaptchaToken }),
-      });
-      const result = await response.json();
-      return response.ok ? { error: null } : { error: result.error || 'Could not send a sign-in code.' };
-    } catch {
-      return { error: 'Could not connect to the backend server.' };
-    }
-  }, []);
-
-  const verifyOtp = useCallback(async (identifier: string, code: string, channel: 'email' | 'sms', recaptchaToken = '') => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/otp/verify/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, code, channel, recaptcha_token: recaptchaToken }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        return { error: result.error || 'The sign-in code is invalid or expired.' };
-      }
-      saveTabAuth(result.user, result.access, result.refresh);
-      refreshUser();
-      return { error: null };
-    } catch {
-      return { error: 'Could not connect to the backend server.' };
-    }
-  }, [refreshUser]);
+  const signInWithOtp = useCallback(async () => ({ error: 'OTP login is not supported by the new backend yet.' }), []);
+  const verifyOtp = useCallback(async () => ({ error: 'OTP verification is not supported yet.' }), []);
   const signUpOtp = useCallback(async () => ({ error: 'OTP registration is not supported yet.' }), []);
   
   const signInWithGoogle = useCallback(async (token: string): Promise<{ error: string | null; isNewUser?: boolean }> => {
@@ -209,7 +174,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        saveTabAuth(result.user, result.access, result.refresh);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        localStorage.setItem('access_token', result.access);
+        if (result.refresh) {
+          localStorage.setItem('refresh_token', result.refresh);
+        }
         refreshUser();
         return { error: null, isNewUser: result.is_new_user };
       } else {
@@ -238,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signInWithGoogle,
         signOut,
         updateRole,
-        isConfigured: Boolean(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
+        isConfigured: !!import.meta.env.VITE_RECAPTCHA_SITE_KEY,
         refreshUser
       }}
     >

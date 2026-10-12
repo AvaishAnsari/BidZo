@@ -166,7 +166,7 @@ export const Login = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-gray-200 bg-white/5 border border-white/10 backdrop-blur-md"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-[var(--text-main)] bg-[var(--elevated)] border border-[var(--border)] backdrop-blur-md"
             >
               <ShieldCheck className="w-4 h-4 text-[#d4aa5f]" /> Trusted worldwide
             </motion.div>
@@ -187,7 +187,7 @@ export const Login = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.5 }}
-              className="text-gray-300 text-base lg:text-xl leading-relaxed max-w-md font-medium"
+              className="text-[var(--text-muted)] text-base lg:text-xl leading-relaxed max-w-md font-medium"
             >
               Real-time auctions, instant notifications, and secure payments — experience the future of bidding.
             </motion.p>
@@ -228,13 +228,13 @@ export const Login = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 1 }}
-          className="relative z-20 mt-12 hidden lg:flex justify-between items-center text-xs font-medium text-gray-500 w-full"
+          className="relative z-20 mt-12 hidden lg:flex justify-between items-center text-xs font-medium text-[var(--text-muted)] w-full"
         >
           <p>© {new Date().getFullYear()} BidZo. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-gray-300 transition-colors">About</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">About</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Privacy</a>
+            <a href="#" className="hover:text-[var(--text-muted)] transition-colors">Terms</a>
           </div>
         </motion.div>
       </div>
@@ -255,7 +255,7 @@ export const Login = () => {
               <h2 className="text-3xl lg:text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 drop-shadow-sm">
                 {t('auth.welcomeBack', 'Welcome back 👋')}
               </h2>
-              <p className="text-gray-400 text-sm font-medium">
+              <p className="text-[var(--text-muted)] text-sm font-medium">
                 {t('auth.signInToContinue', 'Sign in to continue your bidding journey')}
               </p>
             </motion.div>
@@ -304,7 +304,7 @@ export const Login = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setErrorMsg('Google configuration is missing. Please set VITE_GOOGLE_CLIENT_ID in your .env file.')}
-                  className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
+                  className="w-full flex items-center justify-center gap-3 bg-[var(--elevated)] hover:bg-white/10 backdrop-blur-md border border-[var(--border)] h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -486,37 +486,16 @@ export const Login = () => {
               </motion.button>
             </form>
 
-            <motion.p variants={itemVariants} className="text-center text-sm font-medium text-gray-400">
+            <motion.p variants={itemVariants} className="text-center text-sm font-medium text-[var(--text-muted)]">
               New to BidZo?{' '}
               <Link to="/register" className="text-[#d4aa5f] font-bold hover:text-[#f0d9ae] transition-colors">
                 Create free account
               </Link>
             </motion.p>
 
-            {/* Legally required reCAPTCHA attribution text */}
-            <motion.p variants={itemVariants} className="text-center text-[10px] text-gray-500 leading-relaxed px-4">
-              This site is protected by reCAPTCHA and the Google{' '}
-              <a
-                href="https://policies.google.com/privacy"
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:text-gray-300"
-              >
-                Privacy Policy
-              </a>{' '}
-              and{' '}
-              <a
-                href="https://policies.google.com/terms"
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:text-gray-300"
-              >
-                Terms of Service
-              </a>{' '}
-              apply.
-            </motion.p>
 
-            <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
+
+            <div className="flex items-center justify-center gap-2 text-[11px] text-[var(--text-muted)]">
               <Shield className="w-3.5 h-3.5 text-[#34d399]" /> 256-bit SSL encrypted connection
             </div>
           </div>

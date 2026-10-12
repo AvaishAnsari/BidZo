@@ -9,7 +9,7 @@ services:
     name: bidzo-backend
     env: python
     plan: free
-    buildCommand: "pip install -r backend/requirements.txt && PYTHONPATH=\".:backend\" python backend/manage.py migrate"
+    buildCommand: "pip install -r backend/requirements.txt && PYTHONPATH=\".:backend\" python backend/manage.py migrate && PYTHONPATH=\".:backend\" python backend/seed_auctions.py"
     startCommand: "PYTHONPATH=\".:backend\" daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
     envVars:
       - key: PYTHON_VERSION

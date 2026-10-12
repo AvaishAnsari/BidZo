@@ -80,7 +80,9 @@ function mapBid(bid: any): BidRecord {
  */
 export async function fetchAuctions(): Promise<Auction[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/`);
+    const response = await fetch(`${API_BASE_URL}/auctions/`, {
+      headers: getAuthHeaders(),
+    });
     const data = await handleResponse(response);
 
     return data.map(mapAuction);
@@ -88,6 +90,43 @@ export async function fetchAuctions(): Promise<Auction[]> {
     console.error('[auctionService] fetchAuctions error:', error.message);
     throw error;
   }
+}
+
+/**
+ * Upload 1 or more image files to Django /api/upload/
+ */
+export async function uploadAuctionImages(files: File[]): Promise<string[]> {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('images', file);
+  });
+
+  const token = localStorage.getItem('access_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/upload/`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Image upload failed (${response.status})`;
+    try {
+      const data = await response.json();
+      errorMsg = data.error || data.detail || errorMsg;
+    } catch {
+      const text = await response.text();
+      if (text) errorMsg = text;
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await response.json();
+  return data.urls || (data.url ? [data.url] : []);
 }
 
 /**
@@ -101,6 +140,7 @@ export async function createAuctionAPI(payload: {
   end_time: string;
   category?: string;
   image_url?: string;
+  images?: string[];
 }): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/auctions/`, {
@@ -110,11 +150,19 @@ export async function createAuctionAPI(payload: {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw new Error('Authentication failed. Please log in to create an auction.');
+      let errorMsg = `Failed to create auction: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.error || errorData.detail || errorMsg;
+      } catch {
+        const errorText = await response.text();
+        if (errorText) errorMsg = errorText;
       }
-      const errorText = await response.text();
-      throw new Error(errorText || `Failed to create auction: ${response.status}`);
+
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please log in again to create an auction.');
+      }
+      throw new Error(errorMsg);
     }
 
     return response.json();
@@ -147,7 +195,9 @@ export async function uploadAuctionImage(file: File): Promise<string> {
  */
 export async function fetchAuction(id: string | number): Promise<Auction> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/${id}/`);
+    const response = await fetch(`${API_BASE_URL}/auctions/${id}/`, {
+      headers: getAuthHeaders(),
+    });
     const item = await handleResponse(response);
 
     return mapAuction(item);

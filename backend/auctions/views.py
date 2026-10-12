@@ -1,69 +1,99 @@
 # auctions/views.py
-import hmac
-import hashlib
-import re
-import secrets
-import uuid
-from decimal import Decimal
-from datetime import timedelta
-
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.contrib.auth.hashers import check_password, make_password
-from django.core.mail import send_mail
-from django.core.files.storage import default_storage
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from django.core import signing
-from django.utils.crypto import constant_time_compare
-import requests
 import datetime
-from .models import AuctionItem, AuctionPayment, Bid, Notification, OneTimeCode, UserProfile, WatchlistItem
-from .serializers import AuctionItemSerializer, BidSerializer
+import os
+import uuid
+from .models import AuctionItem, Bid, Address, UserProfile, Order, Shipment
+from .serializers import AuctionItemSerializer, BidSerializer, AddressSerializer, UserProfileSerializer, OrderSerializer, ShipmentSerializer
+from .payment_service import PaymentService
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.conf import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from .permissions import IsAuthenticatedOrReadOnly
+import requests
 
+class AuthAnonRateThrottle(AnonRateThrottle):
+    rate = '10/minute'
 
-def verify_recaptcha(token, expected_action):
-    secret = getattr(settings, 'RECAPTCHA_SECRET_KEY', '')
-    if not secret:
-        return bool(settings.DEBUG)
+def verify_recaptcha_v3(token, expected_action):
+    recaptcha_secret = getattr(settings, 'RECAPTCHA_SECRET_KEY', '')
+    bypass_in_dev = getattr(settings, 'RECAPTCHA_BYPASS_IN_DEV', False)
+    min_score = getattr(settings, 'RECAPTCHA_MIN_SCORE', 0.5)
+
+    if not recaptcha_secret or bypass_in_dev:
+        return True, None
+
     if not token:
-        return False
+        return False, "Missing reCAPTCHA token."
     try:
-        response = requests.post(
+        verify_response = requests.post(
             'https://www.google.com/recaptcha/api/siteverify',
-            data={'secret': secret, 'response': token},
-            timeout=5,
-        )
-        result = response.json()
-        return bool(
-            response.ok and result.get('success')
-            and result.get('action') == expected_action
-            and float(result.get('score', 0)) >= 0.5
-        )
-    except (requests.RequestException, ValueError, TypeError):
-        return False
+            data={'secret': recaptcha_secret, 'response': token},
+            timeout=5
+        ).json()
+        if not verify_response.get('success'):
+            return False, "Invalid reCAPTCHA token."
+        if expected_action and verify_response.get('action') != expected_action:
+            return False, "reCAPTCHA action mismatch."
+        if verify_response.get('score', 0) < min_score:
+            return False, "reCAPTCHA score too low."
+        return True, None
+    except requests.exceptions.RequestException:
+        return False, "Failed to verify reCAPTCHA with Google."
+    except Exception:
+        return False, "Internal error verifying reCAPTCHA."
 
 # ── AUCTION VIEWS ───────────────────────────────────────────────────────────
 
-class AuctionListCreateView(generics.ListCreateAPIView):
-    queryset = AuctionItem.objects.all().order_by('-created_at')
+class AuctionDetailView(generics.RetrieveAPIView):
     serializer_class = AuctionItemSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    lookup_url_kwarg = 'auction_id'
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        from django.db import models
+        user = self.request.user
+        qs = AuctionItem.objects.all()
+        if user.is_authenticated:
+            if getattr(user, 'profile', None) and user.profile.role == 'admin':
+                return qs
+            return qs.filter(models.Q(moderation_status='APPROVED') | models.Q(seller=user))
+        return qs.filter(moderation_status='APPROVED')
+
+class AuctionListCreateView(generics.ListCreateAPIView):
+    serializer_class = AuctionItemSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        from django.db import models
+        user = self.request.user
+        qs = AuctionItem.objects.all().order_by('-created_at')
+        if user.is_authenticated:
+            if getattr(user, 'profile', None) and user.profile.role == 'admin':
+                return qs
+            return qs.filter(models.Q(moderation_status='APPROVED') | models.Q(seller=user))
+        return qs.filter(moderation_status='APPROVED')
+
+    def create(self, request, *args, **kwargs):
+        try:
+            if request.user.profile.role != 'seller':
+                return Response({"success": False, "error": "Only sellers can create auctions."}, status=status.HTTP_403_FORBIDDEN)
+            if request.user.profile.verification_status != 'VERIFIED':
+                return Response({"success": False, "error": "You must be verified by an admin to create auctions."}, status=status.HTTP_403_FORBIDDEN)
+        except Exception:
+            return Response({"success": False, "error": "User profile not found."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         auction = serializer.save(seller=self.request.user)
@@ -72,60 +102,47 @@ class AuctionListCreateView(generics.ListCreateAPIView):
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
                 'auction_global',
-                {
-                    'type': 'auction_message',
-                    'message': {
-                        'type': 'AUCTION_CREATED',
-                        'auction': serializer.data
-                    }
-                }
+                {'type': 'auction_message', 'message': {'type': 'AUCTION_CREATED', 'auction': serializer.data}}
             )
         transaction.on_commit(broadcast_auction)
-
-
-class AuctionDetailView(generics.RetrieveAPIView):
-    queryset = AuctionItem.objects.select_related('seller').prefetch_related('bids')
-    serializer_class = AuctionItemSerializer
-    permission_classes = [permissions.AllowAny]
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-@parser_classes([MultiPartParser, FormParser])
-def api_upload_auction_image_view(request):
-    """Store an auction image and return its public URL for the listing form."""
-    uploaded = request.FILES.get('image')
-    if not uploaded:
-        return Response({'error': 'Choose an image to upload.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    allowed_types = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
-    allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
-    extension = ('.' + uploaded.name.rsplit('.', 1)[-1].lower()) if '.' in uploaded.name else ''
-    if uploaded.content_type not in allowed_types or extension not in allowed_extensions:
-        return Response({'error': 'Use a JPG, PNG, WEBP, or GIF image.'}, status=status.HTTP_400_BAD_REQUEST)
-    if uploaded.size > 5 * 1024 * 1024:
-        return Response({'error': 'Image must be 5 MB or smaller.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    stored_name = default_storage.save(f'auction_images/{uuid.uuid4().hex}{extension}', uploaded)
-    return Response({'image_url': request.build_absolute_uri(settings.MEDIA_URL + stored_name)}, status=status.HTTP_201_CREATED)
 
 
 # ── BID VIEWS ───────────────────────────────────────────────────────────────
 
 class BidListCreateView(generics.ListCreateAPIView):
     serializer_class = BidSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Bid.objects.filter(auction_item_id=self.kwargs['auction_id']).order_by('-amount')
+        auction_id = self.kwargs['auction_id']
+        try:
+            auction = AuctionItem.objects.get(id=auction_id)
+            user = self.request.user
+            if auction.moderation_status != 'APPROVED':
+                is_authorized = user.is_authenticated and (user == auction.seller or getattr(user.profile, 'role', '') == 'admin')
+                if not is_authorized:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied("Cannot view bids for an unapproved auction.")
+        except AuctionItem.DoesNotExist:
+            pass
+        return Bid.objects.filter(auction_item_id=auction_id).order_by('-amount')
 
     def create(self, request, *args, **kwargs):
-        if not verify_recaptcha(request.data.get('recaptcha_token'), 'place_bid'):
-            return Response({'success': False, 'error': 'Security verification failed. Please retry.'}, status=status.HTTP_400_BAD_REQUEST)
-        auction_id = self.kwargs['auction_id']
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        amount = serializer.validated_data['amount']
+        # Allow any authenticated user (buyers and sellers) to bid.
+        # Seller self-bidding restriction is handled after loading the auction.
+        pass
+
+        try:
+            auction_id = self.kwargs['auction_id']
+            amount = float(request.data.get('amount', 0))
+            recaptcha_token = request.data.get('recaptcha_token', '')
+        except (ValueError, TypeError):
+            return Response({"success": False, "error": "Invalid bid amount format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # RECAPTCHA VALIDATION
+        is_valid, error_msg = verify_recaptcha_v3(recaptcha_token, expected_action='bid')
+        if not is_valid:
+            return Response({"success": False, "error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
         # ─── CONCURRENCY SAFETY & VALIDATION BLOCK ───
         with transaction.atomic():
@@ -135,104 +152,65 @@ class BidListCreateView(generics.ListCreateAPIView):
             except AuctionItem.DoesNotExist:
                 return Response({"success": False, "error": "Auction item not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            # 1. The owner cannot bid on their own auction.
-            if auction.seller_id == request.user.id:
-                return Response({"success": False, "error": "Auction owners cannot bid on their own auctions."}, status=status.HTTP_400_BAD_REQUEST)
+            # 1. Prevent seller from bidding on their own auction
+            if auction.seller == request.user:
+                return Response({"success": False, "error": "You cannot bid on your own auction."}, status=status.HTTP_403_FORBIDDEN)
 
-            # 2. Only active auctions that have not passed their end time accept bids.
-            if auction.status != 'active' or auction.end_time <= timezone.now():
+            if auction.moderation_status != 'APPROVED':
+                return Response({"success": False, "error": "Cannot bid on an unapproved auction."}, status=status.HTTP_403_FORBIDDEN)
+
+            # 2. Check if the auction has already closed
+            if auction.end_time < timezone.now():
                 return Response({"success": False, "error": "This auction has already ended."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 3. The first bid must exceed the starting price; later bids must
-            # exceed the current highest bid. Keep the comparison in Decimal.
-            recorded_highest = Bid.objects.filter(auction_item=auction).order_by('-amount').values_list('amount', flat=True).first()
-            previous_bid = Bid.objects.filter(auction_item=auction).select_related('bidder').order_by('-amount', 'timestamp').first()
-            current_price = max(auction.starting_price, auction.current_highest_bid, recorded_highest or Decimal('0.00'))
-            minimum_bid = current_price + auction.min_increment
-            if amount < minimum_bid:
+            # 2. Check if the new bid is higher than the current highest bid
+            if amount <= float(auction.current_highest_bid):
                 return Response({
                     "success": False,
-                    "error": f"Bid must be at least {minimum_bid} (current price plus the minimum increment)."
+                    "error": f"Bid must be higher than the current highest bid of {auction.current_highest_bid}."
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # The Bid post-save signal updates the auction price in this transaction.
+            # Update the auction price atomically
+            auction.current_highest_bid = amount
+            auction.save()
+
+            # Save the bid via serializer
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
             serializer.save(bidder=self.request.user, auction_item=auction)
-            Notification.objects.create(
-                user=auction.seller,
-                auction=auction,
-                type='bid_update',
-                title='New bid on your auction',
-                message=f'{request.user.username} placed a bid of {amount} on {auction.title}.',
-            )
-            if previous_bid and previous_bid.bidder_id != request.user.id:
-                Notification.objects.create(
-                    user=previous_bid.bidder,
-                    auction=auction,
-                    type='outbid',
-                    title='You have been outbid',
-                    message=f'A higher bid was placed on {auction.title}.',
-                )
 
             # Broadcast to WebSocket group
             def broadcast_bid():
                 channel_layer = get_channel_layer()
-                event = {
-                    'type': 'auction_message',
-                    'message': {
-                        'type': 'BID_PLACED',
-                        'auction_id': int(auction_id),
-                        'bid': serializer.data,
-                        'current_highest_bid': str(amount),
+                async_to_sync(channel_layer.group_send)(
+                    f'auction_{auction_id}',
+                    {
+                        'type': 'auction_message',
+                        'message': {
+                            'type': 'BID_PLACED',
+                            'auction_id': int(auction_id),
+                            'bid': serializer.data,
+                            'current_highest_bid': amount,
+                        }
                     }
-                }
-                async_to_sync(channel_layer.group_send)(f'auction_{auction_id}', event)
-                async_to_sync(channel_layer.group_send)('auction_global', event)
+                )
 
             transaction.on_commit(broadcast_bid)
 
         return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
 
 
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def api_close_auction_view(request, auction_id):
-    """Mark an expired auction complete; only its seller or an admin can settle it."""
-    with transaction.atomic():
-        auction = AuctionItem.objects.select_for_update().filter(pk=auction_id).first()
-        if auction is None:
-            return Response({"success": False, "error": "Auction item not found."}, status=status.HTTP_404_NOT_FOUND)
-        if auction.seller_id != request.user.id and not request.user.is_staff:
-            return Response({"success": False, "error": "Only the seller or an admin can close this auction."}, status=status.HTTP_403_FORBIDDEN)
-        if auction.end_time > timezone.now():
-            return Response({"success": False, "error": "This auction has not ended yet."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if auction.status != 'completed':
-            auction.status = 'completed'
-            auction.save(update_fields=['status'])
-
-        winning_bid = Bid.objects.filter(auction_item=auction).order_by('-amount', 'timestamp').first()
-        if winning_bid:
-            Notification.objects.get_or_create(
-                user=winning_bid.bidder,
-                auction=auction,
-                type='system',
-                title='Auction ended — you won',
-                defaults={'message': f'You won {auction.title}. Payment is now available.'},
-            )
-        return Response({
-            "success": True,
-            "status": "completed",
-            "winner_id": winning_bid.bidder_id if winning_bid else None,
-        }, status=status.HTTP_200_OK)
-
-
 # ── AUTHENTICATION VIEWS (JWT ENHANCED) ─────────────────────────────────────
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthAnonRateThrottle])
 def api_login_view(request):
-    if not verify_recaptcha(request.data.get('recaptcha_token'), 'login'):
-        return Response({'success': False, 'error': 'Security verification failed. Please retry.'}, status=status.HTTP_400_BAD_REQUEST)
+    recaptcha_token = request.data.get('recaptcha_token', '')
+    is_valid, error_msg = verify_recaptcha_v3(recaptcha_token, expected_action='login')
+    if not is_valid:
+        return Response({"success": False, "error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
     identifier = request.data.get('username') or request.data.get('email')
     password = request.data.get('password')
 
@@ -273,180 +251,44 @@ def api_login_view(request):
             "error": "Authentication failed. Please verify your credentials."
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def api_request_otp_view(request):
-    """Send a short-lived login code to a registered email or phone number."""
-    if request.data.get('purpose', 'login') == 'login' and not verify_recaptcha(request.data.get('recaptcha_token'), 'login'):
-        return Response({'success': False, 'error': 'Security verification failed. Please retry.'}, status=status.HTTP_400_BAD_REQUEST)
-    identifier = (request.data.get('identifier') or '').strip()
-    channel = request.data.get('channel')
-    purpose = request.data.get('purpose', 'login')
-    if channel not in ('email', 'sms') or purpose not in ('login', 'phone_registration') or not identifier:
-        return Response({"success": False, "error": "Enter an email or mobile number."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if purpose == 'phone_registration':
-        if channel != 'sms' or not re.fullmatch(r'\+[1-9]\d{7,14}', identifier):
-            return Response({"success": False, "error": "Use a mobile number in international format, for example +919876543210."}, status=status.HTTP_400_BAD_REQUEST)
-        if UserProfile.objects.filter(phone_number=identifier).exists():
-            return Response({"success": False, "error": "This mobile number is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        user = None
-    elif channel == 'email':
-        try:
-            validate_email(identifier)
-        except ValidationError:
-            return Response({"success": False, "error": "Enter a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
-        user = User.objects.filter(email__iexact=identifier).first()
-    else:
-        if not re.fullmatch(r'\+[1-9]\d{7,14}', identifier):
-            return Response({"success": False, "error": "Use international format, for example +919876543210."}, status=status.HTTP_400_BAD_REQUEST)
-        profile = UserProfile.objects.select_related('user').filter(phone_number=identifier).first()
-        user = profile.user if profile else None
-
-    # Avoid disclosing whether an account exists.
-    generic_response = {"success": True, "message": "If the account exists, a verification code has been sent."}
-    if user is None and purpose == 'login':
-        return Response(generic_response, status=status.HTTP_200_OK)
-
-    now = timezone.now()
-    latest = OneTimeCode.objects.filter(user=user, identifier=identifier, channel=channel, purpose=purpose).order_by('-created_at').first()
-    if latest and latest.created_at > now - timedelta(seconds=60):
-        return Response({"success": False, "error": "Please wait a minute before requesting another code."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-
-    code = f'{secrets.randbelow(1_000_000):06d}'
-    OneTimeCode.objects.filter(user=user, identifier=identifier, channel=channel, purpose=purpose, consumed_at__isnull=True).update(consumed_at=now)
-    OneTimeCode.objects.create(
-        user=user,
-        identifier=identifier,
-        channel=channel,
-        purpose=purpose,
-        code_hash=make_password(code),
-        expires_at=now + timedelta(minutes=5),
-    )
-
-    try:
-        if channel == 'email':
-            send_mail(
-                'Your BidZo sign-in code',
-                f'Your BidZo verification code is {code}. It expires in 5 minutes.',
-                None,
-                [user.email],
-                fail_silently=False,
-            )
-        elif settings.DEBUG:
-            # Free development-only delivery. Configure a real SMS gateway before production.
-            print(f'[BidZo development SMS] To ending {identifier[-4:]}: sign-in code {code}', flush=True)
-        else:
-            raise RuntimeError('SMS delivery provider is not configured.')
-    except Exception:
-        OneTimeCode.objects.filter(user=user, identifier=identifier, channel=channel, purpose=purpose, consumed_at__isnull=True).update(consumed_at=now)
-        return Response({"success": False, "error": "Code delivery is unavailable. Check the backend email/SMS configuration."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-    return Response(generic_response, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def api_verify_otp_view(request):
-    if request.data.get('purpose', 'login') == 'login' and not verify_recaptcha(request.data.get('recaptcha_token'), 'login'):
-        return Response({'success': False, 'error': 'Security verification failed. Please retry.'}, status=status.HTTP_400_BAD_REQUEST)
-    identifier = (request.data.get('identifier') or '').strip()
-    channel = request.data.get('channel')
-    purpose = request.data.get('purpose', 'login')
-    code = (request.data.get('code') or '').strip()
-    if not identifier or channel not in ('email', 'sms') or purpose not in ('login', 'phone_registration') or not re.fullmatch(r'\d{6}', code):
-        return Response({"success": False, "error": "Enter the six-digit code."}, status=status.HTTP_400_BAD_REQUEST)
-
-    if purpose == 'phone_registration':
-        if channel != 'sms' or not re.fullmatch(r'\+[1-9]\d{7,14}', identifier):
-            return Response({"success": False, "error": "Use a valid international mobile number."}, status=status.HTTP_400_BAD_REQUEST)
-        user = None
-    elif channel == 'email':
-        user = User.objects.filter(email__iexact=identifier).first()
-    else:
-        profile = UserProfile.objects.select_related('user').filter(phone_number=identifier).first()
-        user = profile.user if profile else None
-
-    now = timezone.now()
-    challenge_filters = {
-        'channel': channel,
-        'consumed_at__isnull': True,
-        'expires_at__gt': now,
-    }
-    if purpose == 'phone_registration':
-        challenge_filters.update(user__isnull=True, identifier=identifier, purpose=purpose)
-    else:
-        challenge_filters.update(user=user, identifier=identifier, purpose=purpose)
-    challenge = OneTimeCode.objects.filter(**challenge_filters).order_by('-created_at').first()
-
-    if not challenge or challenge.attempts >= 5 or not check_password(code, challenge.code_hash):
-        if challenge and challenge.attempts < 5:
-            challenge.attempts += 1
-            challenge.save(update_fields=['attempts'])
-        return Response({"success": False, "error": "That code is invalid or expired. Request a new one and try again."}, status=status.HTTP_400_BAD_REQUEST)
-
-    challenge.consumed_at = now
-    challenge.save(update_fields=['consumed_at'])
-    if purpose == 'phone_registration':
-        verification_token = signing.dumps({"phone_number": identifier}, salt='bidzo-phone-registration')
-        return Response({"success": True, "phone_verification_token": verification_token}, status=status.HTTP_200_OK)
-
-    refresh = RefreshToken.for_user(user)
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    return Response({
-        "success": True,
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
-        "user": {"id": user.id, "username": user.username, "email": user.email, "role": profile.role},
-    }, status=status.HTTP_200_OK)
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def api_google_login_view(request):
     token = request.data.get('token')
     if not token:
         return Response({"success": False, "error": "Token is required"}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
         # Verify the token against Google
         idinfo = id_token.verify_oauth2_token(
-            token, 
-            google_requests.Request(), 
+            token,
+            google_requests.Request(),
             settings.GOOGLE_OAUTH2_CLIENT_ID,
             clock_skew_in_seconds=10
         )
-        
+
         email = idinfo.get('email')
-        
+        name = idinfo.get('name') or email.split('@')[0]
+
         if not email:
             return Response({"success": False, "error": "Email not provided by Google"}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # New accounts must provide their name and phone number through the
-        # registration form. Google remains available to sign in to an account
-        # that has already been created with those required details.
-        user = User.objects.filter(email__iexact=email).first()
-        if not user:
-            return Response({
-                "success": False,
-                "error": "Create your account with your name and phone number first, then use Google to sign in."
-            }, status=status.HTTP_400_BAD_REQUEST)
 
-        if idinfo.get('email_verified') is True:
-            profile, _ = UserProfile.objects.get_or_create(user=user)
-            if not profile.email_verified:
-                profile.email_verified = True
-                profile.save(update_fields=['email_verified'])
-            
+        user, created = User.objects.get_or_create(username=email, defaults={'email': email})
+
+        if created:
+            # Set unusable password for Google users
+            user.set_unusable_password()
+            user.save()
+
         # UserProfile with 'buyer' role is automatically created by the post_save signal in models.py
-            
+
         refresh = RefreshToken.for_user(user)
         role = 'buyer'
         try:
             role = user.profile.role
         except Exception:
             pass
-            
+
         return Response({
             "success": True,
             "refresh": str(refresh),
@@ -457,9 +299,9 @@ def api_google_login_view(request):
                 "email": user.email,
                 "role": role
             },
-            "is_new_user": False
+            "is_new_user": created
         }, status=status.HTTP_200_OK)
-        
+
     except ValueError as e:
         # Invalid token
         return Response({"success": False, "error": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
@@ -468,11 +310,16 @@ def api_google_login_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthAnonRateThrottle])
 def api_register_view(request):
+    recaptcha_token = request.data.get('recaptcha_token', '')
+    is_valid, error_msg = verify_recaptcha_v3(recaptcha_token, expected_action='register')
+    if not is_valid:
+        return Response({"success": False, "error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
     username = request.data.get('username')
     email = request.data.get('email')
     password = request.data.get('password')
-    phone_number = (request.data.get('phone_number') or '').strip() or None
     role = request.data.get('role', 'buyer')
 
     if not username or not email or not password:
@@ -480,17 +327,6 @@ def api_register_view(request):
             "success": False,
             "error": "Username, email, and password are required."
         }, status=status.HTTP_400_BAD_REQUEST)
-
-    if role not in ['buyer', 'seller']:
-        return Response({
-            "success": False,
-            "error": "Role must be either buyer or seller."
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    if not phone_number or not re.fullmatch(r'\+[1-9]\d{7,14}', phone_number):
-        return Response({"success": False, "error": "A valid mobile number with country code is required."}, status=status.HTTP_400_BAD_REQUEST)
-    if UserProfile.objects.filter(phone_number=phone_number).exists():
-        return Response({"success": False, "error": "This mobile number is already in use."}, status=status.HTTP_400_BAD_REQUEST)
 
     if User.objects.filter(username=username).exists():
         return Response({
@@ -506,15 +342,13 @@ def api_register_view(request):
 
     try:
         user = User.objects.create_user(username=username, email=email, password=password)
-        
+
         # The post_save signal created the profile with default 'buyer' role.
         # We need to fetch it explicitly to update it, as the reverse relation isn't cached yet.
         profile = user.profile
-        profile.role = role
-        profile.phone_number = phone_number
-        profile.email_verified = False
-        profile.phone_verified = False
-        profile.save()
+        if role in ['buyer', 'seller']:
+            profile.role = role
+            profile.save()
 
         return Response({
             "success": True,
@@ -537,7 +371,7 @@ def api_update_role_view(request):
     role = request.data.get('role')
     if role not in ['buyer', 'seller']:
         return Response({"success": False, "error": "Invalid role."}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     user = request.user
     try:
         profile = user.profile
@@ -547,391 +381,372 @@ def api_update_role_view(request):
     except Exception:
         return Response({"success": False, "error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
 
-
-def _account_details_payload(user):
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    return {
-        "id": user.id,
-        "username": user.username,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "email": user.email,
-        "phone_number": profile.phone_number or "",
-        "email_verified": profile.email_verified,
-        "phone_verified": profile.phone_verified,
-        "role": profile.role,
-    }
-
-
-@api_view(['GET', 'PATCH'])
-@permission_classes([permissions.IsAuthenticated])
-def api_user_profile_view(request):
-    """Read or update account details that do not need contact verification."""
-    user = request.user
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-
-    if request.method == 'PATCH':
-        username = (request.data.get('username', user.username) or '').strip()
-        first_name = (request.data.get('first_name', user.first_name) or '').strip()
-        last_name = (request.data.get('last_name', user.last_name) or '').strip()
-
-        if not username or len(username) > 150:
-            return Response({"success": False, "error": "Username must be between 1 and 150 characters."}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            UnicodeUsernameValidator()(username)
-        except ValidationError:
-            return Response({"success": False, "error": "Use a valid username without spaces or special characters."}, status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(username__iexact=username).exclude(pk=user.pk).exists():
-            return Response({"success": False, "error": "That username is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        if len(first_name) > 150 or len(last_name) > 150:
-            return Response({"success": False, "error": "Names must be 150 characters or fewer."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.username = username
-        user.first_name = first_name
-        user.last_name = last_name
-        try:
-            user.save(update_fields=['username', 'first_name', 'last_name'])
-        except IntegrityError:
-            return Response({"success": False, "error": "That username is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-
-    return Response({"success": True, "profile": _account_details_payload(user)}, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def api_request_contact_change_otp_view(request):
-    """Send a verification code to the new email address or phone number."""
-    channel = request.data.get('channel')
-    identifier = (request.data.get('identifier') or '').strip()
-    user = request.user
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-
-    if channel == 'email':
-        identifier = identifier.lower()
-        try:
-            validate_email(identifier)
-        except ValidationError:
-            return Response({"success": False, "error": "Enter a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(email__iexact=identifier).exclude(pk=user.pk).exists():
-            return Response({"success": False, "error": "That email address is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        if user.email and user.email.lower() == identifier and profile.email_verified:
-            return Response({"success": False, "error": "That is already your verified email address."}, status=status.HTTP_400_BAD_REQUEST)
-    elif channel == 'sms':
-        if not re.fullmatch(r'\+[1-9]\d{7,14}', identifier):
-            return Response({"success": False, "error": "Use international format, for example +919876543210."}, status=status.HTTP_400_BAD_REQUEST)
-        if UserProfile.objects.filter(phone_number=identifier).exclude(user=user).exists():
-            return Response({"success": False, "error": "That mobile number is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-        if profile.phone_number == identifier and profile.phone_verified:
-            return Response({"success": False, "error": "That is already your verified mobile number."}, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        return Response({"success": False, "error": "Choose email or SMS verification."}, status=status.HTTP_400_BAD_REQUEST)
-
-    now = timezone.now()
-    latest = OneTimeCode.objects.filter(
-        user=user, identifier=identifier, channel=channel, purpose='contact_change'
-    ).order_by('-created_at').first()
-    if latest and latest.created_at > now - timedelta(seconds=60):
-        return Response({"success": False, "error": "Please wait a minute before requesting another code."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-
-    code = f'{secrets.randbelow(1_000_000):06d}'
-    OneTimeCode.objects.filter(
-        user=user, identifier=identifier, channel=channel, purpose='contact_change', consumed_at__isnull=True
-    ).update(consumed_at=now)
-    OneTimeCode.objects.create(
-        user=user,
-        identifier=identifier,
-        channel=channel,
-        purpose='contact_change',
-        code_hash=make_password(code),
-        expires_at=now + timedelta(minutes=5),
-    )
-
-    try:
-        if channel == 'email':
-            send_mail(
-                'Verify your BidZo email address',
-                f'Your BidZo email verification code is {code}. It expires in 5 minutes.',
-                None,
-                [identifier],
-                fail_silently=False,
-            )
-        elif settings.DEBUG:
-            print(f'[BidZo development SMS] To ending {identifier[-4:]}: contact verification code {code}', flush=True)
-        else:
-            raise RuntimeError('SMS delivery provider is not configured.')
-    except Exception:
-        OneTimeCode.objects.filter(
-            user=user, identifier=identifier, channel=channel, purpose='contact_change', consumed_at__isnull=True
-        ).update(consumed_at=now)
-        return Response({"success": False, "error": "Code delivery is unavailable. Check the backend email/SMS configuration."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-    return Response({"success": True, "message": f"A verification code was sent to the new {'email address' if channel == 'email' else 'mobile number'}."}, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def api_verify_contact_change_otp_view(request):
-    """Update a contact field only after its new destination passes OTP verification."""
-    channel = request.data.get('channel')
-    identifier = (request.data.get('identifier') or '').strip()
-    code = (request.data.get('code') or '').strip()
-    user = request.user
-    if not identifier or channel not in ('email', 'sms') or not re.fullmatch(r'\d{6}', code):
-        return Response({"success": False, "error": "Enter the six-digit verification code."}, status=status.HTTP_400_BAD_REQUEST)
-    if channel == 'email':
-        identifier = identifier.lower()
-        try:
-            validate_email(identifier)
-        except ValidationError:
-            return Response({"success": False, "error": "Enter a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
-    elif not re.fullmatch(r'\+[1-9]\d{7,14}', identifier):
-        return Response({"success": False, "error": "Use a valid international mobile number."}, status=status.HTTP_400_BAD_REQUEST)
-
-    now = timezone.now()
-    challenge = OneTimeCode.objects.filter(
-        user=user,
-        identifier=identifier,
-        channel=channel,
-        purpose='contact_change',
-        consumed_at__isnull=True,
-        expires_at__gt=now,
-    ).order_by('-created_at').first()
-    if not challenge or challenge.attempts >= 5 or not check_password(code, challenge.code_hash):
-        if challenge and challenge.attempts < 5:
-            challenge.attempts += 1
-            challenge.save(update_fields=['attempts'])
-        return Response({"success": False, "error": "That code is invalid or expired. Request a new one and try again."}, status=status.HTTP_400_BAD_REQUEST)
-
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    if channel == 'email' and User.objects.filter(email__iexact=identifier).exclude(pk=user.pk).exists():
-        return Response({"success": False, "error": "That email address is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-    if channel == 'sms' and UserProfile.objects.filter(phone_number=identifier).exclude(user=user).exists():
-        return Response({"success": False, "error": "That mobile number is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        with transaction.atomic():
-            challenge.consumed_at = now
-            challenge.save(update_fields=['consumed_at'])
-            if channel == 'email':
-                user.email = identifier
-                user.save(update_fields=['email'])
-                profile.email_verified = True
-                profile.save(update_fields=['email_verified'])
-            else:
-                profile.phone_number = identifier
-                profile.phone_verified = True
-                profile.save(update_fields=['phone_number', 'phone_verified'])
-    except IntegrityError:
-        return Response({"success": False, "error": "That contact detail is already in use."}, status=status.HTTP_400_BAD_REQUEST)
-
-    return Response({"success": True, "message": "Your verified contact detail was updated.", "profile": _account_details_payload(user)}, status=status.HTTP_200_OK)
-
 class UserBidsView(generics.ListAPIView):
     serializer_class = BidSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Bid.objects.filter(bidder=self.request.user).order_by('-timestamp')
+        return Bid.objects.filter(bidder=self.request.user).order_by('-timestamp').select_related('auction_item')
+
+
+# ── USER PROFILE VIEW ──────────────────────────────────────────────────────────
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
+
+
+# ── ADDRESS VIEWS ──────────────────────────────────────────────────────────────
+
+class AddressListCreateView(generics.ListCreateAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Only return addresses belonging to the authenticated user (no IDOR)
+        return Address.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Derive user from request — never trust user_id from request body
+        serializer.save(user=self.request.user)
+
+
+class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Scope to authenticated user only — prevents IDOR
+        return Address.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        try:
+            obj = self.get_queryset().get(pk=self.kwargs['address_id'])
+            return obj
+        except Address.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Address not found.")
+
+# ── ORDER & PAYMENT VIEWS ──────────────────────────────────────────────────
+
+class OrderListView(generics.ListAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from django.db.models import Q
+        return Order.objects.filter(Q(buyer=self.request.user) | Q(seller=self.request.user)).order_by('-created_at')
+
+class OrderDetailView(generics.RetrieveAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        from django.db.models import Q
+        return Order.objects.filter(Q(buyer=self.request.user) | Q(seller=self.request.user))
+
+class AuctionOrderCreateView(generics.CreateAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        auction_id = self.kwargs['auction_id']
+        address_id = request.data.get('delivery_address_id')
+
+        with transaction.atomic():
+            if not address_id:
+                return Response({"success": False, "error": "delivery_address_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                delivery_address = Address.objects.get(id=address_id, user=request.user)
+            except Address.DoesNotExist:
+                return Response({"success": False, "error": "Invalid delivery address."}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                auction = AuctionItem.objects.select_for_update().get(id=auction_id)
+            except AuctionItem.DoesNotExist:
+                return Response({"success": False, "error": "Auction not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            if auction.get_current_status() != 'ended':
+                return Response({"success": False, "error": "Auction has not ended yet."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if auction.moderation_status != 'APPROVED':
+                return Response({"success": False, "error": "Cannot create an order for an unapproved auction."}, status=status.HTTP_403_FORBIDDEN)
+
+            winner = auction.winner
+
+            if not winner:
+                return Response({"success": False, "error": "Auction ended with no winner."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if winner != request.user:
+                return Response({"success": False, "error": "Only the auction winner can create an order."}, status=status.HTTP_403_FORBIDDEN)
+
+            if hasattr(auction, 'order'):
+                return Response({"success": False, "error": "Order already exists for this auction."}, status=status.HTTP_400_BAD_REQUEST)
+
+            winning_bid = auction.bids.first()
+
+            from decimal import Decimal
+            from .shipping_service import ShippingService
+            shipping_charge = ShippingService.calculate_shipping_charge(delivery_address)
+
+            order = Order.objects.create(
+                auction=auction,
+                winning_bid=winning_bid,
+                buyer=winner,
+                seller=auction.seller,
+                delivery_address=delivery_address,
+                winning_amount=winning_bid.amount,
+                shipping_charge=shipping_charge,
+                payment_status='PENDING',
+                order_status='AWAITING_PAYMENT'
+            )
+
+            try:
+                rp_order_id = PaymentService.create_payment_order(order.id, order.total_amount)
+                order.razorpay_order_id = rp_order_id
+                order.save(update_fields=['razorpay_order_id'])
+            except Exception as e:
+                # Log the error but allow order creation to succeed without a payment session
+                print(f"Razorpay order creation failed: {e}")
+
+            serializer = self.get_serializer(order)
+            return Response({"success": True, "data": serializer.data}, status=status.HTTP_201_CREATED)
+
+class PaymentVerificationView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        order_id = self.kwargs['order_id']
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_signature = request.data.get('razorpay_signature')
+
+        with transaction.atomic():
+            try:
+                order = Order.objects.select_for_update().get(id=order_id, buyer=request.user)
+            except Order.DoesNotExist:
+                return Response({"success": False, "error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            if order.payment_status == 'PAID':
+                return Response({"success": False, "error": "Order is already paid."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if order.razorpay_order_id != razorpay_order_id:
+                return Response({"success": False, "error": "Order ID mismatch."}, status=status.HTTP_400_BAD_REQUEST)
+
+            is_valid = PaymentService.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+            if is_valid:
+                order.payment_status = 'PAID'
+                order.order_status = 'PROCESSING'
+                order.razorpay_payment_id = razorpay_payment_id
+                order.razorpay_signature = razorpay_signature
+                order.save()
+
+                from .models import Shipment
+                Shipment.objects.get_or_create(order=order, defaults={'status': 'READY_TO_SHIP'})
+
+                return Response({"success": True, "message": "Payment verified successfully."})
+            else:
+                order.payment_status = 'FAILED'
+                order.save(update_fields=['payment_status'])
+                return Response({"success": False, "error": "Invalid payment signature."}, status=status.HTTP_400_BAD_REQUEST)
+
+class RazorpayWebhookView(generics.GenericAPIView):
+    permission_classes = [] # Webhooks don't use our JWT auth
+
+    def post(self, request, *args, **kwargs):
+        signature = request.headers.get('X-Razorpay-Signature')
+        if not signature:
+            return Response({"error": "Missing signature"}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_valid = PaymentService.verify_webhook_signature(request.body, signature)
+        if not is_valid:
+            return Response({"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST)
+
+        event = request.data.get('event')
+        if event == 'order.paid':
+            payload = request.data.get('payload', {}).get('order', {}).get('entity', {})
+            razorpay_order_id = payload.get('id')
+            if razorpay_order_id:
+                try:
+                    with transaction.atomic():
+                        order = Order.objects.select_for_update().get(razorpay_order_id=razorpay_order_id)
+                        if order.payment_status != 'PAID':
+                            order.payment_status = 'PAID'
+                            order.order_status = 'PROCESSING'
+                            order.save()
+                            from .models import Shipment
+                            Shipment.objects.get_or_create(order=order, defaults={'status': 'READY_TO_SHIP'})
+                except Order.DoesNotExist:
+                    pass # Or log it. We must return 200 to Razorpay.
+
+        return Response({"status": "ok"})
+
+class ShipmentUpdateView(generics.UpdateAPIView):
+    serializer_class = ShipmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Shipment.objects.all()
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        # Only sellers can update shipments for their sales
+        return Shipment.objects.filter(order__seller=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        shipment = self.get_object()
+
+        # Prevent buyers from updating
+        if shipment.order.buyer == request.user and shipment.order.seller != request.user:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Buyers cannot update shipments.")
+
+        serializer = self.get_serializer(shipment, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        # Optional: track dispatched_at / delivered_at based on status
+        new_status = serializer.validated_data.get('status', shipment.status)
+        from django.utils import timezone
+
+        if new_status == 'SHIPPED' and not shipment.dispatched_at:
+            serializer.validated_data['dispatched_at'] = timezone.now()
+        if new_status == 'DELIVERED' and not shipment.delivered_at:
+            serializer.validated_data['delivered_at'] = timezone.now()
+
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+
+# ── ADMIN MODERATION VIEWS ───────────────────────────────────────────────────
+
+class AdminSellerVerificationView(generics.UpdateAPIView):
+    from .serializers import AdminUserProfileSerializer
+    serializer_class = AdminUserProfileSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_object(self):
+        from django.db.models import Q
+        lookup = self.kwargs['user_id']
+        try:
+            return UserProfile.objects.get(Q(user__id=lookup) | Q(id=lookup))
+        except UserProfile.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("User profile not found")
+
+    def perform_update(self, serializer):
+        old_status = self.get_object().verification_status
+        instance = serializer.save()
+
+        # Policy: If a seller's verification is revoked or rejected, suspend their listings.
+        if old_status == 'VERIFIED' and instance.verification_status != 'VERIFIED':
+            AuctionItem.objects.filter(
+                seller=instance.user,
+                moderation_status__in=['APPROVED', 'PENDING_REVIEW']
+            ).update(
+                moderation_status='REJECTED',
+                moderation_notes='Automatically rejected due to seller verification revocation.'
+            )
+
+
+class AdminAuctionModerationView(generics.UpdateAPIView):
+    from .serializers import AdminAuctionItemSerializer
+    serializer_class = AdminAuctionItemSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'id'
+    lookup_url_kwarg = 'auction_id'
+    queryset = AuctionItem.objects.all()
+
+class AdminPendingSellersView(generics.ListAPIView):
+    from .serializers import AdminUserProfileSerializer
+    serializer_class = AdminUserProfileSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        from django.db.models import Q
+        return UserProfile.objects.filter(
+            Q(verification_status='PENDING') | (Q(role='seller') & ~Q(verification_status='VERIFIED'))
+        ).order_by('-user__date_joined')
+
+class AdminPendingAuctionsView(generics.ListAPIView):
+    from .serializers import AdminAuctionItemSerializer
+    serializer_class = AdminAuctionItemSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        return AuctionItem.objects.filter(moderation_status='PENDING_REVIEW').order_by('-created_at')
+
+
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class FileUploadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        files = request.FILES.getlist('images') or request.FILES.getlist('files')
+        if not files:
+            single_file = request.FILES.get('image') or request.FILES.get('file')
+            if single_file:
+                files = [single_file]
+
+        if not files:
+            return Response({"success": False, "error": "No files provided for upload."}, status=status.HTTP_400_BAD_REQUEST)
+
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'}
+        max_size = 10 * 1024 * 1024  # 10 MB
+
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'auctions')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        urls = []
+        for f in files:
+            ext = os.path.splitext(f.name)[1].lower()
+            if ext not in allowed_extensions:
+                return Response({
+                    "success": False,
+                    "error": f"Invalid file format for {f.name}. Supported formats: JPG, PNG, WEBP, GIF."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if f.size > max_size:
+                return Response({
+                    "success": False,
+                    "error": f"File {f.name} exceeds maximum allowed size of 10MB."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            unique_filename = f"{uuid.uuid4().hex}{ext}"
+            file_path = os.path.join(upload_dir, unique_filename)
+
+            with open(file_path, 'wb+') as destination:
+                for chunk in f.chunks():
+                    destination.write(chunk)
+
+            file_url = request.build_absolute_uri(f"{settings.MEDIA_URL}auctions/{unique_filename}")
+            urls.append(file_url)
+
+        return Response({
+            "success": True,
+            "urls": urls,
+            "url": urls[0] if urls else ""
+        }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([permissions.IsAuthenticated])
-def api_watchlist_view(request):
-    if request.method == 'GET':
-        ids = WatchlistItem.objects.filter(user=request.user).values_list('auction_id', flat=True)
-        return Response({'auction_ids': list(ids)}, status=status.HTTP_200_OK)
+@permission_classes([AllowAny])
+def api_seed_view(request):
     try:
-        auction = AuctionItem.objects.get(pk=request.data.get('auction_id'))
-    except (AuctionItem.DoesNotExist, TypeError, ValueError):
-        return Response({'success': False, 'error': 'Auction not found.'}, status=status.HTTP_404_NOT_FOUND)
-    _, created = WatchlistItem.objects.get_or_create(user=request.user, auction=auction)
-    return Response({'success': True, 'auction_id': auction.id, 'watchlisted': True}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-
-@api_view(['DELETE'])
-@permission_classes([permissions.IsAuthenticated])
-def api_watchlist_remove_view(request, auction_id):
-    deleted, _ = WatchlistItem.objects.filter(user=request.user, auction_id=auction_id).delete()
-    return Response({'success': True, 'auction_id': auction_id, 'watchlisted': False, 'removed': bool(deleted)}, status=status.HTTP_200_OK)
-
-
-@api_view(['GET', 'PATCH'])
-@permission_classes([permissions.IsAuthenticated])
-def api_notifications_view(request, notification_id=None):
-    if request.method == 'GET':
-        items = Notification.objects.filter(user=request.user)[:100]
-        return Response([{
-            'id': item.id, 'user_id': item.user_id, 'title': item.title,
-            'message': item.message, 'type': item.type, 'read': item.read,
-            'created_at': item.created_at, 'auction_id': item.auction_id,
-        } for item in items])
-    if notification_id is None:
-        Notification.objects.filter(user=request.user, read=False).update(read=True)
-        return Response({'success': True})
-    updated = Notification.objects.filter(user=request.user, pk=notification_id).update(read=True)
-    if not updated:
-        return Response({'success': False, 'error': 'Notification not found.'}, status=status.HTTP_404_NOT_FOUND)
-    return Response({'success': True})
-
-
-@api_view(['GET'])
-@permission_classes([permissions.IsAdminUser])
-def api_admin_dashboard_view(request):
-    now = timezone.now()
-    auctions = AuctionItem.objects.select_related('seller').order_by('-created_at')[:10]
-    users = User.objects.select_related('profile').order_by('-date_joined')[:10]
+        from seed_auctions import seed
+    except ImportError:
+        from backend.seed_auctions import seed
+    force = request.GET.get('force', 'false').lower() == 'true'
+    seed(force=force)
+    count = AuctionItem.objects.filter(moderation_status='APPROVED').count()
     return Response({
-        'stats': {
-            'total_users': User.objects.count(),
-            'active_auctions': AuctionItem.objects.filter(status='active', end_time__gt=now).count(),
-            'ended_auctions': AuctionItem.objects.filter(end_time__lte=now).count(),
-            'total_bids': Bid.objects.count(),
-        },
-        'recent_auctions': [{
-            'id': a.id, 'title': a.title, 'seller': a.seller.username,
-            'status': 'completed' if a.end_time <= now else a.status,
-            'current_highest_bid': str(a.current_highest_bid), 'created_at': a.created_at,
-        } for a in auctions],
-        'recent_users': [{
-            'id': u.id, 'username': u.username, 'email': u.email,
-            'role': getattr(getattr(u, 'profile', None), 'role', 'buyer'),
-            'date_joined': u.date_joined,
-        } for u in users],
+        "success": True,
+        "message": f"Database contains {count} approved live auctions.",
+        "approved_count": count
     })
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def api_payment_order_view(request):
-    """Create a Razorpay order only for the authenticated winner of an ended auction."""
-    key_id = getattr(settings, 'RAZORPAY_KEY_ID', '')
-    key_secret = getattr(settings, 'RAZORPAY_KEY_SECRET', '')
-    if not key_id or not key_secret:
-        return Response({'success': False, 'error': 'Online payments are not configured on this server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-    try:
-        auction_id = int(request.data.get('auction_id'))
-    except (TypeError, ValueError):
-        return Response({'success': False, 'error': 'Auction not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    try:
-        with transaction.atomic():
-            # Serialize checkouts on this auction so two requests cannot create
-            # separate payable orders at the same time.
-            auction = AuctionItem.objects.select_for_update().get(pk=auction_id)
-            if auction.end_time > timezone.now():
-                return Response({'success': False, 'error': 'Payment is available after the auction ends.'}, status=status.HTTP_400_BAD_REQUEST)
-            winning_bid = Bid.objects.filter(auction_item=auction).order_by('-amount', 'timestamp').first()
-            if not winning_bid or winning_bid.bidder_id != request.user.id:
-                return Response({'success': False, 'error': 'Only the winning bidder can pay for this auction.'}, status=status.HTTP_403_FORBIDDEN)
-            if AuctionPayment.objects.filter(auction=auction, status='completed').exists():
-                return Response({'success': False, 'error': 'This auction has already been paid.'}, status=status.HTTP_409_CONFLICT)
-
-            amount_paise = int(winning_bid.amount * 100)
-            payment = AuctionPayment.objects.filter(
-                auction=auction, user=request.user, status='pending', amount=winning_bid.amount,
-            ).order_by('-created_at').first()
-            if payment is None:
-                try:
-                    response = requests.post(
-                        'https://api.razorpay.com/v1/orders',
-                        auth=(key_id, key_secret),
-                        json={'amount': amount_paise, 'currency': 'INR', 'receipt': f'bidzo-{auction.id}-{request.user.id}'[:40]},
-                        timeout=15,
-                    )
-                    response.raise_for_status()
-                    order = response.json()
-                except (requests.RequestException, ValueError):
-                    return Response({'success': False, 'error': 'The payment provider could not create an order.'}, status=status.HTTP_502_BAD_GATEWAY)
-                if not isinstance(order, dict) or not order.get('id'):
-                    return Response({'success': False, 'error': 'The payment provider returned an invalid order.'}, status=status.HTTP_502_BAD_GATEWAY)
-                payment = AuctionPayment.objects.create(
-                    auction=auction, user=request.user, amount=winning_bid.amount,
-                    razorpay_order_id=order['id'], status='pending',
-                )
-    except AuctionItem.DoesNotExist:
-        return Response({'success': False, 'error': 'Auction not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    return Response({
-        'success': True, 'key_id': key_id, 'order_id': payment.razorpay_order_id,
-        'amount': int(payment.amount * 100), 'currency': 'INR', 'payment_record_id': payment.id,
-    })
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def api_payment_verify_view(request):
-    order_id = request.data.get('razorpay_order_id', '')
-    payment_id = request.data.get('razorpay_payment_id', '')
-    signature = request.data.get('razorpay_signature', '')
-    payment = AuctionPayment.objects.filter(razorpay_order_id=order_id, user=request.user).first()
-    if not payment or not payment_id or not signature:
-        return Response({'success': False, 'error': 'Payment details are invalid.'}, status=status.HTTP_400_BAD_REQUEST)
-    key_secret = getattr(settings, 'RAZORPAY_KEY_SECRET', '')
-    if not key_secret:
-        return Response({'success': False, 'error': 'Online payments are not configured on this server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-    expected = hmac.new(key_secret.encode(), f'{order_id}|{payment_id}'.encode(), hashlib.sha256).hexdigest()
-    if not constant_time_compare(expected, signature):
-        return Response({'success': False, 'error': 'Payment signature verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # A valid checkout signature proves the callback belongs to this order, but
-    # we also confirm the payment state, amount, and currency with Razorpay
-    # before marking money as received.
-    try:
-        provider_response = requests.get(
-            f'https://api.razorpay.com/v1/payments/{payment_id}',
-            auth=(getattr(settings, 'RAZORPAY_KEY_ID', ''), key_secret),
-            timeout=15,
-        )
-        provider_response.raise_for_status()
-        provider_payment = provider_response.json()
-    except (requests.RequestException, ValueError):
-        return Response(
-            {'success': False, 'error': 'Could not confirm payment with the payment provider. Please retry.'},
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
-
-    if not isinstance(provider_payment, dict):
-        return Response(
-            {'success': False, 'error': 'The payment provider returned an invalid payment record.'},
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
-
-    expected_amount_paise = int(payment.amount * 100)
-    if (
-        provider_payment.get('id') != payment_id
-        or provider_payment.get('order_id') != order_id
-        or provider_payment.get('amount') != expected_amount_paise
-        or provider_payment.get('currency') != 'INR'
-        or provider_payment.get('status') != 'captured'
-    ):
-        return Response(
-            {'success': False, 'error': 'The payment is not captured for the expected order and amount.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    with transaction.atomic():
-        AuctionItem.objects.select_for_update().get(pk=payment.auction_id)
-        payment = AuctionPayment.objects.select_for_update().get(pk=payment.pk)
-        if AuctionPayment.objects.filter(auction_id=payment.auction_id, status='completed').exclude(pk=payment.pk).exists():
-            return Response(
-                {'success': False, 'error': 'This auction has already been paid.'},
-                status=status.HTTP_409_CONFLICT,
-            )
-        if payment.status == 'completed':
-            if payment.razorpay_payment_id == payment_id:
-                return Response({'success': True, 'payment_id': payment.id, 'status': payment.status})
-            return Response(
-                {'success': False, 'error': 'This order has already been completed with another payment.'},
-                status=status.HTTP_409_CONFLICT,
-            )
-        payment.razorpay_payment_id = payment_id
-        payment.status = 'completed'
-        payment.save(update_fields=['razorpay_payment_id', 'status'])
-    return Response({'success': True, 'payment_id': payment.id, 'status': payment.status})
-
-
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def api_payment_status_view(request, auction_id):
-    payment = AuctionPayment.objects.filter(auction_id=auction_id, user=request.user).order_by('-created_at').first()
-    return Response({'status': payment.status if payment else 'unpaid'})

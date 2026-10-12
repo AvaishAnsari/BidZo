@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   DESIGN TOKENS
-   ───────────────────────────────────────────────────────────────────────── */
 @theme {
   /* Brand — antique brass */
   --color-brand-50:  #fbf5e8;
@@ -25,30 +22,50 @@
   --color-accent-600: #7f302f;
   --color-accent-700: #642727;
 
-  /* Container sizes */
-  --container-xs:  20rem;
-  --container-sm:  24rem;
-  --container-md:  28rem;
-  --container-lg:  32rem;
-  --container-xl:  36rem;
-  --container-2xl: 42rem;
-  --container-3xl: 48rem;
-  --container-4xl: 56rem;
-  --container-5xl: 64rem;
-  --container-6xl: 72rem;
-  --container-7xl: 80rem;
+  --color-success-bg: var(--success-bg);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger-bg: var(--danger-bg);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   GLOBAL RESET & SCROLLBAR
-   ───────────────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --elevated: #27272a;
+    --primary: #8b5cf6;
+    --primary-hover: #a78bfa;
+    --accent: #c4b5fd;
+    --text-main: #fafafa;
+    --text-muted: #a1a1aa;
+    --border: #27272a;
+    --success: #34D399;
+    --warning: #FBBF24;
+    --danger: #F87171;
+    --success-bg: rgba(52, 211, 153, 0.1);
+    --warning-bg: rgba(251, 191, 36, 0.1);
+    --danger-bg: rgba(248, 113, 113, 0.1);
+  }
+
+  [data-theme="light"] {
+    --bg: #F6F8FC;
+    --surface: #FFFFFF;
+    --elevated: #FFFFFF;
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --accent: #7C3AED;
+    --text-main: #111827;
+    --text-muted: #64748B;
+    --border: #E2E8F0;
+    --success: #059669;
+    --warning: #D97706;
+    --danger: #DC2626;
+    --success-bg: rgba(5, 150, 105, 0.1);
+    --warning-bg: rgba(217, 119, 6, 0.1);
+    --danger-bg: rgba(220, 38, 38, 0.1);
+  }
+}
+
 * { box-sizing: border-box; }
-
-/* Hide Google reCAPTCHA v3 floating badge (attribution is rendered in the auth form) */
-.grecaptcha-badge { 
-  visibility: hidden !important; 
-}
-
 html { scroll-behavior: smooth; }
 
 /* Premium dark scrollbar */
@@ -450,13 +467,8 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; }
   background: linear-gradient(145deg, rgba(15,12,40,0.8) 0%, rgba(10,10,30,0.9) 100%);
   border: 1px solid rgba(157,108,48,0.2);
   border-radius: 0.75rem;
-  min-width: 3.5rem;
-  padding: 0.75rem 0.5rem;
-  text-align: center;
-  backdrop-filter: blur(12px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 4px 12px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .time-block-urgent {
@@ -554,76 +566,111 @@ h1, h2, h3, h4, h5, h6 { font-weight: 600; }
 [data-theme="light"] .btn-gradient:hover {
   box-shadow: 0 12px 25px -8px rgba(196, 155, 90, 0.5);
   transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary);
 }
 
-[data-theme="light"] .btn-gradient::before {
-  display: none;
+.navbar {
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-/* Light Theme Badges */
-[data-theme="light"] .badge-ended {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+.btn-primary {
+  background-color: var(--primary);
+  color: #FFFFFF;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
-[data-theme="light"] .badge-urgent {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
-  animation: pulse-urgent 1.5s infinite;
+.btn-secondary {
+  background-color: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  background-color: var(--elevated);
 }
 
-[data-theme="light"] .badge-live {
-  background: #10b981;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+.input-field {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+.input-field::placeholder {
+  color: var(--text-muted);
 }
 
-[data-theme="light"] .badge-upcoming {
-  background: #f59e0b;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+.badge-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.badge-live {
+  background-color: var(--success-bg);
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.badge-ended {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.badge-upcoming {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   HIDE SCROLLBAR UTILITY
-   ───────────────────────────────────────────────────────────────────────── */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SKELETON LOADERS
-   ───────────────────────────────────────────────────────────────────────── */
 @keyframes skeleton-wave {
-  0%   { background-position: -400px 0; }
-  100% { background-position:  400px 0; }
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.04) 0%,
-    rgba(255,255,255,0.10) 40%,
-    rgba(255,255,255,0.04) 80%
-  );
-  background-size: 800px 100%;
-  animation: skeleton-wave 1.6s infinite linear;
-  border-radius: 0.5rem;
+  background-color: var(--border);
+  animation: skeleton-wave 1.5s infinite ease-in-out;
+  border-radius: 0.25rem;
 }
 
-[data-theme="light"] .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(0,0,0,0.05) 0%,
-    rgba(0,0,0,0.10) 40%,
-    rgba(0,0,0,0.05) 80%
-  );
-  background-size: 800px 100%;
+@keyframes priceFlip {
+  0% { transform: translateY(-4px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

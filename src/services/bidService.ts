@@ -1,13 +1,11 @@
 /**
  * bidService.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Calls the Django REST API for bid operations.
+ * Migrated from Supabase to Django REST API for real-time bid operations.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { getAuthHeaders } from './api';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+import { getAuthHeaders, API_BASE_URL } from './api';
 
 export interface PlaceBidParams {
   auctionId: string | number;
@@ -45,34 +43,32 @@ export async function placeBid({ auctionId, amount }: PlaceBidInput): Promise<vo
  */
 export async function placeBidRPC(
   auctionIdOrParams: number | string | PlaceBidParams,
-  amountArg?: number,
-  recaptchaTokenArg?: string,
+  amountArg?: number
 ): Promise<PlaceBidResult> {
   let auctionId: number | string;
   let amount: number;
-  let recaptchaToken = recaptchaTokenArg || '';
 
   if (typeof auctionIdOrParams === 'object') {
     auctionId = auctionIdOrParams.auctionId;
     amount = auctionIdOrParams.amount;
-    recaptchaToken = auctionIdOrParams.recaptchaToken || recaptchaToken;
   } else {
     auctionId = auctionIdOrParams;
     amount = amountArg ?? 0;
   }
 
   try {
+    const body: any = { amount: amount };
+    if (auctionIdOrParams && typeof auctionIdOrParams === 'object' && 'recaptchaToken' in auctionIdOrParams && auctionIdOrParams.recaptchaToken) {
+      body.recaptcha_token = auctionIdOrParams.recaptchaToken;
+    }
+
     const response = await fetch(`${API_BASE_URL}/auctions/${auctionId}/bids/`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ amount, recaptcha_token: recaptchaToken }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        const msg = 'Authentication failed. Please log in to place a bid.';
-        return { success: false, error: msg, message: msg };
-      }
       let errorMsg = `Failed to place bid: ${response.status}`;
       try {
         const data = await response.json();
@@ -80,6 +76,11 @@ export async function placeBidRPC(
       } catch {
         const errorText = await response.text();
         if (errorText) errorMsg = errorText;
+      }
+
+      if (response.status === 401) {
+        const msg = 'Your session has expired. Please log in again to place a bid.';
+        return { success: false, error: msg, message: msg };
       }
       return { success: false, error: errorMsg, message: errorMsg };
     }
