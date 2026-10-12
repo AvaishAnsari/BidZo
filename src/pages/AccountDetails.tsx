@@ -230,8 +230,8 @@ export function AccountDetailsPage() {
 
   const updateProfile = (updated: AccountDetails) => {
     setProfile(updated);
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-    localStorage.setItem('user', JSON.stringify({ ...storedUser, username: updated.username, email: updated.email, role: updated.role }));
+    const storedUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+    sessionStorage.setItem('user', JSON.stringify({ ...storedUser, username: updated.username, email: updated.email, role: updated.role }));
     refreshUser();
   };
 

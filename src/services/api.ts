@@ -1,9 +1,11 @@
 import toast from 'react-hot-toast';
+import { clearTabAuth, migrateLegacyAuthToTab } from './authStorage';
 
 let authErrorReported = false;
 
 export function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('access_token');
+  migrateLegacyAuthToTab();
+  const token = sessionStorage.getItem('access_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -23,10 +25,7 @@ export function handleAuthError(response: Response, body: any): boolean {
   );
   if (!invalidToken) return false;
 
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
-  localStorage.removeItem('isAuthenticated');
+  clearTabAuth();
   window.dispatchEvent(new Event('bidzo:auth-expired'));
   if (!authErrorReported) {
     authErrorReported = true;

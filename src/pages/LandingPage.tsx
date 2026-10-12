@@ -11,7 +11,7 @@ import BrandMark from '../components/BrandMark';
 
 /* ─── tiny helpers ─────────────────────────────────────────────── */
 const centerStyle: React.CSSProperties = {
-  maxWidth: '1280px',
+  maxWidth: '1440px',
   marginLeft: 'auto',
   marginRight: 'auto',
   paddingLeft: '1.5rem',
@@ -228,7 +228,7 @@ export const LandingPage = () => {
       </motion.section>
 
       {/* ════ FEATURES ══════════════════════════════════════════════ */}
-      <section style={{ padding: '6rem 0' }}>
+      <section style={{ padding: 'clamp(3rem, 5vw, 5rem) 0' }}>
         <div style={centerStyle}>
           <FadeUp>
             <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>

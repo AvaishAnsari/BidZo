@@ -6,12 +6,14 @@ from pathlib import Path
 
 def main():
     """Run administrative tasks."""
-    # Ensure current directory is added to sys.path so Django can locate local apps (like auctions)
+    # Support both the backend package (backend.settings/backend.urls) and the
+    # local auctions app when manage.py is invoked from the repository root.
     BASE_DIR = Path(__file__).resolve().parent
-    sys.path.append(str(BASE_DIR))
+    PROJECT_ROOT = BASE_DIR.parent
+    sys.path.insert(0, str(PROJECT_ROOT))
+    sys.path.insert(0, str(BASE_DIR))
 
-    # Point directly to settings.py inside the same directory
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

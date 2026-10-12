@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import type { UserRole } from '../types';
+import { clearTabAuth, migrateLegacyAuthToTab, saveTabAuth } from '../services/authStorage';
 
 export interface User {
   id: number;
@@ -24,7 +25,7 @@ export interface AuthContextType {
   userName: string | null;
   session: any | null; // Placeholder for legacy compatibility
   signIn: (email: string, password: string, recaptchaToken?: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, name: string, role: UserRole, phoneNumber: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 
   signInWithOtp: (identifier: string, channel: 'email' | 'sms', recaptchaToken?: string) => Promise<{ error: string | null }>;
@@ -47,8 +48,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole | null>(null);
 
   const refreshUser = useCallback(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('access_token');
+    migrateLegacyAuthToTab();
+    const storedUser = sessionStorage.getItem('user');
+    const token = sessionStorage.getItem('access_token');
     if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -83,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateRole = useCallback(
     async (newRole: UserRole): Promise<{ error: string | null }> => {
       try {
-        const token = localStorage.getItem('access_token');
+        const token = sessionStorage.getItem('access_token');
         if (!token) return { error: 'Not authenticated' };
 
         const response = await fetch(`${API_BASE_URL}/users/role/`, {
@@ -101,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (user) {
             const updatedUser = { ...user, role: newRole };
             setUser(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser));
+            sessionStorage.setItem('user', JSON.stringify(updatedUser));
           }
           return { error: null };
         } else {
@@ -124,11 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         const result = await response.json();
         if (response.ok && result.success) {
-          localStorage.setItem('user', JSON.stringify(result.user));
-          localStorage.setItem('access_token', result.access);
-          if (result.refresh) {
-            localStorage.setItem('refresh_token', result.refresh);
-          }
+          saveTabAuth(result.user, result.access, result.refresh);
           refreshUser();
           return { error: null };
         } else {
@@ -142,12 +140,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string, userRole: UserRole): Promise<{ error: string | null }> => {
+    async (email: string, password: string, name: string, userRole: UserRole, phoneNumber: string): Promise<{ error: string | null }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/register/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, username: name, role: userRole }),
+          body: JSON.stringify({ email, password, username: name, role: userRole, phone_number: phoneNumber }),
         });
         const result = await response.json();
         if (response.ok) {
@@ -163,10 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signOut = useCallback(async () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('isAuthenticated');
+    clearTabAuth();
     setUser(null);
     setRole(null);
   }, []);
@@ -196,9 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!response.ok || !result.success) {
         return { error: result.error || 'The sign-in code is invalid or expired.' };
       }
-      localStorage.setItem('user', JSON.stringify(result.user));
-      localStorage.setItem('access_token', result.access);
-      if (result.refresh) localStorage.setItem('refresh_token', result.refresh);
+      saveTabAuth(result.user, result.access, result.refresh);
       refreshUser();
       return { error: null };
     } catch {
@@ -216,11 +209,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        localStorage.setItem('user', JSON.stringify(result.user));
-        localStorage.setItem('access_token', result.access);
-        if (result.refresh) {
-          localStorage.setItem('refresh_token', result.refresh);
-        }
+        saveTabAuth(result.user, result.access, result.refresh);
         refreshUser();
         return { error: null, isNewUser: result.is_new_user };
       } else {

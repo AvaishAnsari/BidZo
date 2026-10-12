@@ -8,12 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
-import { GoogleLogin } from '@react-oauth/google';
 import BrandMark from '../components/BrandMark';
-
-const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const hasGoogleConfig = clientId && clientId !== 'your_google_client_id_here' && clientId !== '';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 const schema = z.object({
   name:  z.string().min(2, 'At least 2 characters.'),
@@ -25,17 +20,11 @@ type FormVals = z.infer<typeof schema>;
 
 export const Register = () => {
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
+  const { signUp } = useAuth();
 
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [phoneOtpValue, setPhoneOtpValue] = useState('');
-  const [phoneVerificationToken, setPhoneVerificationToken] = useState<string | null>(null);
-
-
-
   const { register, handleSubmit, watch, formState: { errors, touchedFields } } = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', email: '', phoneNumber: '', password: '' },
@@ -51,48 +40,10 @@ export const Register = () => {
     setLoading(true);
 
     try {
-      if (!phoneVerificationToken) {
-        const url = phoneOtpSent ? `${API_BASE_URL}/auth/otp/verify/` : `${API_BASE_URL}/auth/otp/request/`;
-        const payload = phoneOtpSent
-          ? { identifier: data.phoneNumber, channel: 'sms', purpose: 'phone_registration', code: phoneOtpValue }
-          : { identifier: data.phoneNumber, channel: 'sms', purpose: 'phone_registration' };
-        const otpResponse = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const otpResult = await otpResponse.json();
-        if (!otpResponse.ok) throw new Error(otpResult.error || 'Mobile verification failed.');
-
-        if (phoneOtpSent) {
-          setPhoneVerificationToken(otpResult.phone_verification_token);
-          toast.success('Mobile number verified. Create your account to continue.');
-        } else {
-          setPhoneOtpSent(true);
-          toast.success('Enter the code printed in the Django terminal.');
-        }
-        return;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: data.name,
-          email: data.email,
-          password: data.password,
-          phone_number: data.phoneNumber,
-          phone_verification_token: phoneVerificationToken,
-        })
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Registration failed');
-      }
-
-      toast.success('Registration successful! Please sign in.');
-      navigate('/login');
+      const { error } = await signUp(data.email, data.password, data.name, 'buyer', data.phoneNumber);
+      if (error) throw new Error(error);
+      toast.success('Account created. Welcome to BidZo!');
+      navigate('/auctions');
     } catch (err: any) {
       setErrorMsg(err instanceof TypeError
         ? 'Could not reach the Django backend. Start PostgreSQL and the backend server at http://127.0.0.1:8000, then try again.'
@@ -237,7 +188,12 @@ export const Register = () => {
                 <motion.div key="details" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col gap-[20px]">
 
                   <motion.div variants={itemVariants} className="text-center">
-                    <h2 className="text-3xl lg:text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 drop-shadow-sm">Create account ✨</h2>
+                    <h2 className="text-3xl lg:text-4xl font-extrabold mb-2 drop-shadow-sm">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">Create account</span>
+                      <span className="inline-flex align-middle ml-2 text-[#d4aa5f]" aria-label="BidZo">
+                        <BrandMark size={30} />
+                      </span>
+                    </h2>
                     <p className="text-gray-400 text-sm font-medium">Join BidZo — fast, free, and secure</p>
                   </motion.div>
 
@@ -247,51 +203,9 @@ export const Register = () => {
                     </motion.div>
                   )}
 
-                  <motion.div variants={itemVariants} className="w-full flex items-center justify-center">
-                    {hasGoogleConfig ? (
-                      <div className="w-full">
-                        <GoogleLogin
-                          onSuccess={async (credentialResponse) => {
-                            setLoading(true);
-                            if (credentialResponse.credential) {
-                              const { error } = await signInWithGoogle(credentialResponse.credential);
-                              if (error) {
-                                setErrorMsg(error);
-                              } else {
-                                toast.success('Registration successful! Welcome to BidZo.');
-                                navigate('/');
-                              }
-                            }
-                            setLoading(false);
-                          }}
-                          onError={() => {
-                            setErrorMsg('Google Sign-Up failed.');
-                          }}
-                          theme="filled_black"
-                          size="large"
-                          width="100%"
-                          text="signup_with"
-                        />
-                      </div>
-                    ) : (
-                      <motion.button
-                        type="button"
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setErrorMsg('Google configuration is missing. Please set VITE_GOOGLE_CLIENT_ID in your .env file.')}
-                        className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 h-[48px] rounded-[8px] transition-all duration-300 text-sm font-bold shadow-lg"
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24">
-                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        Sign up with Google
-                      </motion.button>
-                    )}
-                  </motion.div>
+                  <motion.p variants={itemVariants} className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs leading-relaxed text-gray-400">
+                    Enter your email and phone number to create an account. No verification code is needed for this college project.
+                  </motion.p>
 
                   <motion.div variants={itemVariants} className="flex items-center gap-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10"></div>
@@ -346,11 +260,7 @@ export const Register = () => {
                           type="tel"
                           id="phoneNumber"
                           autoComplete="tel"
-                          {...register('phoneNumber', { onChange: () => {
-                            setPhoneOtpSent(false);
-                            setPhoneOtpValue('');
-                            setPhoneVerificationToken(null);
-                          } })}
+                          {...register('phoneNumber')}
                           style={{ paddingLeft: '44px' }}
                           className="peer w-full h-[48px] bg-black/40 border border-white/10 rounded-[8px] pt-4 pb-1 pr-4 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50 focus:border-[#d4aa5f] transition-all placeholder-transparent shadow-inner"
                           placeholder="Mobile Number (+919876543210)"
@@ -361,21 +271,6 @@ export const Register = () => {
                       </div>
                       {touchedFields.phoneNumber && errors.phoneNumber && <p className="text-[10px] font-semibold text-red-400 pl-1 mt-1">{errors.phoneNumber.message}</p>}
                     </motion.div>
-
-                    {phoneOtpSent && !phoneVerificationToken && (
-                      <motion.div variants={itemVariants} className="relative group mb-[20px] flex flex-col">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          value={phoneOtpValue}
-                          onChange={(event) => setPhoneOtpValue(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="w-full h-[48px] rounded-[8px] border border-white/10 bg-black/40 px-4 text-center text-lg tracking-[0.35em] text-white focus:border-[#d4aa5f] focus:outline-none focus:ring-2 focus:ring-[#8b5e2c]/50"
-                          placeholder="6-digit mobile code"
-                          aria-label="Mobile verification code"
-                        />
-                      </motion.div>
-                    )}
 
                     <motion.div variants={itemVariants} className="flex flex-col mb-[16px]">
                       <div className="relative group">
@@ -412,13 +307,13 @@ export const Register = () => {
                       <div className="absolute inset-0 bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] opacity-80 group-hover:opacity-100 transition-opacity blur-sm"></div>
                       <div className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] h-[48px] rounded-[8px] text-sm font-bold text-white shadow-inner border border-white/10">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Zap className="w-5 h-5"/>}
-                        {!phoneOtpSent ? 'Verify mobile number' : !phoneVerificationToken ? 'Confirm mobile code' : 'Create Account'}
+                        Create Account
                       </div>
                     </motion.button>
                   </form>
 
                   <motion.p variants={itemVariants} className="text-[10px] text-center text-gray-500">
-                    Protected by reCAPTCHA and subject to Google's <a href="https://policies.google.com/privacy" className="text-[#d4aa5f] hover:text-[#f0d9ae] transition-colors font-semibold">Privacy Policy</a>
+                    Your email and phone are saved to your account; no verification code is sent.
                   </motion.p>
 
                   <motion.p variants={itemVariants} className="text-center text-sm font-medium text-gray-400 mt-[8px]">

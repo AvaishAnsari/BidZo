@@ -336,7 +336,7 @@ def api_request_otp_view(request):
             )
         elif settings.DEBUG:
             # Free development-only delivery. Configure a real SMS gateway before production.
-            print(f'[BidZo development SMS] To ending {identifier[-4:]}: sign-in code {code}')
+            print(f'[BidZo development SMS] To ending {identifier[-4:]}: sign-in code {code}', flush=True)
         else:
             raise RuntimeError('SMS delivery provider is not configured.')
     except Exception:
@@ -418,17 +418,19 @@ def api_google_login_view(request):
         )
         
         email = idinfo.get('email')
-        name = idinfo.get('name') or email.split('@')[0]
         
         if not email:
             return Response({"success": False, "error": "Email not provided by Google"}, status=status.HTTP_400_BAD_REQUEST)
             
-        user, created = User.objects.get_or_create(username=email, defaults={'email': email})
-        
-        if created:
-            # Set unusable password for Google users
-            user.set_unusable_password()
-            user.save()
+        # New accounts must provide their name and phone number through the
+        # registration form. Google remains available to sign in to an account
+        # that has already been created with those required details.
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response({
+                "success": False,
+                "error": "Create your account with your name and phone number first, then use Google to sign in."
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         if idinfo.get('email_verified') is True:
             profile, _ = UserProfile.objects.get_or_create(user=user)
@@ -455,7 +457,7 @@ def api_google_login_view(request):
                 "email": user.email,
                 "role": role
             },
-            "is_new_user": created
+            "is_new_user": False
         }, status=status.HTTP_200_OK)
         
     except ValueError as e:
@@ -471,7 +473,6 @@ def api_register_view(request):
     email = request.data.get('email')
     password = request.data.get('password')
     phone_number = (request.data.get('phone_number') or '').strip() or None
-    phone_verification_token = request.data.get('phone_verification_token') or ''
     role = request.data.get('role', 'buyer')
 
     if not username or not email or not password:
@@ -488,12 +489,6 @@ def api_register_view(request):
 
     if not phone_number or not re.fullmatch(r'\+[1-9]\d{7,14}', phone_number):
         return Response({"success": False, "error": "A valid mobile number with country code is required."}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        proof = signing.loads(phone_verification_token, salt='bidzo-phone-registration', max_age=600)
-    except signing.BadSignature:
-        return Response({"success": False, "error": "Verify your mobile number before creating the account."}, status=status.HTTP_400_BAD_REQUEST)
-    if proof.get('phone_number') != phone_number:
-        return Response({"success": False, "error": "The verified mobile number does not match."}, status=status.HTTP_400_BAD_REQUEST)
     if UserProfile.objects.filter(phone_number=phone_number).exists():
         return Response({"success": False, "error": "This mobile number is already in use."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -517,7 +512,8 @@ def api_register_view(request):
         profile = user.profile
         profile.role = role
         profile.phone_number = phone_number
-        profile.phone_verified = True
+        profile.email_verified = False
+        profile.phone_verified = False
         profile.save()
 
         return Response({
@@ -660,7 +656,7 @@ def api_request_contact_change_otp_view(request):
                 fail_silently=False,
             )
         elif settings.DEBUG:
-            print(f'[BidZo development SMS] To ending {identifier[-4:]}: contact verification code {code}')
+            print(f'[BidZo development SMS] To ending {identifier[-4:]}: contact verification code {code}', flush=True)
         else:
             raise RuntimeError('SMS delivery provider is not configured.')
     except Exception:
@@ -813,38 +809,52 @@ def api_payment_order_view(request):
     if not key_id or not key_secret:
         return Response({'success': False, 'error': 'Online payments are not configured on this server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     try:
-        auction = AuctionItem.objects.get(pk=request.data.get('auction_id'))
-    except (AuctionItem.DoesNotExist, TypeError, ValueError):
+        auction_id = int(request.data.get('auction_id'))
+    except (TypeError, ValueError):
         return Response({'success': False, 'error': 'Auction not found.'}, status=status.HTTP_404_NOT_FOUND)
-    if auction.end_time > timezone.now():
-        return Response({'success': False, 'error': 'Payment is available after the auction ends.'}, status=status.HTTP_400_BAD_REQUEST)
-    winning_bid = Bid.objects.filter(auction_item=auction).order_by('-amount', 'timestamp').first()
-    if not winning_bid or winning_bid.bidder_id != request.user.id:
-        return Response({'success': False, 'error': 'Only the winning bidder can pay for this auction.'}, status=status.HTTP_403_FORBIDDEN)
-    if AuctionPayment.objects.filter(auction=auction, status='completed').exists():
-        return Response({'success': False, 'error': 'This auction has already been paid.'}, status=status.HTTP_409_CONFLICT)
 
-    amount_paise = int(winning_bid.amount * 100)
     try:
-        response = requests.post(
-            'https://api.razorpay.com/v1/orders',
-            auth=(key_id, key_secret),
-            json={'amount': amount_paise, 'currency': 'INR', 'receipt': f'bidzo-{auction.id}-{request.user.id}'[:40]},
-            timeout=15,
-        )
-        response.raise_for_status()
-        order = response.json()
-    except (requests.RequestException, ValueError):
-        return Response({'success': False, 'error': 'The payment provider could not create an order.'}, status=status.HTTP_502_BAD_GATEWAY)
+        with transaction.atomic():
+            # Serialize checkouts on this auction so two requests cannot create
+            # separate payable orders at the same time.
+            auction = AuctionItem.objects.select_for_update().get(pk=auction_id)
+            if auction.end_time > timezone.now():
+                return Response({'success': False, 'error': 'Payment is available after the auction ends.'}, status=status.HTTP_400_BAD_REQUEST)
+            winning_bid = Bid.objects.filter(auction_item=auction).order_by('-amount', 'timestamp').first()
+            if not winning_bid or winning_bid.bidder_id != request.user.id:
+                return Response({'success': False, 'error': 'Only the winning bidder can pay for this auction.'}, status=status.HTTP_403_FORBIDDEN)
+            if AuctionPayment.objects.filter(auction=auction, status='completed').exists():
+                return Response({'success': False, 'error': 'This auction has already been paid.'}, status=status.HTTP_409_CONFLICT)
 
-    payment, _ = AuctionPayment.objects.update_or_create(
-        razorpay_order_id=order['id'],
-        defaults={'auction': auction, 'user': request.user, 'amount': winning_bid.amount, 'status': 'pending'},
-    )
+            amount_paise = int(winning_bid.amount * 100)
+            payment = AuctionPayment.objects.filter(
+                auction=auction, user=request.user, status='pending', amount=winning_bid.amount,
+            ).order_by('-created_at').first()
+            if payment is None:
+                try:
+                    response = requests.post(
+                        'https://api.razorpay.com/v1/orders',
+                        auth=(key_id, key_secret),
+                        json={'amount': amount_paise, 'currency': 'INR', 'receipt': f'bidzo-{auction.id}-{request.user.id}'[:40]},
+                        timeout=15,
+                    )
+                    response.raise_for_status()
+                    order = response.json()
+                except (requests.RequestException, ValueError):
+                    return Response({'success': False, 'error': 'The payment provider could not create an order.'}, status=status.HTTP_502_BAD_GATEWAY)
+                if not isinstance(order, dict) or not order.get('id'):
+                    return Response({'success': False, 'error': 'The payment provider returned an invalid order.'}, status=status.HTTP_502_BAD_GATEWAY)
+                payment = AuctionPayment.objects.create(
+                    auction=auction, user=request.user, amount=winning_bid.amount,
+                    razorpay_order_id=order['id'], status='pending',
+                )
+    except AuctionItem.DoesNotExist:
+        return Response({'success': False, 'error': 'Auction not found.'}, status=status.HTTP_404_NOT_FOUND)
+
     return Response({
         'success': True, 'key_id': key_id, 'order_id': payment.razorpay_order_id,
-        'amount': amount_paise, 'currency': 'INR', 'payment_record_id': payment.id,
-    }, status=status.HTTP_201_CREATED)
+        'amount': int(payment.amount * 100), 'currency': 'INR', 'payment_record_id': payment.id,
+    })
 
 
 @api_view(['POST'])
@@ -861,12 +871,62 @@ def api_payment_verify_view(request):
         return Response({'success': False, 'error': 'Online payments are not configured on this server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     expected = hmac.new(key_secret.encode(), f'{order_id}|{payment_id}'.encode(), hashlib.sha256).hexdigest()
     if not constant_time_compare(expected, signature):
-        payment.status = 'failed'
-        payment.save(update_fields=['status'])
         return Response({'success': False, 'error': 'Payment signature verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
-    payment.razorpay_payment_id = payment_id
-    payment.status = 'completed'
-    payment.save(update_fields=['razorpay_payment_id', 'status'])
+
+    # A valid checkout signature proves the callback belongs to this order, but
+    # we also confirm the payment state, amount, and currency with Razorpay
+    # before marking money as received.
+    try:
+        provider_response = requests.get(
+            f'https://api.razorpay.com/v1/payments/{payment_id}',
+            auth=(getattr(settings, 'RAZORPAY_KEY_ID', ''), key_secret),
+            timeout=15,
+        )
+        provider_response.raise_for_status()
+        provider_payment = provider_response.json()
+    except (requests.RequestException, ValueError):
+        return Response(
+            {'success': False, 'error': 'Could not confirm payment with the payment provider. Please retry.'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    if not isinstance(provider_payment, dict):
+        return Response(
+            {'success': False, 'error': 'The payment provider returned an invalid payment record.'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    expected_amount_paise = int(payment.amount * 100)
+    if (
+        provider_payment.get('id') != payment_id
+        or provider_payment.get('order_id') != order_id
+        or provider_payment.get('amount') != expected_amount_paise
+        or provider_payment.get('currency') != 'INR'
+        or provider_payment.get('status') != 'captured'
+    ):
+        return Response(
+            {'success': False, 'error': 'The payment is not captured for the expected order and amount.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with transaction.atomic():
+        AuctionItem.objects.select_for_update().get(pk=payment.auction_id)
+        payment = AuctionPayment.objects.select_for_update().get(pk=payment.pk)
+        if AuctionPayment.objects.filter(auction_id=payment.auction_id, status='completed').exclude(pk=payment.pk).exists():
+            return Response(
+                {'success': False, 'error': 'This auction has already been paid.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if payment.status == 'completed':
+            if payment.razorpay_payment_id == payment_id:
+                return Response({'success': True, 'payment_id': payment.id, 'status': payment.status})
+            return Response(
+                {'success': False, 'error': 'This order has already been completed with another payment.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        payment.razorpay_payment_id = payment_id
+        payment.status = 'completed'
+        payment.save(update_fields=['razorpay_payment_id', 'status'])
     return Response({'success': True, 'payment_id': payment.id, 'status': payment.status})
 
 

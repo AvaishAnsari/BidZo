@@ -844,23 +844,57 @@ a { text-underline-offset: 0.18em; }
 .app-header-inner, .landing-header-inner { min-width: 0; }
 .app-primary-nav { min-width: 0; }
 .landing-nav-actions a { white-space: nowrap; }
-.auction-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)) !important; }
+.auction-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 22.5rem)) !important;
+  justify-content: center;
+}
 .auction-detail-columns { min-width: 0; }
-.auth-shell { overflow-x: clip; }
-.auth-aside { overflow-x: hidden; }
-.auth-panel { min-width: 0; }
+.auth-shell {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
+  min-height: 100svh;
+  overflow-x: clip;
+}
+.auth-aside {
+  width: auto !important;
+  min-width: 0;
+  min-height: 100svh;
+  padding: clamp(1.5rem, 4vw, 4rem) !important;
+  overflow-x: hidden;
+}
+.auth-panel {
+  width: auto !important;
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 3rem) !important;
+}
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .auth-shell { grid-template-columns: minmax(0, 1fr); }
   .auth-aside {
     min-height: 0 !important;
-    max-height: 300px;
+    max-height: 340px;
     padding: 1.25rem 1.5rem 1rem !important;
     overflow: hidden !important;
   }
   .auth-aside .mb-12 { margin-bottom: 1rem !important; }
   .auth-aside h1 { font-size: clamp(1.8rem, 5vw, 2.5rem) !important; }
   .auth-aside .space-y-8 { gap: 1rem !important; }
-  .auth-aside .space-y-8 > :nth-child(n+3) { display: none !important; }
+  .auth-aside .space-y-8 > :nth-child(n+4) { display: none !important; }
+  .auth-panel { padding: 1rem !important; }
+}
+
+@media (max-width: 900px) {
+  .auth-aside {
+    min-height: 0 !important;
+    max-height: 320px;
+    padding: 1.25rem 1.5rem 1rem !important;
+    overflow: hidden !important;
+  }
+  .auth-aside .mb-12 { margin-bottom: 1rem !important; }
+  .auth-aside h1 { font-size: clamp(1.8rem, 5vw, 2.5rem) !important; }
+  .auth-aside .space-y-8 { gap: 1rem !important; }
+  .auth-aside .space-y-8 > :nth-child(n+4) { display: none !important; }
   .auth-panel { padding: 1rem !important; }
 }
 .landing-hero {
@@ -869,9 +903,9 @@ a { text-underline-offset: 0.18em; }
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
   align-items: center;
   gap: clamp(2rem, 6vw, 5.5rem);
-  max-width: 1280px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: clamp(4rem, 8vw, 7rem) 1.5rem;
+  padding: clamp(3.5rem, 6vw, 5.5rem) 1.5rem;
   text-align: left;
   background: radial-gradient(ellipse 55% 60% at 85% 40%, rgba(190, 143, 70, 0.13), transparent 78%);
 }
@@ -1112,17 +1146,17 @@ a { text-underline-offset: 0.18em; }
   .landing-hero h1 { letter-spacing: -0.04em !important; }
   .landing-feature-grid { gap: 0.85rem !important; }
   .auction-grid { gap: 1rem !important; }
-  .auth-shell { overflow: visible !important; }
+  .auth-shell { overflow-x: clip !important; }
   .auth-aside {
     min-height: 0 !important;
-    max-height: 280px;
+    max-height: 320px;
     padding: 1.25rem 1.25rem 1rem !important;
     overflow: hidden !important;
   }
   .auth-aside .mb-12 { margin-bottom: 1.25rem !important; }
   .auth-aside h1 { font-size: 2rem !important; }
   .auth-aside .space-y-8 { gap: 1rem !important; }
-  .auth-aside .space-y-8 > :nth-child(n+3) { display: none !important; }
+  .auth-aside .space-y-8 > :nth-child(n+4) { display: none !important; }
   .auth-panel { padding: 1rem !important; }
   .auth-card { padding: 1.5rem !important; border-radius: 1.25rem !important; }
   .app-header + main { padding-top: 1rem !important; padding-bottom: 2rem !important; }

@@ -81,6 +81,7 @@ export const AuctionDetail = () => {
 
   // ── Step 4: Winning / Outbid state ─────────────────────────────────────────
   const isOwnAuction = !!(user && auction && auction.seller_id === user.id);
+  const hasUserBid = !!(user && bids.some((bid) => bid.bidder_id === user.id));
   const isWinning    = isEnded && auction?.winner_id
     ? auction.winner_id === user?.id
     : !!(user && bids.length > 0 && bids[0].bidder_id === user.id);
@@ -492,7 +493,7 @@ export const AuctionDetail = () => {
               )}
 
               {/* ── Step 4: Winning / Outbid indicator ───────────────── */}
-              {user && bids.length > 0 && (
+              {hasUserBid && (
                 <AnimatePresence mode="wait">
                   {isWinning ? (
                     <motion.div

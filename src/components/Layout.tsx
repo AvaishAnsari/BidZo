@@ -10,7 +10,7 @@ import { useNotifications } from '../context/NotificationContext';
 import BackToTop from './BackToTop';
 import BrandMark from './BrandMark';
 const centerStyle: React.CSSProperties = {
-  maxWidth: '1280px',
+  maxWidth: '1600px',
   marginLeft: 'auto',
   marginRight: 'auto',
   paddingLeft: '1.5rem',

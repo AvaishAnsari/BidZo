@@ -204,8 +204,8 @@ export const Login = () => {
                   <Users className="w-5 h-5 lg:w-6 lg:h-6 text-[#d4aa5f]" />
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">12K+</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Active Bidders</div>
+                  <div className="text-lg lg:text-xl font-extrabold text-white tracking-tight">Live bidding</div>
+                  <div className="text-xs lg:text-sm font-medium text-gray-400">Follow every bid</div>
                 </div>
               </div>
               <div className="w-px h-12 lg:h-14 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
@@ -214,63 +214,12 @@ export const Login = () => {
                   <Trophy className="w-5 h-5 lg:w-6 lg:h-6 text-[#d4aa5f]" />
                 </div>
                 <div>
-                  <div className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">38K+</div>
-                  <div className="text-xs lg:text-sm font-medium text-gray-400">Auctions Won</div>
+                  <div className="text-lg lg:text-xl font-extrabold text-white tracking-tight">One account</div>
+                  <div className="text-xs lg:text-sm font-medium text-gray-400">Buy or sell on BidZo</div>
                 </div>
               </div>
             </motion.div>
 
-            {/* Live Auction Card Preview */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1, y: [-5, 5, -5] }}
-              transition={{
-                opacity: { duration: 0.6, delay: 0.8 },
-                scale: { duration: 0.6, delay: 0.8 },
-                y: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1.4 },
-              }}
-              className="mt-8 lg:mt-10 bg-[#0f111a]/80 backdrop-blur-xl rounded-2xl p-4 flex gap-4 lg:gap-5 items-center relative overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[#d4aa5f]/20 hover:border-[#d4aa5f]/40 transition-colors duration-300"
-            >
-              {/* Clarify it's a preview */}
-              <div className="absolute top-2 right-2 z-10 bg-black/60 text-[9px] font-bold text-gray-400 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                Live Preview
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-50 pointer-events-none"></div>
-              <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-xl overflow-hidden relative shrink-0 shadow-inner">
-                <div className="absolute top-2 left-2 z-10 bg-rose-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-lg flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                  LIVE
-                </div>
-                <img
-                  src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=600&auto=format&fit=crop"
-                  alt="Premium Watch"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 relative z-10 flex flex-col justify-between h-full py-1">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-sm lg:text-base text-white">Premium Watch</h3>
-                    <div className="bg-black/60 rounded-md px-2 py-1 border border-white/5">
-                      <div className="text-[#f43f5e] font-mono text-xs lg:text-sm font-bold tracking-widest">
-                        00:02:45
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-400 font-medium">Luxury Edition</p>
-                </div>
-
-                <div className="flex justify-between items-end mt-4">
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-0.5">Current Bid</p>
-                    <p className="text-white font-extrabold text-lg lg:text-xl drop-shadow-md">₹48,750</p>
-                  </div>
-                  <div className="bg-gradient-to-r from-[#8b5e2c] to-[#d4aa5f] hover:brightness-110 text-white text-xs font-bold px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg flex items-center gap-1 shadow-lg transition-all duration-300 pointer-events-none">
-                    Place Bid <span className="text-base leading-none">→</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
           </div>
         </div>
 
@@ -515,35 +464,9 @@ export const Login = () => {
                 </button>
               </motion.div>
 
-              {/* Keep me signed in */}
-              <motion.div variants={itemVariants} className="flex items-center gap-3 mt-[12px]">
-                <div className="relative flex items-center justify-center">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="peer w-5 h-5 rounded-md border border-white/20 bg-black/40 checked:bg-[#8b5e2c] checked:border-transparent focus:ring-2 focus:ring-[#8b5e2c]/50 appearance-none transition-all cursor-pointer"
-                  />
-                  <svg
-                    className="absolute w-3 h-3 pointer-events-none opacity-0 peer-checked:opacity-100 text-white"
-                    viewBox="0 0 14 10"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M1 5L4.5 8.5L13 1"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-                <label
-                  htmlFor="remember"
-                  className="text-sm font-medium text-gray-300 cursor-pointer hover:text-white transition-colors"
-                >
-                  Keep me signed in
-                </label>
+              {/* Authentication is intentionally isolated per tab. */}
+              <motion.div variants={itemVariants} className="mt-[12px] px-1 text-xs text-gray-400">
+                This tab has its own sign-in, so you can use separate accounts in other tabs.
               </motion.div>
 
               {/* Submit Button */}
