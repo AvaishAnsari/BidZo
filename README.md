@@ -1,40 +1,249 @@
-# BidZo
+# BidZo - Real-Time Auction Bidding Platform
 
-BidZo is an auction and bidding application. The frontend is built with React, TypeScript, and Vite. The backend is Django with PostgreSQL; the backend project and API documentation are in `backend/`.
+Our platform introduces a set of innovative and scalable features designed to enhance the online auction experience. It leverages real-time technology to enable instant bid updates without page refresh, ensuring a seamless and competitive environment for users.
 
-## Backend setup
+The system incorporates an AI-powered smart bidding assistant that analyzes bidding patterns and suggests optimal bid values, helping users make informed decisions. To maintain platform integrity, advanced validation mechanisms and fraud detection techniques are implemented to prevent fake or malicious bidding activities.
 
-1. Create and activate a Python virtual environment.
-2. Install dependencies with `pip install -r backend/requirements.txt`.
-3. Configure the variables shown in `backend/.env.example` for your PostgreSQL database and Django settings.
-4. From the repository root, run database migrations with `python backend/manage.py migrate`.
-5. Start Django with `python backend/manage.py runserver`.
+A secure and automated payment workflow is integrated using Razorpay, enabling smooth transaction processing and ensuring reliability. The platform also features a transparent live dashboard that provides real-time insights such as bid history, highest bids, and auction countdown, promoting trust among users.
 
-See `backend/API_Documentation.md` for the current API endpoints.
+Built on a scalable serverless architecture using Supabase and PostgreSQL, the system ensures high performance and reliability. Additionally, role-based access control enables efficient management for buyers, sellers, and administrators.
 
-## Frontend setup
+The platform is future-ready, with planned enhancements including AI-based price prediction models, blockchain-backed transparency, and intelligent automation to further optimize the auction ecosystem.
 
-1. Install Node dependencies with `npm install`.
-2. Copy `.env.example` to `.env.local` and set `VITE_API_BASE_URL` to your Django server URL.
-3. Start the development server with `npm run dev`.
+##  Features
 
-The frontend expects the Django API and WebSocket endpoints to be available at the configured backend host.
+- **User Authentication**: Secure registration and login with Supabase Auth
+- **Role-Based Access**: Buyer and Seller roles with different permissions
+- **Real-Time Bidding**: Live bid updates using Supabase Realtime subscriptions
+- **Auction Management**: Create, browse, and participate in auctions
+- **Payment Integration**: Razorpay integration for secure payments
+- **Image Storage**: Upload auction images to Supabase Storage
+- **Row-Level Security**: Database security with RLS policies
+- **Responsive Design**: Mobile-friendly UI with Tailwind CSS
 
-## One-command local development
+##  Project Structure
 
-After installing dependencies and configuring `.env.local`, start PostgreSQL (if stopped), Django, and Vite together from the repository root:
-
-```bash
-./dev.sh start
+```
+src/
+├── components/          # Reusable React components
+│   └── ProtectedRoute.tsx    # Route protection for authenticated users
+├── context/            # React Context for state management
+│   └── AuthContext.tsx       # Authentication state and utilities
+├── pages/              # Page components
+│   ├── HomePage.tsx
+│   ├── LoginPage.tsx
+│   └── RegisterPage.tsx
+├── hooks/              # Custom React hooks
+├── types/              # TypeScript type definitions
+│   └── index.ts
+├── utils/              # Utility functions
+│   └── supabase.ts
+├── App.tsx            # Main component with routing
+└── index.css          # Global styles with Tailwind
 ```
 
-The script writes server output and PID files under the ignored `.run/` directory. Use `./dev.sh status` to check the services and `./dev.sh stop` to stop the Django and Vite processes started by the script. PostgreSQL starts automatically when it is stopped; the script may ask for your system password through `sudo`.
+##  Tech Stack
 
-## Before a public launch
+### Frontend
+- **React 18** - UI library
+- **Vite** - Build tool
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Utility-first CSS
+- **React Router** - Client-side routing
+- **Axios** - HTTP client
 
-- Set `DEBUG=False`, a unique private `SECRET_KEY`, and explicit `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, and `CSRF_TRUSTED_ORIGINS` values. The backend now refuses to start in production mode without `SECRET_KEY`.
-- Serve the site over HTTPS. Production cookie, redirect, and HSTS protections are enabled when `DEBUG=False`; set `SECURE_SSL_REDIRECT=False` only when HTTPS is handled correctly in front of Django.
-- Configure SMTP for email verification and connect a real SMS provider before offering SMS OTP. The development console email and terminal SMS codes are not delivery services.
-- Configure Razorpay test credentials and test end-to-end before live credentials. The backend checks Razorpay's payment record, captured status, order, currency, and amount before marking an order paid.
-- Use a shared Redis channel layer when running multiple Django workers so auction WebSocket updates reach every connected client. The default in-memory layer is for local development.
-- Test bidding with multiple authenticated accounts, including bids submitted at nearly the same time, and remove development listings before launch.
+### Backend
+- **Supabase** - PostgreSQL + Auth + Realtime + Storage
+- **PostgreSQL** - Database
+- **Row-Level Security (RLS)** - Database-level security
+
+### Payment
+- **Razorpay** - Payment gateway integration
+
+##  Setup Guide
+
+### Prerequisites
+- Node.js 16.x or higher
+- npm or yarn
+- Supabase account (free tier available)
+
+### 1. Clone and Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Create Supabase Project
+
+1. Go to [Supabase](https://supabase.com)
+2. Create a new project
+3. Copy your **Project URL** and **Anonymous Key**
+
+### 3. Setup Database
+
+1. In Supabase, go to SQL Editor
+2. Create a new query
+3. Copy and paste the contents of `supabase_schema.sql`
+4. Run the script to create tables, indexes, and RLS policies
+
+### 4. Configure Environment Variables
+
+1. Copy `.env.example` to `.env.local`
+```bash
+cp .env.example .env.local
+```
+
+2. Update `.env.local` with your credentials:
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
+```
+
+### 5. Run Development Server
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+##  Authentication Module
+
+### Overview
+
+The authentication module handles user registration, login, and session management using Supabase Auth.
+
+### Key Components
+
+#### AuthContext (`src/context/AuthContext.tsx`)
+Manages global authentication state and provides methods:
+- `register()` - Create new user account
+- `login()` - Sign in existing user
+- `logout()` - Sign out user
+- `updateProfile()` - Update user profile information
+
+#### useAuth Hook
+Custom hook to access authentication context:
+```typescript
+const { user, isAuthenticated, isLoading, login, register, logout } = useAuth();
+```
+
+#### ProtectedRoute Component
+Wraps routes that require authentication:
+```typescript
+<ProtectedRoute requiredRole="seller">
+  <CreateAuctionPage />
+</ProtectedRoute>
+```
+
+### User Registration Flow
+
+1. User fills registration form with email, password, name, and role
+2. Frontend validates inputs (password requirements, email format, etc.)
+3. Supabase Auth creates user account
+4. User profile is stored in `users` table
+5. User is automatically logged in after registration
+
+### User Login Flow
+
+1. User enters email and password
+2. Supabase authenticates credentials
+3. User profile is fetched from database
+4. Authentication state is updated
+5. User is redirected to home page
+
+##  Database Schema
+
+### Tables
+
+#### users
+- Stores user profiles linked to Supabase Auth
+- Fields: `id`, `email`, `name`, `role`, `avatar_url`, `created_at`
+
+#### auctions
+- Stores auction listings created by sellers
+- Fields: `id`, `title`, `description`, `image_url`, `start_price`, `current_price`, `min_increment`, `start_time`, `end_time`, `seller_id`, `status`, `winner_id`, `created_at`
+
+#### bids
+- Records all bids placed on auctions
+- Fields: `id`, `auction_id`, `user_id`, `amount`, `created_at`
+
+#### orders
+- Tracks completed auction transactions
+- Fields: `id`, `auction_id`, `buyer_id`, `amount`, `payment_status`, `razorpay_order_id`, `razorpay_payment_id`, `created_at`
+
+### RLS Policies
+
+Database-level security ensures:
+- Users can only view their own profiles
+- Sellers can only update their own auctions
+- Only authenticated users can place bids
+- Users can only see orders they are involved in
+
+##  Deployment
+
+### Frontend (Vercel)
+
+1. Push code to GitHub
+2. Connect repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy
+
+### Backend (Supabase)
+
+Supabase is hosted and managed - no additional deployment needed.
+
+##  Next Modules to Implement
+
+- [x] Authentication Module (✅ completed)
+- [ ] Auction Management Module
+- [ ] Real-Time Bidding Module
+- [ ] Payment Integration Module
+- [ ] User Dashboard Module
+- [ ] Image Upload Module
+
+##  Contributing
+
+Contributions are welcome! Please follow these guidelines:
+1. Create a feature branch
+2. Make your changes
+3. Test thoroughly
+4. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see LICENSE file for details.
+
+##  Support
+
+For issues and questions, please open a GitHub issue or contact the development team.
+
+```mermaid
+graph TD
+    subgraph Frontend [Client Layer - React/Vite]
+        UI[React UI Components & Framer Motion]
+        State[React Context & Custom Hooks]
+        Validation[Zod & React Hook Form]
+    end
+
+    subgraph Backend [Supabase Backend-as-a-Service]
+        Auth[Supabase Auth API]
+        RPC[PostgreSQL RPC Functions]
+        DB[(PostgreSQL Database)]
+        Realtime[WebSockets / Real-Time Engine]
+    end
+
+    %% Data Flow
+    UI -->|1. User Interaction| Validation
+    Validation -->|2. Validated Payload| State
+    State -->|3. API Request| Auth
+    State -->|3. Execute Function| RPC
+    RPC -->|4. Secure Transaction| DB
+    DB -->|5. Data Mutated Event| Realtime
+    Realtime -->|6. Broadcast via WebSockets| State
+    State -->|7. State Update| UI
+    
+    %% Optimistic Flow
+    State -.->|Instant Optimistic Update| UI
+```

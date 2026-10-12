@@ -1,27 +1,116 @@
-# BidZo Development Notes
+_# BidZo - Real-Time Auction Bidding Application
 
-## Project overview
+## Project Overview
+BidZo is a full-stack real-time auction bidding platform with user authentication, role-based access, live bidding, and payment integration.
 
-BidZo is an auction and bidding application. The frontend uses React, TypeScript, and Vite. The backend uses Django REST Framework and Django Channels with PostgreSQL.
+## Tech Stack
+- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, React Router
+- **Backend**: Supabase (PostgreSQL, Auth, Realtime, Storage)
+- **Payment**: Razorpay Integration
+- **Database**: PostgreSQL with Row-Level Security (RLS)
 
-## Repository layout
+## Completed Modules
 
-- `src/components/` — reusable frontend components
-- `src/pages/` — frontend pages
-- `src/hooks/` — custom React hooks
-- `src/services/` — HTTP and WebSocket client services for the Django backend
-- `src/types/` — shared frontend types
-- `backend/` — Django project, auction app, migrations, and API documentation
+### ✅ Authentication Module
+- User registration with role selection (buyer/seller)
+- Secure login and logout
+- Supabase Auth integration
+- Session persistence
+- Protected routes with role-based access
+- User profile management
 
-## Development setup
+**Key Files**:
+- `src/context/AuthContext.tsx` - Authentication state management
+- `src/pages/LoginPage.tsx` - Login form
+- `src/pages/RegisterPage.tsx` - Registration form
+- `src/components/ProtectedRoute.tsx` - Route protection
+- `src/utils/supabase.ts` - Supabase client setup
 
-- Frontend: `npm install`, configure `VITE_API_BASE_URL`, then run `npm run dev`.
-- Backend: install `backend/requirements.txt`, configure `backend/.env.example` values, run `python backend/manage.py migrate`, then `python backend/manage.py runserver`.
-- See `backend/API_Documentation.md` for the API endpoints.
+## Setup Instructions
 
-## Development guidelines
+### Prerequisites
+- Node.js 16+
+- Supabase Account
+- Razorpay Account (for payments)
 
-- Keep business rules, permissions, and input validation enforced on the Django backend.
-- Use the frontend service modules for Django API requests and WebSocket connections.
-- Keep React components in `src/components/`, pages in `src/pages/`, hooks in `src/hooks/`, and shared types in `src/types/`.
-- Store secrets in environment variables; do not commit real credentials.
+### Initial Setup
+1. Run `npm install` to install dependencies
+2. Create `.env.local` from `.env.example`
+3. Add Supabase credentials to `.env.local`
+4. Run database schema script in Supabase SQL editor
+5. Run `npm run dev` to start development server
+
+### Database Setup
+1. Copy content from `supabase_schema.sql`
+2. Paste into Supabase SQL Editor
+3. Execute to create tables, indexes, and RLS policies
+4. Verify tables are created in Supabase dashboard
+
+## Next Steps
+
+### 2️⃣ Auction Management Module (Next Priority)
+- Create auction page (seller-only)
+- Auction listings page
+- Auction detail page
+- Search and filtering
+- Auction status management
+
+### 3️⃣ Real-Time Bidding Module
+- Supabase Realtime subscriptions for bid updates
+- Live bid counter
+- Auction timer with countdown
+- Auto-update highest bid
+- Real-time participant count
+
+### 4️⃣ Payment Integration Module
+- Razorpay integration
+- Order creation
+- Payment verification
+- Invoice generation
+
+### 5️⃣ Additional Features
+- User dashboard
+- Order history
+- My auctions page
+- Seller analytics
+- Image upload to Supabase Storage
+- Email notifications
+
+## Development Guidelines
+
+### Code Organization
+- Place components in `src/components/`
+- Create pages in `src/pages/`
+- Custom hooks in `src/hooks/`
+- Types in `src/types/`
+- Utilities in `src/utils/`
+
+### Styling
+- Use Tailwind CSS utilities
+- Custom CSS in respective component files
+- Global styles in `src/index.css`
+
+### API/Database
+- Use Supabase client from `src/utils/supabase.ts`
+- Leverage RLS for security
+- Use SQL functions for complex operations
+- Test RLS policies thoroughly
+
+## Environment Variables
+```
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
+```
+
+## Useful Commands
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+## Important Notes
+- All sensitive data should use environment variables
+- RLS policies must be tested for each table
+- Supabase edge functions can be used for complex logic
+- Always validate user input on frontend and backend
