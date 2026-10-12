@@ -1,214 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Activity, Gavel, Loader2, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Navigate } from 'react-router-dom';
-import { ShieldAlert, Users, TrendingUp, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { toast } from 'react-hot-toast';
-import { getAuthHeaders, API_BASE_URL } from '../services/api';
+import { getAuthHeaders } from '../services/api';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+interface DashboardData {
+  stats: { total_users: number; active_auctions: number; ended_auctions: number; total_bids: number };
+  recent_auctions: { id: number; title: string; seller: string; status: string; current_highest_bid: string; created_at: string }[];
+  recent_users: { id: number; username: string; email: string; role: string; date_joined: string }[];
+}
 
 export const AdminDashboard: React.FC = () => {
   const { user, role } = useAuth();
   const { isDark } = useTheme();
-
-  const [activeTab, setActiveTab] = useState<'flags' | 'sellers' | 'products'>('sellers');
-  const [pendingSellers, setPendingSellers] = useState<any[]>([]);
-  const [pendingProducts, setPendingProducts] = useState<any[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user && role === 'admin') {
-      fetchData();
-    }
-  }, [user, role]);
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/admin/dashboard/`, { headers: getAuthHeaders() })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || body.error || 'Could not load admin dashboard.');
+        if (!cancelled) setData(body);
+      })
+      .catch((reason) => { if (!cancelled) setError(reason.message || 'Could not load admin dashboard.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const sellersRes = await fetch(`${API_BASE_URL}/admin/users/pending/`, {
-        headers: getAuthHeaders()
-      });
-      const productsRes = await fetch(`${API_BASE_URL}/admin/auctions/pending/`, {
-        headers: getAuthHeaders()
-      });
+  if (!user || role !== 'admin') return <Navigate to="/auctions" replace />;
 
-      if (sellersRes.ok) {
-        setPendingSellers(await sellersRes.json());
-      }
-      if (productsRes.ok) {
-        setPendingProducts(await productsRes.json());
-      }
-    } catch (error) {
-      toast.error('Failed to load pending applications.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Protect route strictly
-  if (!user || role !== 'admin') {
-    return <Navigate to="/auctions" replace />;
-  }
-
-  // Mock stats for dashboard
-  const stats = [
-    { label: 'Total Users', value: '1,245', icon: <Users className="w-6 h-6 text-blue-500" /> },
-    { label: 'Active Auctions', value: '87', icon: <TrendingUp className="w-6 h-6 text-green-500" /> },
-    { label: 'Fraud Flags', value: '12', icon: <ShieldAlert className="w-6 h-6 text-red-500" /> },
-  ];
-
-  const recentFlags = [
-    { id: 1, user: 'john@example.com', reason: 'Self-bidding attempt', time: '2 mins ago' },
-    { id: 2, user: 'hacker@mock.com', reason: 'Massive bid leap (1000%)', time: '1 hr ago' },
-    { id: 3, user: 'sniper@bot.net', reason: 'Api rate limiting exceeded', time: '3 hrs ago' },
-  ];
-
-  const approveSeller = async (id: number, verify: boolean) => {
-    try {
-      const status = verify ? 'VERIFIED' : 'REJECTED';
-      const res = await fetch(`${API_BASE_URL}/admin/users/${id}/verify/`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ verification_status: status })
-      });
-      if (res.ok) {
-        setPendingSellers(prev => prev.filter(s => s.user?.id !== id && s.id !== id));
-        toast.success(verify ? 'Seller verified.' : 'Seller rejected.');
-        fetchData(); // refresh products in case any got rejected automatically
-      } else {
-        toast.error('Error updating seller status.');
-      }
-    } catch (error) {
-      toast.error('Error updating seller status.');
-    }
-  };
-
-  const approveProduct = async (id: number, approve: boolean) => {
-    try {
-      const status = approve ? 'APPROVED' : 'REJECTED';
-      const res = await fetch(`${API_BASE_URL}/admin/auctions/${id}/moderate/`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ moderation_status: status })
-      });
-      if (res.ok) {
-        setPendingProducts(prev => prev.filter(p => p.id !== id));
-        toast.success(approve ? 'Product approved.' : 'Product rejected.');
-      } else {
-        toast.error('Error updating product status.');
-      }
-    } catch (error) {
-      toast.error('Error updating product status.');
-    }
-  };
+  const foreground = isDark ? '#f3f4f6' : '#111827';
+  const muted = isDark ? '#9ca3af' : '#6b7280';
+  const stats = data ? [
+    { label: 'Registered users', value: data.stats.total_users, icon: <Users color="#0f9f8f" /> },
+    { label: 'Active auctions', value: data.stats.active_auctions, icon: <Gavel color="#16a34a" /> },
+    { label: 'Total bids', value: data.stats.total_bids, icon: <Activity color="#2563eb" /> },
+  ] : [];
 
   return (
-    <div style={{ width: '100%', padding: '2rem 0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-        <ShieldAlert style={{ width: '2.5rem', height: '2.5rem', color: '#ef4444' }} />
-        <div>
-          <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 800, color: isDark ? 'white' : '#111827' }}>
-            Admin Dashboard
-          </h1>
-          <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-            System overview and security monitoring
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
-        {stats.map((stat, idx) => (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="glass-card"
-            style={{ padding: '1.5rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}
-          >
-            <div style={{ padding: '1rem', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              {stat.icon}
+    <main style={{ width: '100%', padding: '2rem 0', color: foreground }}>
+      <h1 style={{ marginBottom: '0.4rem' }}>Admin Dashboard</h1>
+      <p style={{ color: muted, marginTop: 0 }}>Live figures and recent activity from BidZo.</p>
+      {loading ? <div style={{ padding: '3rem', textAlign: 'center' }}><Loader2 className="animate-spin" /></div> : error ? (
+        <p role="alert" style={{ color: '#dc2626' }}>{error}</p>
+      ) : data && <>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', margin: '1.5rem 0 2rem' }}>
+          {stats.map((stat) => <article className="glass-card" key={stat.label} style={{ padding: '1.25rem', borderRadius: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>{stat.icon}<span style={{ color: muted }}>{stat.label}</span></div>
+            <strong style={{ display: 'block', fontSize: '2rem', marginTop: '0.5rem' }}>{stat.value.toLocaleString()}</strong>
+          </article>)}
+        </section>
+        <section className="glass-card" style={{ padding: '1.25rem', borderRadius: '1rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ marginTop: 0 }}>Recent auctions</h2>
+          {data.recent_auctions.length === 0 ? <p style={{ color: muted }}>No auctions yet.</p> : data.recent_auctions.map((auction) => (
+            <div key={auction.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 0', borderTop: '1px solid rgba(148,163,184,.2)' }}>
+              <span>{auction.title} <small style={{ color: muted }}>by {auction.seller}</small></span>
+              <span style={{ color: muted }}>{auction.status} · ₹{Number(auction.current_highest_bid).toLocaleString('en-IN')}</span>
             </div>
-            <div>
-              <p style={{ margin: 0, fontSize: '0.8rem', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.05em' }}>{stat.label}</p>
-              <p style={{ margin: 0, fontSize: '2rem', fontWeight: 800, color: isDark ? 'white' : '#111827' }}>{stat.value}</p>
+          ))}
+        </section>
+        <section className="glass-card" style={{ padding: '1.25rem', borderRadius: '1rem' }}>
+          <h2 style={{ marginTop: 0 }}>Recently joined</h2>
+          {data.recent_users.length === 0 ? <p style={{ color: muted }}>No members yet.</p> : data.recent_users.map((member) => (
+            <div key={member.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 0', borderTop: '1px solid rgba(148,163,184,.2)' }}>
+              <span>{member.username} <small style={{ color: muted }}>{member.email}</small></span>
+              <span style={{ color: muted }}>{member.role}</span>
             </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="glass-card" style={{ padding: '2rem', borderRadius: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
-          <button onClick={() => setActiveTab('sellers')} style={{ background: 'transparent', border: 'none', color: activeTab === 'sellers' ? '#c084fc' : '#6b7280', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1rem' }}>Pending Sellers ({pendingSellers.length})</button>
-          <button onClick={() => setActiveTab('products')} style={{ background: 'transparent', border: 'none', color: activeTab === 'products' ? '#c084fc' : '#6b7280', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1rem' }}>Pending Products ({pendingProducts.length})</button>
-          <button onClick={() => setActiveTab('flags')} style={{ background: 'transparent', border: 'none', color: activeTab === 'flags' ? '#ef4444' : '#6b7280', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertTriangle className="w-5 h-5"/> Security Flags ({recentFlags.length})</button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {loading ? (
-            <p style={{ color: '#6b7280' }}>Loading pending reviews...</p>
-          ) : (
-            <>
-              {activeTab === 'flags' && recentFlags.map((flag) => (
-                <div key={flag.id} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '1rem', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)',
-                  borderRadius: '0.75rem'
-                }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827' }}>{flag.user}</p>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444' }}>{flag.reason}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>{flag.time}</p>
-                    <button style={{ marginTop: '0.5rem', padding: '0.3rem 0.75rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
-                      Ban User
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {activeTab === 'sellers' && pendingSellers.length === 0 && (
-                <p style={{ color: '#6b7280' }}>No pending sellers to review.</p>
-              )}
-              {activeTab === 'sellers' && pendingSellers.map((seller) => (
-                <div key={seller.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.1rem' }}>{seller.business_name || seller.username}</p>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                      {seller.email} •
-                      {seller.business_registration_number && ` Reg No: ${seller.business_registration_number}`}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button onClick={() => approveSeller(seller.id, true)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><CheckCircle className="w-4 h-4"/> Approve</button>
-                    <button onClick={() => approveSeller(seller.id, false)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><XCircle className="w-4 h-4"/> Reject</button>
-                  </div>
-                </div>
-              ))}
-
-              {activeTab === 'products' && pendingProducts.length === 0 && (
-                <p style={{ color: '#6b7280' }}>No pending products to review.</p>
-              )}
-              {activeTab === 'products' && pendingProducts.map((prod) => (
-                <div key={prod.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    {prod.image_url && <img src={prod.image_url} alt={prod.title} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '0.5rem' }} />}
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 600, color: isDark ? '#e5e7eb' : '#111827', fontSize: '1.1rem' }}>{prod.title}</p>
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#9ca3af', marginTop: '0.25rem' }}>Seller: {prod.seller_name} • <span style={{ color: '#c084fc', fontWeight: 'bold' }}>₹ {prod.starting_price}</span></p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button onClick={() => approveProduct(prod.id, true)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><CheckCircle className="w-4 h-4"/> Approve</button>
-                    <button onClick={() => approveProduct(prod.id, false)} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '0.5rem', fontWeight: 'bold', cursor: 'pointer' }}><XCircle className="w-4 h-4"/> Reject</button>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          ))}
+        </section>
+      </>}
+    </main>
   );
 };

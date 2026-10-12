@@ -24,17 +24,17 @@ export const SmartBidAssistant: React.FC<SmartBidAssistantProps> = ({
   return (
     <div style={{
       width: '100%',
-      background: 'rgba(99, 102, 241, 0.05)',
-      border: '1px solid rgba(99, 102, 241, 0.2)',
+      background: 'rgba(157, 108, 48, 0.05)',
+      border: '1px solid rgba(157, 108, 48, 0.2)',
       borderRadius: '1rem',
       padding: '1.25rem',
       marginTop: '1.5rem',
       marginBottom: '1rem',
-      boxShadow: 'inset 0 0 20px rgba(99, 102, 241, 0.05)'
+      boxShadow: 'inset 0 0 20px rgba(157, 108, 48, 0.05)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
         <div style={{
-          background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+          background: 'linear-gradient(135deg, #8b5e2c, #c49b5a)',
           padding: '0.35rem',
           borderRadius: '0.5rem',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -42,10 +42,10 @@ export const SmartBidAssistant: React.FC<SmartBidAssistantProps> = ({
           <Sparkles style={{ width: '1rem', height: '1rem', color: '#ffffff' }} />
         </div>
         <div>
-          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#e0e7ff', letterSpacing: '0.05em' }}>
+          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#f2e2bd', letterSpacing: '0.05em' }}>
             AI Smart Bidding
           </h4>
-          <p style={{ margin: 0, fontSize: '0.7rem', color: '#818cf8' }}>Algorithmically generated optimal bids</p>
+          <p style={{ margin: 0, fontSize: '0.7rem', color: '#e2c17f' }}>Algorithmically generated optimal bids</p>
         </div>
       </div>
 
@@ -57,8 +57,8 @@ export const SmartBidAssistant: React.FC<SmartBidAssistantProps> = ({
             badgeColor = 'rgba(75, 85, 99, 0.4)';
             glowColor = 'rgba(156, 163, 175, 0.2)';
           } else if (sug.type === 'Optimal') {
-            badgeColor = 'rgba(99, 102, 241, 0.25)';
-            glowColor = 'rgba(129, 140, 248, 0.5)';
+            badgeColor = 'rgba(157, 108, 48, 0.25)';
+            glowColor = 'rgba(94, 234, 212, 0.5)';
           } else {
             badgeColor = 'rgba(239, 68, 68, 0.15)';
             glowColor = 'rgba(248, 113, 113, 0.4)';
@@ -91,7 +91,7 @@ export const SmartBidAssistant: React.FC<SmartBidAssistantProps> = ({
               </div>
               <div style={{
                 marginTop: '0.4rem', fontSize: '0.65rem', fontWeight: 600,
-                color: sug.type === 'Knockout' ? '#fca5a5' : sug.type === 'Optimal' ? '#a5b4fc' : '#9ca3af',
+                color: sug.type === 'Knockout' ? '#fca5a5' : sug.type === 'Optimal' ? '#f0d9ae' : '#9ca3af',
                 display: 'flex', alignItems: 'center', gap: '0.2rem',
                 background: 'rgba(0,0,0,0.2)', padding: '0.15rem 0.4rem', borderRadius: '1rem'
               }}>

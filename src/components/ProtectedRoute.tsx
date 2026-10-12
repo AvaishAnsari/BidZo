@@ -24,7 +24,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
         justifyContent: 'center',
         gap: '0.75rem',
       }}>
-        <Loader2 style={{ width: '2rem', height: '2rem', color: '#6366f1', animation: 'spin 1s linear infinite' }} />
+        <Loader2 style={{ width: '2rem', height: '2rem', color: '#8b5e2c', animation: 'spin 1s linear infinite' }} />
         <p style={{ color: '#6b7280', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
           Loading…
         </p>
@@ -37,13 +37,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Logged in but no role chosen yet (e.g. fresh Google sign-in) → pick a role first
-  if (!userRole) {
-    return <Navigate to="/select-role" replace />;
-  }
-
-  // Logged in but wrong role → back to auctions grid
-  if (requiredRole && userRole && userRole !== requiredRole) {
+  // Role restrictions are only used for privileged areas such as admin.
+  if (requiredRole && userRole !== requiredRole) {
     return <Navigate to="/auctions" replace />;
   }
 

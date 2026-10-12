@@ -1,151 +1,114 @@
-# BidZo API Documentation
+# BidZo API
 
-**Base URL (Local):** `http://127.0.0.1:8000`
+Local base URL: `http://127.0.0.1:8000`
 
----
+Protected endpoints use a Django REST Framework Simple JWT access token:
 
-## 🔑 Authentication (JWT)
+```http
+Authorization: Bearer <access_token>
+```
 
-All protected routes require an `Authorization` header containing the access token:
-`Authorization: Bearer <your_access_token>`
+## Authentication
 
-### 1. Login / Obtain Tokens
-- **Endpoint:** `POST /api/token/`
-- **Description:** Authenticates a user and returns JWT access/refresh tokens.
-- **Headers:** `Content-Type: application/json`
-- **Request Body:**
-  ```json
-  {
-    "username": "username",
-    "password": "password"
-  }
+### Register
 
-  >Response (200 OK):
+`POST /api/register/`
 
-  {
-  "refresh": "eyJhbGciOi...",
-  "access": "eyJhbGciOi..."
-}
-
-2. Refresh Access Token
-
-    Endpoint: POST /api/token/refresh/
-
-    >Description: Obtains a new access token using a valid refresh token.
-
-    >Headers: Content-Type: application/json
-
-    >Request Body:
-
-    {
-  "refresh": "your_refresh_token_here"
-}
-
->Response (200 OK):
+```json
 {
-  "access": "eyJhbGciOi..."
+  "username": "sam",
+  "email": "sam@example.com",
+  "phone_number": "+919876543210",
+  "phone_verification_token": "<token returned by OTP verification>",
+  "password": "a-strong-password",
+  "role": "buyer"
 }
+```
 
-Auction Endpoints
-1. List All Auctions
+`phone_number` is a verified, unique E.164 number. New members can both bid and list; the legacy `role` value is retained for existing data compatibility. Admin accounts must be created through Django admin or `createsuperuser`.
 
-    Endpoint: GET /api/auctions/
+### Login
 
-    Auth Required: No
+`POST /api/login/`
 
-    Response (200 OK):
-    JSON
+Accepts `username` or `email`, plus `password`. A successful response includes `access`, `refresh`, and the user profile.
 
-    [
-      {
-        "id": 1,
-        "title": "Custom PCB Mechanical Keyboard",
-        "description": "Mint condition with linear switches",
-        "starting_price": "150.00",
-        "current_highest_bid": "180.00",
-        "end_time": "2026-10-15T12:00:00Z",
-        "status": "active",
-        "seller": 1,
-        "seller_username": "rahu",
-        "bids": [],
-        "created_at": "2026-09-29T10:00:00Z"
-      }
-    ]
+### OTP login
 
-2. Create Auction
+Request an email login code with `POST /api/auth/otp/request/`:
 
-    Endpoint: POST /api/auctions/
+```json
+{ "identifier": "sam@example.com", "channel": "email" }
+```
 
-    Auth Required: Yes (Bearer <access_token>)
+For SMS login, send the registered E.164 number and use `"channel": "sms"`. Verify with `POST /api/auth/otp/verify/` and `{ "identifier": "sam@example.com", "channel": "email", "code": "123456" }`. Codes expire after five minutes and are limited to five attempts.
 
-    Headers: Content-Type: application/json
+To register a mobile number safely, request and verify an SMS code with `"purpose": "phone_registration"`; the verify endpoint returns a short-lived `phone_verification_token`. Include that token in the registration request. During local development, email and SMS codes are printed in the Django terminal. Configure email and a real SMS gateway before production; the development SMS console is not a delivery service.
 
-    Request Body:
-    JSON
+### Google login
 
-    {
-      "title": "Vintage Mechanical Keyboard",
-      "description": "Studio quality custom board",
-      "starting_price": "100.00",
-      "end_time": "2026-10-20T18:00:00Z"
-    }
+`POST /api/auth/google/`
 
-    Response (201 Created):
-    JSON
+Accepts a verified Google ID token as `{ "token": "..." }`.
 
-    {
-      "id": 2,
-      "title": "Vintage Mechanical Keyboard",
-      "description": "Studio quality custom board",
-      "starting_price": "100.00",
-      "current_highest_bid": "0.00",
-      "end_time": "2026-10-20T18:00:00Z",
-      "status": "active",
-      "seller": 1,
-      "seller_username": "rahu",
-      "bids": [],
-      "created_at": "2026-09-29T13:00:00Z"
-    }
+### Change role
 
-3. Get Single Auction
+`POST /api/users/role/`
 
-    Endpoint: GET /api/auctions/{auction_id}/
+Requires authentication. Accepts `buyer` or `seller`.
 
-    Auth Required: No
+## Auctions
 
-💰 Bidding Endpoints
-1. List Bids for an Auction
+### List auctions
 
-    Endpoint: GET /api/auctions/{auction_id}/bids/
+`GET /api/auctions/` is public.
 
-    Auth Required: Yes (Bearer <access_token>)
+### Create auction
 
-2. Place a Bid
+`POST /api/auctions/` requires any authenticated user. The server assigns the seller and auction status.
 
-    Endpoint: POST /api/auctions/{auction_id}/bids/
+```json
+{
+  "title": "Vintage Mechanical Keyboard",
+  "description": "Custom keyboard in excellent condition",
+  "category": "Electronics",
+  "image_url": "https://example.com/keyboard.jpg",
+  "starting_price": "100.00",
+  "end_time": "2026-10-20T18:00:00Z"
+}
+```
 
-    Auth Required: Yes (Bearer <access_token>)
+### Auction details
 
-    Headers: Content-Type: application/json
+`GET /api/auctions/{auction_id}/` is public.
 
-    Request Body:
-    JSON
+## Bids
 
-    {
-      "amount": "200.00"
-    }
+### List bids
 
-    Response (201 Created):
-    JSON
+`GET /api/auctions/{auction_id}/bids/` is public.
 
-    {
-      "success": true,
-      "data": {
-        "id": 1,
-        "auction_item": 1,
-        "bidder": 2,
-        "bidder_username": "mayank",
-        "amount": "200.00",
-        "timestamp": "2026-09-29T13:10:00Z"
-      }
-    }
+### Place a bid
+
+`POST /api/auctions/{auction_id}/bids/` requires an authenticated user and a positive decimal `amount`.
+
+```json
+{
+  "amount": "150.00"
+}
+```
+
+The server rejects bids when the auction is not active, its end time has passed, the bidder owns it, or the amount is not greater than the starting/current price. The auction row is locked while the bid is validated and saved.
+
+## Live updates
+
+WebSocket clients can connect to:
+
+- `ws://127.0.0.1:8000/ws/auctions/` for auction creation and bid updates across the listing.
+- `ws://127.0.0.1:8000/ws/auctions/{auction_id}/` for bid updates to one auction.
+
+Messages are JSON objects with a `type`, such as `AUCTION_CREATED` or `BID_PLACED`. The development server uses an in-memory channel layer; a multi-process deployment needs a shared channel layer such as Redis.
+
+## User bids
+
+`GET /api/users/me/bids/` requires authentication and returns the current user's bids.

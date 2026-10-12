@@ -11,10 +11,10 @@ interface BidHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   auctionId: string;
-  currentUserEmail?: string;
+  currentUserId?: number;
 }
 
-export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClose, auctionId, currentUserEmail }) => {
+export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClose, auctionId, currentUserId }) => {
   const [bids, setBids] = useState<BidRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
             width: '100%', maxWidth: '600px',
             maxHeight: '85vh',
             borderRadius: '1.25rem',
-            border: '1px solid rgba(99,102,241,0.3)',
+            border: '1px solid rgba(157,108,48,0.3)',
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden'
           }}
@@ -83,12 +83,12 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
             background: isDark ? 'rgba(17,24,39,0.5)' : '#ffffff'
           }}>
             <h2 style={{ color: isDark ? 'white' : '#111827', margin: 0, fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#818cf8' }} />
+              <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#e2c17f' }} />
               Full Bid History
               {bids.length > 0 && !isLoading && (
                 <span style={{
                   fontSize: '0.75rem', fontWeight: 600,
-                  background: 'rgba(99,102,241,0.2)', color: '#a5b4fc',
+                  background: 'rgba(157,108,48,0.2)', color: '#f0d9ae',
                   padding: '0.15rem 0.5rem', borderRadius: '9999px',
                   marginLeft: '0.5rem'
                 }}>
@@ -120,7 +120,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
           }}>
             {isLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '3rem 0' }}>
-                <Loader2 style={{ width: '2rem', height: '2rem', color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+                <Loader2 style={{ width: '2rem', height: '2rem', color: '#e2c17f', animation: 'spin 1s linear infinite' }} />
                 <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Loading bid history...</p>
               </div>
             ) : error ? (
@@ -139,7 +139,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
               </div>
             ) : (
               bids.map((bid, i) => {
-                const isMe = currentUserEmail === bid.user_email;
+                const isMe = currentUserId === bid.bidder_id;
                 const isHighest = i === 0;
                 
                 return (
@@ -153,11 +153,11 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                       alignItems: 'center', gap: '1rem',
                       padding: '1rem',
                       background: isHighest 
-                        ? (isMe ? (isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.15)') : (isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.1)'))
+                        ? (isMe ? (isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.15)') : (isDark ? 'rgba(157,108,48,0.08)' : 'rgba(157,108,48,0.1)'))
                         : (isDark ? 'rgba(17,24,39,0.5)' : '#f9fafb'),
                       borderRadius: '0.75rem',
                       border: isHighest 
-                        ? (isMe ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(99,102,241,0.3)')
+                        ? (isMe ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(157,108,48,0.3)')
                         : (isDark ? '1px solid rgba(55,65,81,0.4)' : '1px solid rgba(209,213,219,0.8)'),
                     }}
                   >
@@ -166,11 +166,11 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                         width: '2rem', height: '2rem', flexShrink: 0,
                         borderRadius: '50%',
                         background: isHighest 
-                          ? (isMe ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.2)')
+                          ? (isMe ? 'rgba(34,197,94,0.2)' : 'rgba(157,108,48,0.2)')
                           : (isDark ? 'rgba(55,65,81,0.5)' : 'rgba(229, 231, 235, 0.8)'),
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: isHighest 
-                          ? (isMe ? '#4ade80' : '#a5b4fc')
+                          ? (isMe ? '#4ade80' : '#f0d9ae')
                           : (isDark ? '#9ca3af' : '#6b7280'),
                       }}>
                         {isHighest ? <Trophy style={{ width: '1rem', height: '1rem' }} /> : `#${i + 1}`}
@@ -178,7 +178,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                       
                       <div style={{ minWidth: 0 }}>
                         <div style={{ 
-                          color: isHighest ? (isMe ? '#10b981' : (isDark ? '#c4b5fd' : '#7e22ce')) : (isDark ? '#d1d5db' : '#374151'),
+                          color: isHighest ? (isMe ? '#10b981' : (isDark ? '#f0d9ae' : '#684827')) : (isDark ? '#d1d5db' : '#374151'),
                           fontWeight: isHighest ? 700 : 500, fontSize: '0.95rem',
                           display: 'flex', alignItems: 'center', gap: '0.5rem',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
@@ -187,9 +187,9 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                           {isHighest && (
                             <span style={{
                               fontSize: '0.65rem', fontWeight: 800,
-                              color: isMe ? '#4ade80' : '#a5b4fc',
-                              background: isMe ? 'rgba(34,197,94,0.1)' : 'rgba(99,102,241,0.15)',
-                              border: `1px solid ${isMe ? 'rgba(34,197,94,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                              color: isMe ? '#4ade80' : '#f0d9ae',
+                              background: isMe ? 'rgba(34,197,94,0.1)' : 'rgba(157,108,48,0.15)',
+                              border: `1px solid ${isMe ? 'rgba(34,197,94,0.3)' : 'rgba(157,108,48,0.3)'}`,
                               borderRadius: '9999px', padding: '0.1rem 0.5rem',
                             }}>
                               TOP BID
@@ -221,7 +221,7 @@ export const BidHistoryModal: React.FC<BidHistoryModalProps> = ({ isOpen, onClos
                     
                     <div style={{ textAlign: 'right' }}>
                       <span style={{
-                        color: isHighest ? (isMe ? '#10b981' : (isDark ? '#a5b4fc' : '#4f46e5')) : (isDark ? '#e5e7eb' : '#111827'),
+                        color: isHighest ? (isMe ? '#10b981' : (isDark ? '#f0d9ae' : '#8b5e2c')) : (isDark ? '#e5e7eb' : '#111827'),
                         fontWeight: 800, fontSize: '1.25rem',
                         whiteSpace: 'nowrap'
                       }}>

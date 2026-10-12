@@ -1,6 +1,6 @@
 /**
  * useAuctions.ts
- * Fetches all auctions and subscribes to Supabase Realtime so that
+ * Fetches all auctions and subscribes to Django Channels so that
  * any change to the `auctions` table (e.g. a new current_price after a bid)
  * is reflected instantly across all connected clients — no page refresh needed.
  *
@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { fetchAuctions } from '../services/auctionService';
+import { fetchAuctions, mapAuction } from '../services/auctionService';
 import { realtime } from '../services/realtime';
 import type { Auction } from '../types';
 
@@ -55,21 +55,7 @@ export function useAuctions(): UseAuctionsResult {
 
     const handleAuctionCreated = (payload: any) => {
       const { auction } = payload;
-      const newAuction: Auction = {
-        id: auction.id,
-        title: auction.title,
-        description: auction.description,
-        image_url: auction.image_url || '',
-        start_price: Number(auction.starting_price),
-        current_price: Number(auction.current_highest_bid),
-        end_time: auction.end_time,
-        start_time: auction.created_at, // Use created_at as fallback for start_time
-        min_increment: 0, // Fallback for min_increment
-        status: auction.status === 'active' ? 'live' : auction.status,
-        created_at: auction.created_at,
-        seller_id: auction.seller?.id || '',
-        images: auction.images || (auction.image_url ? [auction.image_url] : []),
-      };
+      const newAuction: Auction = mapAuction(auction);
       setAuctions(prev => [newAuction, ...prev]);
     };
 
