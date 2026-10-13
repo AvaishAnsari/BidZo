@@ -6,7 +6,7 @@
  */
 
 import type { Auction } from '../types';
-import { getAuthHeaders, API_BASE_URL } from './api';
+import { getAuthHeaders, getValidAuthHeaders, clearAuthSession, API_BASE_URL } from './api';
 
 export interface BidRecord {
   id: number;
@@ -18,6 +18,9 @@ export interface BidRecord {
 // Helper to handle response checks cleanly
 async function handleResponse(response: Response) {
   if (!response.ok) {
+    if (response.status === 401) {
+      clearAuthSession();
+    }
     const errorText = await response.text();
     throw new Error(errorText || `Network response error: ${response.status}`);
   }
@@ -31,9 +34,19 @@ async function handleResponse(response: Response) {
  */
 export async function fetchAuctions(): Promise<Auction[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/`, {
-      headers: getAuthHeaders(),
+    const headers = await getValidAuthHeaders();
+    let response = await fetch(`${API_BASE_URL}/auctions/`, {
+      headers,
     });
+
+    // If 401 unauthorized (stale or expired token), clear session and retry unauthenticated
+    if (response.status === 401 && headers['Authorization']) {
+      clearAuthSession();
+      response = await fetch(`${API_BASE_URL}/auctions/`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await handleResponse(response);
 
     return data.map((item: any) => ({
@@ -145,9 +158,18 @@ export async function createAuctionAPI(payload: {
  */
 export async function fetchAuction(id: string | number): Promise<Auction> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auctions/${id}/`, {
-      headers: getAuthHeaders(),
+    const headers = await getValidAuthHeaders();
+    let response = await fetch(`${API_BASE_URL}/auctions/${id}/`, {
+      headers,
     });
+
+    if (response.status === 401 && headers['Authorization']) {
+      clearAuthSession();
+      response = await fetch(`${API_BASE_URL}/auctions/${id}/`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const item = await handleResponse(response);
 
     return {
