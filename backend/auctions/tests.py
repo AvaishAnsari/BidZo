@@ -151,3 +151,13 @@ class AuctionPhase1Tests(APITransactionTestCase):
         # Or both might succeed if 150.00 locked first, saved, then 160.00 locked and saved.
         # But in NO case should 150.00 overwrite 160.00.
         self.assertEqual(self.auction_a.current_highest_bid, Decimal('160.00'))
+
+    def test_invalid_or_expired_token_handling(self):
+        # A bad/expired token on a SAFE method (GET) should not 401; it should return public auctions
+        resp_get = self.client.get('/api/auctions/', HTTP_AUTHORIZATION='Bearer invalid_or_expired_token')
+        self.assertEqual(resp_get.status_code, 200)
+
+        # But a bad/expired token on an unsafe method (POST) MUST return 401
+        resp_post = self.client.post('/api/auctions/', {'title': 'Test'}, HTTP_AUTHORIZATION='Bearer invalid_or_expired_token')
+        self.assertEqual(resp_post.status_code, 401)
+

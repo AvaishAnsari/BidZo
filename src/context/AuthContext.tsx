@@ -37,7 +37,7 @@ export interface AuthContextType {
   refreshUser: () => void;
 }
 
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, isTokenExpired, getValidAccessToken, clearAuthSession } from '../services/api';
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
@@ -50,6 +50,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('access_token');
     if (storedUser && token) {
+      if (isTokenExpired(token)) {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken && !isTokenExpired(refreshToken)) {
+          // Token expired but refresh token is available - refresh in background
+          getValidAccessToken().then((newToken) => {
+            if (!newToken) {
+              setUser(null);
+              setRole(null);
+            }
+          });
+        } else {
+          // Both are expired - clear zombie session
+          clearAuthSession();
+          setUser(null);
+          setRole(null);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
@@ -68,6 +88,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     refreshUser();
+    const handleLogout = () => {
+      setUser(null);
+      setRole(null);
+    };
+    window.addEventListener('bidzo:auth:logout', handleLogout);
+    return () => window.removeEventListener('bidzo:auth:logout', handleLogout);
   }, [refreshUser]);
 
   const updateRole = useCallback(
@@ -153,10 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signOut = useCallback(async () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('isAuthenticated');
+    clearAuthSession();
     setUser(null);
     setRole(null);
   }, []);
